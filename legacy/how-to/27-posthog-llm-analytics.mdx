@@ -1,0 +1,28 @@
+---
+title: PostHog LLM analytics
+created: 2026-02-09
+updated: 2026-02-09
+---
+
+# PostHog LLM analytics
+
+PostHog is already used in Studio and marketing for analytics and feature flags. For **LLM/agent usage** (generations, traces), the easiest path is OpenRouter’s built-in integration.
+
+## Option A — OpenRouter Broadcast (recommended)
+
+OpenRouter can send LLM analytics to PostHog automatically.
+
+1. In the [OpenRouter dashboard](https://openrouter.ai/docs/guides/features/broadcast/posthog), configure the **Broadcast** feature with your PostHog project API key (and any other settings they require).
+2. No code changes in this repo: requests to OpenRouter will be reported to PostHog by OpenRouter.
+
+See [OpenRouter Broadcast / PostHog](https://openrouter.ai/docs/guides/features/broadcast/posthog) for details.
+
+## Option B — PostHog SDK in runtime (optional)
+
+If you need **in-app trace IDs** or finer control:
+
+- Install `posthog-node` and `@posthog/ai` in Studio.
+- PostHog’s docs show wrapping the Node OpenAI client; our stack uses `createOpenAI` from `@ai-sdk/openai` and a custom fetch for fallbacks in [apps/studio/lib/model-router/openrouter-fetch.ts](../../apps/studio/lib/model-router/openrouter-fetch.ts).
+- You would need to either (1) use PostHog’s wrapped OpenAI client where we build the adapter (e.g. in [packages/shared/src/shared/copilot/next/runtime.ts](../../packages/shared/src/shared/copilot/next/runtime.ts)), or (2) wrap the fetch we pass so that outgoing OpenRouter requests are reported to PostHog.
+
+Revisit this when we want trace IDs or server-side LLM events beyond what Broadcast provides.

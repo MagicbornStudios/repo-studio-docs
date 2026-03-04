@@ -1,0 +1,38 @@
+---
+title: 03 - Model routing and OpenRouter
+---
+
+# 03 - Model routing and OpenRouter
+
+OpenRouter for chat, structured output, plan, image. Model IDs per user; resolved server-side.
+
+## SDK
+
+- **OpenAI SDK + @ai-sdk/openai** — OpenRouter via `baseURL`; no OpenRouter-specific SDK.
+- **Model list** — `GET /api/v1/models` mapped in `apps/studio/lib/openrouter-models.ts`.
+- **Defaults** — `apps/studio/lib/model-router/defaults.ts`: `getDefaultChatModelId()`, `DEFAULT_IMAGE_MODEL`, `DEFAULT_TASK_MODEL`.
+
+## Slots
+
+- `copilot` and `assistantUi` (ModelProviderId).
+- Stored in `settings-overrides` (scope `app`): `ai.model.copilot`, `ai.model.assistantUi`.
+- No client model IDs: server resolves from persisted settings.
+
+**Single source of truth:** Model selection persists in `settings-overrides` via `persistence.ts`; server resolves via `getPersistedModelIdForProvider(req, provider)`. **ModelSwitcher** is reusable: pass `provider="copilot" | "assistantUi"` and `variant="toolbar" | "composer"`.
+
+## Runtime matrix
+
+| Use case | Route | Model source |
+|----------|-------|--------------|
+| assistant-ui | POST /api/assistant-chat | `getPersistedModelIdForProvider(req, 'assistantUi')` |
+| forge/plan | POST /api/forge/plan | DEFAULT_TASK_MODEL |
+| structured-output | POST /api/structured-output | DEFAULT_TASK_MODEL |
+| image-generate | POST /api/image-generate | DEFAULT_IMAGE_MODEL |
+
+**Next:** [04 - Editors as MCP apps](04-editors-as-mcp-apps)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/lib/model-router/`, `apps/studio/lib/openrouter-models.ts`, `apps/studio/app/api/assistant-chat/route.ts`
+Related: ai/02-domain-integration, errors-and-attempts
+Do not: Use @openrouter/ai-sdk-provider; use OpenAI SDK + baseURL. See errors-and-attempts.
+</Callout>

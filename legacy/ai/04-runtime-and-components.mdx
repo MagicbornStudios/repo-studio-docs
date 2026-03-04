@@ -1,0 +1,220 @@
+---
+title: Runtime and components
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Runtime and components
+
+API route, existing chat components (DialogueAssistantPanel, Thread, ToolUIRegistry), tool-ui Plan, and Progress Tracker. Existing implementation: [apps/studio/app/api/assistant-chat/route.ts](../../apps/studio/app/api/assistant-chat/route.ts). Full component catalog: [07 - Components reference](07-components-reference.mdx).
+
+---
+
+## API route
+
+Route: `/api/assistant` or `/api/assistant-chat` (existing). Uses `streamText` with OpenRouter; no Responses V2 checking.
+
+```typescript
+import { streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { getPayload } from 'payload';
+import { requireAiRequestAuth } from '@/lib/server/api-keys';
+import { recordAiUsageEvent } from '@/lib/server/ai-usage';
+import { getOpenRouterConfig } from '@/lib/openrouter-config';
+import { getPersistedModelIdForProvider } from '@/lib/model-router/persistence';
+
+export async function POST(req: Request) {
+  const payload = await getPayload({ config });
+  const authContext = await requireAiRequestAuth(payload, req, 'ai.chat');
+
+  if (!authContext) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const body = await req.json();
+  const config = getOpenRouterConfig();
+
+  // No Responses V2 checking - just use chat completions
+  const modelId = await getPersistedModelIdForProvider(req, 'assistant') ?? 'openai/gpt-4o-mini';
+
+  const openai = createOpenAI({
+    apiKey: config.apiKey,
+    baseURL: 'https://openrouter.ai/api/v1',
+    headers: {
+      'HTTP-Referer': 'https://forge-studio.local',
+      'X-Title': 'Forge Studio',
+    },
+  });
+
+  try {
+    const result = await streamText({
+      model: openai(modelId),
+      messages: body.messages,
+      tools: body.tools,
+      maxSteps: 10,
+    });
+
+    void recordAiUsageEvent({
+      requestId: crypto.randomUUID(),
+      authContext,
+      provider: 'openrouter',
+      model: modelId,
+      routeKey: 'assistant',
+      status: 'success',
+    });
+
+    return result.toDataStreamResponse();
+  } catch (error) {
+    void recordAiUsageEvent({
+      requestId: crypto.randomUUID(),
+      authContext,
+      provider: 'openrouter',
+      model: modelId,
+      routeKey: 'assistant',
+      status: 'error',
+      errorMessage: error.message,
+    });
+    throw error;
+  }
+}
+```
+
+---
+
+## AssistantProvider
+
+Root provider wrapping Assistant UI runtime:
+
+```typescript
+'use client';
+
+import { AssistantRuntimeProvider } from '@assistant-ui/react';
+import { useLocalRuntime } from '@assistant-ui/react';
+
+export interface AssistantProviderProps {
+  runtimeUrl: string;
+  children: React.ReactNode;
+}
+
+export function AssistantProvider({ runtimeUrl, children }: AssistantProviderProps) {
+  const runtime = useLocalRuntime({
+    api: runtimeUrl,
+  });
+
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      {children}
+    </AssistantRuntimeProvider>
+  );
+}
+```
+
+---
+
+## AssistantChat
+
+Chat UI with sidebar/panel/modal modes:
+
+```typescript
+'use client';
+
+import { Thread } from '@assistant-ui/react';
+import { cn } from '@forge/shared/lib/utils';
+
+export interface AssistantChatProps {
+  mode?: 'sidebar' | 'panel' | 'modal';
+  className?: string;
+}
+
+export function AssistantChat({ mode = 'sidebar', className }: AssistantChatProps) {
+  return (
+    <div className={cn(
+      'flex flex-col h-full bg-background',
+      mode === 'sidebar' && 'w-96 border-l',
+      mode === 'panel' && 'w-full',
+      className
+    )}>
+      <Thread
+        welcome={{
+          message: 'How can I help with your workspace?',
+        }}
+      />
+    </div>
+  );
+}
+```
+
+Existing shared components: [packages/shared/src/shared/components/assistant-ui/](../../packages/shared/src/shared/components/assistant-ui/).
+
+---
+
+## Existing components
+
+**DialogueAssistantPanel** ([apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx](../../apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx)): AssistantRuntimeProvider + AssistantChatTransport + Thread + ToolUIRegistry. Used in Dialogue and Character editors (right-rail Chat panel).
+
+**ToolUIRegistry** ([assistant-tools.tsx](../../packages/shared/src/shared/components/tool-ui/assistant-tools.tsx)): Registers all tool-ui components (render_plan, render_image, etc.). Mount inside AssistantRuntimeProvider.
+
+---
+
+## Plan (tool-ui)
+
+Use tool-ui Plan with `responseActions` for Apply/Request Changes. [tool-ui.com Plan](https://www.tool-ui.com/docs/plan). For `forge_createPlan`: backend returns `{ id, title, description, todos }`; frontend renders via `render_plan` in assistant-tools. Schema: todos with status (pending/in_progress/completed/cancelled).
+
+---
+
+## Progress Tracker
+
+When executing a plan (e.g. "Add 5 dialogue nodes"), show [Progress Tracker](https://www.tool-ui.com/docs/progress-tracker) in chat—"Step 1 of 5: Creating node A", etc. Steps: pending, in-progress, completed, failed. Elapsed time badge; responseActions (Cancel); receipt state for terminal view. Wire `forge_executePlan` or similar to emit step updates.
+
+---
+
+## Editor integration (DialogueEditor)
+
+```typescript
+'use client';
+
+import { DialogueAssistantPanel } from '@/components/editors/dialogue/DialogueAssistantPanel';
+import { useForgeAssistantContract } from '@forge/domain-forge/assistant';
+import { useDomainAssistant } from '@forge/shared/assistant';
+
+export function DialogueEditor({ projectId, graphId }) {
+  const [graph, setGraph] = useState<ForgeGraphDoc | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [highlights, setHighlights] = useState({});
+
+  const assistantContract = useForgeAssistantContract({
+    graph,
+    selection,
+    isDirty: false,
+    applyOperations,
+    onHighlight: (entities) => setHighlights(entities),
+    clearHighlights: () => setHighlights({}),
+    createPlan,
+    executePlan,
+    commitGraph: async () => { /* ... */ },
+  });
+
+  useDomainAssistant(assistantContract);
+
+  return (
+    <WorkspaceShell>
+      <EditorDockLayout>
+        <EditorDockLayout.Main>
+          <ForgeCanvas graph={graph} selection={selection} highlights={highlights} />
+        </EditorDockLayout.Main>
+        <EditorDockLayout.Right>
+          <EditorDockLayout.Panel id="assistant" title="AI Assistant">
+            <DialogueAssistantPanel />
+          </EditorDockLayout.Panel>
+        </EditorDockLayout.Right>
+      </EditorDockLayout>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Next
+
+- [05 - Agent system](05-agent-system.mdx) — BaseAgent, AgentRegistry, AppAgent

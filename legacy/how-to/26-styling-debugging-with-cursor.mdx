@@ -1,0 +1,60 @@
+---
+title: 26 – Styling debugging with Cursor
+created: 2026-02-07
+updated: 2026-02-10
+---
+
+# 26 – Styling debugging with Cursor
+
+Tutorial-style guide for fixing styling issues in this codebase using Cursor, browser selectors, screenshots, and plans. Use this workflow when debugging or updating UI so humans and agents stay consistent.
+
+## Context
+
+Our editor UI is complex: DockLayout panels, toolbars (File/View/State, Admin, API, Workbench), panel tabs (Narratives, Storylets, Nodes), and inspector cards. Styling is driven by:
+
+- **Design tokens** and shared components — [01 - Styling and theming](../design/01-styling-and-theming.mdx), [02 - Components](../design/02-components.mdx).
+- **Theme and density** — `data-theme`, `data-density`, and tokens like `--panel-padding`, `--control-gap`, `--tab-height`.
+
+Before changing styles, read the design docs and [agent-artifacts/core/styling-and-ui-consistency.md](../agent-artifacts/core/styling-and-ui-consistency.md).
+
+## Workflow (human and agent)
+
+### Preflight: verify CSS pipeline
+
+1. Run `pnpm css:doctor` from repo root before opening the browser.
+2. If it fails, fix the reported `globals.css` or generated utility probes first.
+3. Re-run `pnpm css:doctor` until it passes; then start visual debugging.
+
+### Before: capture the problem
+
+1. In Cursor, use the browser (or embedded preview) to select the problematic elements.
+2. Copy into chat:
+   - **DOM path** and **position** (e.g. from Cursor’s element picker).
+   - **React component** and **HTML element** when available.
+3. Attach a **screenshot** (e.g. "before" or "half-done" state).
+4. Save reference screenshots under **docs/images/** with descriptive names (e.g. `buttons_dropdowns_menutitems_unstyled.png`, `half_done_buttons.png`). Reference them in design or how-to docs so we have a visible "avoid" or "before" reference.
+
+### Plans: scope and track
+
+- Create a plan (or use an existing plan file) so changes are scoped and tracked.
+- Implement in slices; update STATUS and relevant docs after each slice.
+
+### After: document the outcome (optional; humans)
+
+- When UI/styling changes are done, an **after** screenshot is optional. **Do not use automated browser screenshot tools**—they error too often. If you want a visual reference, **humans** should: run the app, take a screenshot (Cursor browser tools or any screenshot tool), save to **docs/images/** with a descriptive name (e.g. `styling_after_contrast_and_spacing.png`), and add a short reference in the relevant doc or plan/changelog.
+
+## Agent instructions
+
+When making UI/styling changes as part of a styling or debugging pass:
+
+1. **Before:** If there is an existing "before" screenshot, keep it; do not overwrite it.
+2. **Implement:** Use design tokens and patterns from design/01 and 02; follow [styling-and-ui-consistency.md](../agent-artifacts/core/styling-and-ui-consistency.md).
+3. **After:** Do **not** run browser screenshot automation (it errors too often). Update design docs and STATUS. If an "after" screenshot is needed, note in STATUS that a human can capture and save to `docs/images/<descriptive_name>.png` and reference it in the doc or STATUS.
+4. **Docs:** Update design docs or errors-and-attempts when new patterns or fixes are introduced.
+
+## Related
+
+- [01 - Styling and theming](../design/01-styling-and-theming.mdx)
+- [02 - Components](../design/02-components.mdx)
+- [agent-artifacts/core/styling-and-ui-consistency.md](../agent-artifacts/core/styling-and-ui-consistency.md)
+- [agent-artifacts/core/errors-and-attempts.md](../agent-artifacts/core/errors-and-attempts.md) (e.g. "Grey buttons and missing menu/icons")

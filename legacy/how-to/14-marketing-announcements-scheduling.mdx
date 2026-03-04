@@ -1,0 +1,27 @@
+---
+title: 14 - Platform announcements and scheduling
+created: 2026-02-05
+updated: 2026-02-10
+---
+
+# 14 - Platform announcements and scheduling
+
+How promotions work for customer-facing surfaces.
+
+## Promotions collection
+
+- **Collection:** `promotions` in Studio.
+- **Fields:** `title`, `body`, `active`, `startsAt`, `endsAt`, `ctaUrl`.
+- **API:** `GET /api/promotions` returns active promotions for current time window.
+
+## Scheduling with Payload Jobs
+
+- Tasks: `activatePromotion` and `deactivatePromotion` in `apps/studio/payload/tasks`.
+- Queue jobs from promotions `afterChange` hook when `startsAt`/`endsAt` are in the future.
+- Payload Jobs need a long-running worker process; pure serverless is not enough for delayed execution.
+
+## Serverless fallback
+
+Use external cron to hit a Studio route that toggles active/inactive promotions by time window.
+
+**Back to index:** [00 - How-to index](00-index.mdx)

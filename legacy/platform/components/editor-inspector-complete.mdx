@@ -1,0 +1,878 @@
+---
+title: WorkspaceInspector - Complete Guide
+description: Selection-driven properties panel with conditional sections and entity-specific forms
+---
+
+# WorkspaceInspector - Complete Guide
+
+The **WorkspaceInspector** is a selection-driven properties panel that displays context-sensitive forms and controls based on the current editor selection. It's the right-hand panel in most editors, showing node properties, edge settings, character details, or any other entity-specific information.
+
+## Table of Contents
+
+1. [Core Concepts](#core-concepts)
+2. [Selection System](#selection-system)
+3. [Inspector Sections](#inspector-sections)
+4. [Component API](#component-api)
+5. [Real Examples](#real-examples)
+6. [Highlight Integration](#highlight-integration)
+7. [Performance](#performance)
+8. [Common Patterns](#common-patterns)
+
+---
+
+## Core Concepts
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────┐
+│           WorkspaceInspector                     │
+├──────────────────────────────────────────────┤
+│                                               │
+│  1. Receives Selection                        │
+│       │                                       │
+│       ├─► Selection.type                     │
+│       ├─► Selection.entityType               │
+│       └─► Selection.id                       │
+│                                               │
+│  2. Filters Sections                          │
+│       │                                       │
+│       └─► section.when(selection) → boolean  │
+│                                               │
+│  3. Renders Matching Sections                 │
+│       │                                       │
+│       └─► section.render({ selection })      │
+│                                               │
+└──────────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Selection-driven**: Content changes based on what's selected
+- **Conditional rendering**: Sections shown/hidden via predicate functions
+- **Type-safe**: Full TypeScript support for selection types
+- **Flexible composition**: Section-based or slot-based rendering
+- **Border accent**: Visual indicator tied to context color
+
+---
+
+## Selection System
+
+### Selection Type Union
+
+From `C:\Users\benja\Documents\forge-agent\packages\shared\src\shared\workspace\selection.ts`:
+
+```typescript
+/**
+ * Discriminant union for all selection types.
+ * Every editor emits selection in this shape.
+ */
+export type Selection =
+  | { type: 'none' }
+  | SelectionEntity
+  | SelectionTextRange
+  | SelectionCanvasObject;
+```
+
+### SelectionEntity
+
+**Most common selection type** for nodes, edges, characters, cells, etc.
+
+```typescript
+export interface SelectionEntity {
+  type: 'entity';
+  entityType: string;  // Domain-specific (e.g. 'forge.node', 'characters.cell')
+  id: string;          // Unique identifier
+  ref?: string;        // Optional reference (e.g. node type)
+  meta?: Record<string, unknown>;  // Additional metadata
+}
+```
+
+**Examples:**
+
+```typescript
+// Dialogue node
+{
+  type: 'entity',
+  entityType: 'forge.node',
+  id: 'node-123',
+  meta: { label: 'Start Node' }
+}
+
+// Dialogue edge
+{
+  type: 'entity',
+  entityType: 'forge.edge',
+  id: 'edge-456',
+  meta: { source: 'node-123', target: 'node-789' }
+}
+
+// Character element
+{
+  type: 'entity',
+  entityType: 'characters.cell',
+  id: 'cell-abc',
+  ref: 'traits',
+  meta: { characterId: 'char-1' }
+}
+```
+
+### SelectionTextRange
+
+For text selections in rich text editors.
+
+```typescript
+export interface SelectionTextRange {
+  type: 'textRange';
+  anchor: { key: string; offset: number };
+  focus: { key: string; offset: number };
+  textPreview?: string;
+  meta?: Record<string, unknown>;
+}
+```
+
+### SelectionCanvasObject
+
+For canvas-based systems (Twick, etc.).
+
+```typescript
+export interface SelectionCanvasObject {
+  type: 'canvasObject';
+  system: string;  // e.g. 'twick', 'joints'
+  id: string;
+  meta?: Record<string, unknown>;
+}
+```
+
+### Type Guards
+
+```typescript
+export function isNone(s: Selection | null | undefined): boolean {
+  if (s == null) return true;
+  return 'type' in s && s.type === 'none';
+}
+
+export function isEntity(s: Selection): s is SelectionEntity {
+  return s.type === 'entity';
+}
+
+export function isTextRange(s: Selection): s is SelectionTextRange {
+  return s.type === 'textRange';
+}
+
+export function isCanvasObject(s: Selection): s is SelectionCanvasObject {
+  return s.type === 'canvasObject';
+}
+```
+
+---
+
+## Inspector Sections
+
+### InspectorSection Interface
+
+From `C:\Users\benja\Documents\forge-agent\packages\shared\src\shared\workspace\inspector.ts`:
+
+```typescript
+export interface InspectorSection {
+  id: string;
+  title: string;
+
+  /**
+   * Predicate: when true, this section is shown.
+   * Called on every selection change.
+   */
+  when: (selection: Selection | null) => boolean;
+
+  /**
+   * Render section content.
+   * Only called for sections where when() returned true.
+   */
+  render: (props: { selection: Selection | null }) => ReactNode;
+}
+```
+
+### Section Definition Pattern
+
+```typescript
+const myInspectorSections: InspectorSection[] = [
+  {
+    id: 'node-properties',
+    title: 'Node Properties',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.node',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+      return <NodePropertiesForm nodeId={selection.id} />;
+    },
+  },
+  {
+    id: 'edge-properties',
+    title: 'Edge Properties',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.edge',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+      return <EdgePropertiesForm edgeId={selection.id} />;
+    },
+  },
+];
+```
+
+---
+
+## Component API
+
+### WorkspaceInspector Props
+
+```typescript
+export interface WorkspaceInspectorProps {
+  /** Selection from editor state */
+  selection?: Selection | null;
+
+  /** Declarative section definitions */
+  sections?: InspectorSection[];
+
+  /** Fallback content when no sections match */
+  children?: React.ReactNode;
+
+  className?: string;
+}
+```
+
+### Basic Usage (Section-based)
+
+```tsx
+import { WorkspaceInspector } from '@forge/shared';
+import type { InspectorSection, Selection } from '@forge/shared';
+
+function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+
+  const sections: InspectorSection[] = [
+    {
+      id: 'properties',
+      title: 'Properties',
+      when: (sel) => isEntity(sel),
+      render: ({ selection }) => <PropertiesForm selection={selection} />,
+    },
+  ];
+
+  return (
+    <WorkspaceShell>
+      <EditorCanvas onSelectionChange={setSelection} />
+      <WorkspaceInspector selection={selection} sections={sections} />
+    </WorkspaceShell>
+  );
+}
+```
+
+### Slot-based Usage
+
+```tsx
+function SimpleEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+
+  return (
+    <WorkspaceShell>
+      <EditorCanvas onSelectionChange={setSelection} />
+      <WorkspaceInspector selection={selection}>
+        {isEntity(selection) ? (
+          <PropertiesForm entityId={selection.id} />
+        ) : (
+          <EmptyState message="Select an item" />
+        )}
+      </WorkspaceInspector>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Real Examples
+
+### DialogueEditor Inspector
+
+From `C:\Users\benja\Documents\forge-agent\apps\studio\components\forge\dialogue-inspector-sections.tsx`:
+
+```typescript
+import type { InspectorSection } from '@forge/shared';
+import { isEntity } from '@forge/shared';
+
+export const dialogueInspectorSections: InspectorSection[] = [
+  {
+    id: 'node-properties',
+    title: 'Node Properties',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.node',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Node ID</label>
+            <p className="text-xs text-muted-foreground">{selection.id}</p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Label</label>
+            <Input
+              value={selection.meta?.label as string || ''}
+              onChange={(e) => updateNodeLabel(selection.id, e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Type</label>
+            <Select
+              value={selection.meta?.type as string || 'dialogue'}
+              onValueChange={(val) => updateNodeType(selection.id, val)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dialogue">Dialogue</SelectItem>
+                <SelectItem value="branch">Branch</SelectItem>
+                <SelectItem value="action">Action</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Body</label>
+            <Textarea
+              rows={6}
+              value={selection.meta?.body as string || ''}
+              onChange={(e) => updateNodeBody(selection.id, e.target.value)}
+              placeholder="Enter dialogue text..."
+            />
+          </div>
+        </div>
+      );
+    },
+  },
+
+  {
+    id: 'edge-properties',
+    title: 'Edge Properties',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.edge',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Edge ID</label>
+            <p className="text-xs text-muted-foreground">{selection.id}</p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Source</label>
+            <p className="text-xs text-muted-foreground">
+              {selection.meta?.source as string}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Target</label>
+            <p className="text-xs text-muted-foreground">
+              {selection.meta?.target as string}
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Label</label>
+            <Input
+              value={selection.meta?.label as string || ''}
+              onChange={(e) => updateEdgeLabel(selection.id, e.target.value)}
+              placeholder="Choice text..."
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Condition</label>
+            <Textarea
+              rows={3}
+              value={selection.meta?.condition as string || ''}
+              onChange={(e) => updateEdgeCondition(selection.id, e.target.value)}
+              placeholder="if $variable == true"
+            />
+          </div>
+        </div>
+      );
+    },
+  },
+
+  {
+    id: 'empty-state',
+    title: 'Selection',
+    when: (selection) => selection?.type === 'none',
+    render: () => (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <div className="rounded-full bg-muted p-6 mb-4">
+          <MousePointer size={32} className="text-muted-foreground" />
+        </div>
+        <h3 className="text-sm font-medium mb-2">No Selection</h3>
+        <p className="text-xs text-muted-foreground">
+          Select a node or edge to view properties
+        </p>
+      </div>
+    ),
+  },
+];
+```
+
+### Usage in Editor
+
+```tsx
+function DialogueEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+
+  return (
+    <WorkspaceShell>
+      <GraphEditor onSelectionChange={setSelection} />
+      <WorkspaceInspector
+        selection={selection}
+        sections={dialogueInspectorSections}
+      />
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+### CharacterEditor Inspector
+
+```typescript
+const characterInspectorSections: InspectorSection[] = [
+  {
+    id: 'cell-properties',
+    title: 'Cell Properties',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'characters.cell',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      const cellType = selection.ref; // 'traits', 'relationships', etc.
+
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Cell Type</label>
+            <Badge>{cellType}</Badge>
+          </div>
+
+          {cellType === 'traits' && (
+            <TraitCellForm cellId={selection.id} />
+          )}
+
+          {cellType === 'relationships' && (
+            <RelationshipCellForm cellId={selection.id} />
+          )}
+
+          {cellType === 'notes' && (
+            <NotesCellForm cellId={selection.id} />
+          )}
+        </div>
+      );
+    },
+  },
+
+  {
+    id: 'character-stats',
+    title: 'Character Stats',
+    when: (selection) =>
+      isEntity(selection) &&
+      selection.entityType === 'characters.cell' &&
+      selection.meta?.characterId != null,
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      const characterId = selection.meta?.characterId as string;
+
+      return <CharacterStatsPanel characterId={characterId} />;
+    },
+  },
+];
+```
+
+---
+
+## Highlight Integration
+
+The inspector works seamlessly with the **AI highlight system** to provide visual feedback during agent operations.
+
+### Highlight System Hook
+
+```typescript
+import { useAIHighlight } from '@forge/shared/assistant';
+
+function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+
+  // Hook that tracks AI highlights
+  const { highlightedEntityType, highlightedEntityId } = useAIHighlight();
+
+  const isHighlighted = useCallback(
+    (entityType: string, id: string) => {
+      return (
+        entityType === highlightedEntityType &&
+        id === highlightedEntityId
+      );
+    },
+    [highlightedEntityType, highlightedEntityId]
+  );
+
+  return (
+    <WorkspaceShell>
+      <GraphEditor
+        onSelectionChange={setSelection}
+        isHighlighted={isHighlighted}
+      />
+      <WorkspaceInspector selection={selection} sections={sections} />
+    </WorkspaceShell>
+  );
+}
+```
+
+### Highlight in Inspector
+
+```tsx
+const sections: InspectorSection[] = [
+  {
+    id: 'node-properties',
+    title: 'Node Properties',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.node',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      const { highlightedEntityType, highlightedEntityId } = useAIHighlight();
+      const isHighlighted =
+        selection.entityType === highlightedEntityType &&
+        selection.id === highlightedEntityId;
+
+      return (
+        <div
+          className={cn(
+            'space-y-4 p-4 rounded-md',
+            isHighlighted && 'ring-2 ring-primary animate-pulse'
+          )}
+        >
+          {isHighlighted && (
+            <Alert>
+              <Bot size={16} />
+              <AlertTitle>AI Action</AlertTitle>
+              <AlertDescription>
+                The AI is modifying this node
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <NodePropertiesForm nodeId={selection.id} />
+        </div>
+      );
+    },
+  },
+];
+```
+
+---
+
+## Performance
+
+### Memoization
+
+**Prevent unnecessary re-renders** by memoizing expensive computations.
+
+```tsx
+const sections: InspectorSection[] = useMemo(() => [
+  {
+    id: 'properties',
+    title: 'Properties',
+    when: (selection) => isEntity(selection),
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+      return <PropertiesForm entityId={selection.id} />;
+    },
+  },
+], []); // Empty deps: sections never change
+
+function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+
+  return (
+    <WorkspaceInspector selection={selection} sections={sections} />
+  );
+}
+```
+
+### Component Memoization
+
+```tsx
+const NodePropertiesForm = React.memo(
+  ({ nodeId }: { nodeId: string }) => {
+    const node = useNode(nodeId);
+
+    return (
+      <div className="space-y-4">
+        <Input
+          value={node.label}
+          onChange={(e) => updateNode(nodeId, { label: e.target.value })}
+        />
+      </div>
+    );
+  },
+  (prev, next) => prev.nodeId === next.nodeId
+);
+```
+
+### Conditional Data Fetching
+
+**Only fetch data for visible sections:**
+
+```tsx
+{
+  id: 'node-details',
+  title: 'Node Details',
+  when: (selection) =>
+    isEntity(selection) && selection.entityType === 'forge.node',
+  render: ({ selection }) => {
+    if (!isEntity(selection)) return null;
+
+    // Only fetches when section is visible
+    const { data: node, isLoading } = useNode(selection.id);
+
+    if (isLoading) return <Skeleton />;
+    if (!node) return <EmptyState />;
+
+    return <NodeDetailsForm node={node} />;
+  },
+}
+```
+
+---
+
+## Common Patterns
+
+### Multi-Entity Selection
+
+```tsx
+const sections: InspectorSection[] = [
+  {
+    id: 'bulk-actions',
+    title: 'Bulk Actions',
+    when: (selection) =>
+      isEntity(selection) && selection.meta?.selectedIds != null,
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      const selectedIds = selection.meta?.selectedIds as string[];
+
+      return (
+        <div className="space-y-4">
+          <p className="text-sm">
+            {selectedIds.length} items selected
+          </p>
+
+          <Button
+            onClick={() => deleteNodes(selectedIds)}
+            variant="destructive"
+          >
+            Delete All
+          </Button>
+
+          <Button onClick={() => duplicateNodes(selectedIds)}>
+            Duplicate All
+          </Button>
+        </div>
+      );
+    },
+  },
+];
+```
+
+---
+
+### Nested Entity Types
+
+```tsx
+const sections: InspectorSection[] = [
+  {
+    id: 'dialogue-node',
+    title: 'Dialogue Node',
+    when: (selection) =>
+      isEntity(selection) &&
+      selection.entityType === 'forge.node' &&
+      selection.meta?.nodeType === 'dialogue',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+      return <DialogueNodeForm nodeId={selection.id} />;
+    },
+  },
+  {
+    id: 'branch-node',
+    title: 'Branch Node',
+    when: (selection) =>
+      isEntity(selection) &&
+      selection.entityType === 'forge.node' &&
+      selection.meta?.nodeType === 'branch',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+      return <BranchNodeForm nodeId={selection.id} />;
+    },
+  },
+];
+```
+
+---
+
+### Tabbed Inspector
+
+```tsx
+const sections: InspectorSection[] = [
+  {
+    id: 'node-tabs',
+    title: 'Node',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.node',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      return (
+        <Tabs defaultValue="properties">
+          <TabsList>
+            <TabsTrigger value="properties">Properties</TabsTrigger>
+            <TabsTrigger value="metadata">Metadata</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="properties">
+            <NodePropertiesForm nodeId={selection.id} />
+          </TabsContent>
+
+          <TabsContent value="metadata">
+            <NodeMetadataForm nodeId={selection.id} />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <NodeHistoryList nodeId={selection.id} />
+          </TabsContent>
+        </Tabs>
+      );
+    },
+  },
+];
+```
+
+---
+
+### Accordion Sections
+
+```tsx
+const sections: InspectorSection[] = [
+  {
+    id: 'node-details',
+    title: 'Node Details',
+    when: (selection) =>
+      isEntity(selection) && selection.entityType === 'forge.node',
+    render: ({ selection }) => {
+      if (!isEntity(selection)) return null;
+
+      return (
+        <Accordion type="multiple" defaultValue={['basic', 'advanced']}>
+          <AccordionItem value="basic">
+            <AccordionTrigger>Basic Properties</AccordionTrigger>
+            <AccordionContent>
+              <NodeBasicForm nodeId={selection.id} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="advanced">
+            <AccordionTrigger>Advanced</AccordionTrigger>
+            <AccordionContent>
+              <NodeAdvancedForm nodeId={selection.id} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="metadata">
+            <AccordionTrigger>Metadata</AccordionTrigger>
+            <AccordionContent>
+              <NodeMetadataForm nodeId={selection.id} />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      );
+    },
+  },
+];
+```
+
+---
+
+### Context Menu Integration
+
+```tsx
+function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, entity: Entity) => {
+    e.preventDefault();
+    setSelection({
+      type: 'entity',
+      entityType: entity.type,
+      id: entity.id,
+    });
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  return (
+    <WorkspaceShell>
+      <GraphEditor
+        onSelectionChange={setSelection}
+        onContextMenu={handleContextMenu}
+      />
+      <WorkspaceInspector selection={selection} sections={sections} />
+
+      {contextMenu && (
+        <ContextMenu
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+        >
+          <ContextMenuItem onClick={() => duplicateEntity(selection)}>
+            Duplicate
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => deleteEntity(selection)}>
+            Delete
+          </ContextMenuItem>
+        </ContextMenu>
+      )}
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Summary
+
+The **WorkspaceInspector** provides:
+
+✅ **Selection-driven UI** - Content adapts to what's selected
+✅ **Type-safe selection** - Full TypeScript support with discriminant unions
+✅ **Conditional sections** - Show/hide based on selection predicates
+✅ **Flexible rendering** - Section-based or slot-based composition
+✅ **Highlight integration** - Visual feedback for AI operations
+✅ **Performance optimized** - Memoization and conditional data fetching
+✅ **Common patterns** - Tabs, accordions, bulk actions, nested types
+
+**Next Steps:**
+- [WorkspaceOverlaySurface Guide](./editor-overlay-complete.mdx)
+- [PanelTabs Guide](./panel-tabs-complete.mdx)
+- [Component Patterns](../guides/patterns.mdx)

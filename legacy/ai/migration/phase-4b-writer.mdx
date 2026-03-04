@@ -1,0 +1,34 @@
+---
+title: Phase 4b - Writer domain
+created: 2026-02-12
+updated: 2026-02-12
+---
+
+# Phase 4b: Writer domain (Lexical)
+
+Optional phase; can run in parallel with or after Phase 4 (Character).
+
+---
+
+## Tasks
+
+1. Lexical block-level tools: writer_insertBlock, writer_replaceBlock, writer_deleteBlock, writer_getSelection
+2. LexicalDiffPanel for block-level before/after in chat
+3. Notion-style flow (block ops, not raw JSON)
+4. writer_readAloud with ElevenLabs + tool-ui Audio
+
+---
+
+## Critical files
+
+**Create:**
+
+- `packages/domain-writer/src/assistant/index.ts` (or similar)
+- `packages/domain-writer/src/assistant/tools.ts`
+- LexicalDiffPanel (or extend DiffPreview for block rendering)
+
+**Reference:**
+
+- [03 - Domains (Writer)](../../03-domains-writer.mdx)
+- [08 - Best practices](../../08-best-practices.mdx) — Writer diff strategy
+- [patch.ts](../../../packages/shared/src/shared/copilot/workflows/patch.ts) — `PatchEnvelope<'lexical', LexicalPatchOp[]>`

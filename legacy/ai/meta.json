@@ -1,0 +1,27 @@
+{
+  "title": "AI and LangGraph",
+  "pages": [
+    "00-index",
+    "migration",
+    "01-architecture-overview",
+    "02-domain-integration",
+    "03-domains-forge-character",
+    "03-domains-writer",
+    "04-runtime-and-components",
+    "05-agent-system",
+    "06-mcp-integration",
+    "07-components-reference",
+    "08-best-practices",
+    "10-model-strategy",
+    "11-ai-roadmap",
+    "12-technical-considerations",
+    "13-cost-optimization",
+    "14-ai-context-index",
+    "15-instruction-templating-and-workflow-orchestration",
+    "20-complete-system-architecture",
+    "21-agent-conversation-flows",
+    "diagrams",
+    "examples",
+    "playground"
+  ]
+}

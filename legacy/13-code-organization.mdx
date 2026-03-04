@@ -1,0 +1,41 @@
+---
+title: Code organization
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# Code organization
+
+## Layout
+
+- **apps/studio/app/** - Routes, layout, globals.css.
+- **apps/studio/components/** - App and system components. `apps/studio/components/editors/DialogueEditor.tsx` is the primary editor.
+- **apps/studio/lib/** - Store, CopilotKit actions, utils, OpenRouter config. `apps/studio/lib/domains/video` is a system UI showcase only.
+- **apps/studio/payload/** - Payload CMS collections (users, projects, forge-graphs, video-docs, settings-overrides, agent-sessions).
+- **packages/shared/** - Shared editor UI and styles. No app routes or system (domain) imports.
+- **packages/agent-engine/** - Workflow runtime (steps + events + SSE).
+- **packages/dev-kit/** - Meta-package that re-exports `@forge/shared` + `@forge/agent-engine` (UI atoms live in `@forge/ui`).
+- **packages/domain-forge/** - Dialogue system (domain package) logic (types, store, operations, copilot wiring).
+- **packages/types/** - Generated Payload types + system/domain aliases.
+
+## Atomic design map
+
+- **Atoms**: `packages/ui/src/components/ui/*` (shadcn primitives).
+- **Molecules**: composable widgets (e.g. `apps/studio/components/settings/*`, `apps/studio/components/model-switcher/*`, `packages/shared/src/shared/components/editor/*` controls).
+- **Organisms**: editor shells and larger assemblies (e.g. `apps/studio/components/editors/*`, `apps/studio/components/AppShell.tsx`).
+- **Templates**: `apps/studio/app/*` layout and route composition.
+
+## Editor + CopilotKit
+
+- **Shell** - `packages/shared/src/shared/components/editor/`: declarative slots, shadcn-based primitives.
+- **Dialogue Editor** - `apps/studio/components/editors/DialogueEditor.tsx`: composes shell, registers context and actions from the dialogue system (`packages/domain-forge/src/copilot`).
+- **Editor** - `apps/studio/components/GraphEditor.tsx`: React Flow surface; mutations go through operations used by Copilot actions.
+
+So: **context** (readable) describes the graph; **actions** (createNode, updateNode, deleteNode, createEdge, getGraph) perform edits.
+
+## Adding a new editor
+
+1. Add an editor component that uses `WorkspaceShell` + slots.
+2. Register `useCopilotReadable` with that editor's context.
+3. Register `useCopilotAction` with system-specific actions.
+4. Put the editor in `DockLayout` `main` and declare overlays in one place.

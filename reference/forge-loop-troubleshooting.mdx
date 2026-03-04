@@ -1,0 +1,56 @@
+---
+title: Forge Loop troubleshooting
+created: 2026-02-13
+updated: 2026-02-13
+---
+
+# Forge Loop troubleshooting
+
+## Common stuck states
+
+### `new-project` says `.planning` already exists
+
+- Run `pnpm forge-loop:doctor`.
+- Fix missing required files reported by doctor.
+- Continue with `pnpm forge-loop:progress`.
+
+### `execute-phase` fails with commit scope error
+
+- Auto-commit only allows files in configured `git.commitScope`.
+- Auto-commit also fails when unrelated staged files are out of scope.
+- Move out-of-scope edits to manual commit flow, or expand `git.commitScope` intentionally.
+
+### `verify-work` fails in strict mode
+
+- Read `<phase>-VERIFICATION.md` and `<phase>-UAT.md`.
+- If gaps were found:
+  1. `pnpm forge-loop:plan-phase -- <phase> --gaps`
+  2. `pnpm forge-loop:execute-phase -- <phase> --gaps-only`
+  3. `pnpm forge-loop:verify-work -- <phase> --strict`
+
+### `sync-legacy` appears to do nothing
+
+- Check `.planning/config.json` for `legacySync.enabled`.
+- If disabled, either enable it or run `pnpm forge-loop:sync-legacy -- --force`.
+
+### Plan validation fails
+
+- Ensure plan frontmatter is valid schema YAML.
+- Check that `must_haves.truths/artifacts/key_links` are present.
+- Check dependency IDs in `depends_on` exist in same phase and do not point to later waves.
+
+## Recovery commands
+
+```bash
+pnpm forge-loop:doctor
+pnpm forge-loop:progress
+pnpm forge-loop:plan-phase -- <phase> --gaps
+pnpm forge-loop:execute-phase -- <phase> --gaps-only
+pnpm forge-loop:verify-work -- <phase> --strict
+```
+
+## Decision and error logging playbook
+
+1. Record accepted tradeoff in `.planning/DECISIONS.md`.
+2. Record failed attempt + root cause + fix in `.planning/ERRORS.md`.
+3. Re-run `progress` to continue the loop.

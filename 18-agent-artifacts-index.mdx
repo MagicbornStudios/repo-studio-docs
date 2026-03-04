@@ -1,0 +1,73 @@
+---
+title: Agent artifacts index
+---
+
+# Agent artifacts index
+
+Files for AI/coding agents. Keep accurate and greppable.
+
+## Agent quick start
+
+- **Next:** Read [Coding agent strategy](19-coding-agent-strategy).
+- **Loop:** GSD (Codex) via `$gsd-*` skills for phases; `pnpm gsd:install` to install. Use `forge-loop` for `doctor`, `progress`, `sync-legacy`. `FORGE_LOOP_ID` unset → default (`.planning/`).
+- **Runtime:** Codex + GSD skills for planning/phase execution; prompt-pack optional.
+- **Headless gate:** validate env readiness with `forge-env doctor --mode headless --strict`.
+- **GUI command center:** `forge-repo-studio open --view env` for env triage, allowlisted commands, and loop status.
+
+**Using Cursor with this repo:** Run `pnpm gsd:install` from repo root so Codex (when used) has GSD skills in this project. In Cursor, follow AGENTS.md and `.planning`; use `forge-loop doctor`, `forge-loop progress`, and `forge-loop sync-legacy` as needed. The `.cursor/rules/planning-and-loop.mdc` rule aligns Cursor with the same artifact contract (STATE, DECISIONS, TASK-REGISTRY) as GSD/Codex.
+
+## Source of truth (`.planning`)
+
+- **`.planning/PROJECT.md`** - Product intent and boundaries.
+- **`.planning/REQUIREMENTS.md`** - Requirement baseline and traceability.
+- **`.planning/ROADMAP.md`** - Phase list, dependencies, plan progression.
+- **`.planning/STATE.md`** - Current lifecycle position and active work.
+- **`.planning/DECISIONS.md`** - Decision log (primary).
+- **`.planning/ERRORS.md`** - Non-repeatable failures and fixes (primary).
+- **`.planning/TASK-REGISTRY.md`** - Backlog registry (primary).
+- **`.planning/TEMP-REFACTOR-BACKLOG.md`** - Temporary migration/refactor queue.
+- **`.planning/HUMAN-TASKS.md`** - Human-only tasks (repos, secrets, Vercel, npm, OAuth); check before assuming a task is blocked on human action.
+- **`.planning/PLATFORM-PRD.md`** - Platform product and gateway roadmap (Repo Studio backend, proxy APIs, capabilities).
+- **`.planning/PRD.md`** - Default loop product intent (when present).
+- **`.planning/MONETIZATION-STRATEGY.md`** - Iteration doc: revenue model, license, subscription gating, extension gating, platform entitlements; not MIT.
+- **`.planning/ASSISTANT-RUNTIME-STRATEGY.md`** - Design: Forge/Codex divergence, tool unification, data stream protocol, Phase 19-04.
+- **`.planning/DEFINITION-OF-DONE.md`** - Stage DoD (Planning, Execution, Review, PRD scope); use to determine when a stage is complete.
+- **`.planning/phases/*`** - Context, research, plans, summaries, UAT, verification. Phase 20 wires DoD and HUMAN-TASKS into Repo Studio Planning workspace (snapshot, panels, unified todos); see ROADMAP.
+- **`.planning/prompts/*`** - Runtime-agnostic prompt packs for coding-agent/manual runs.
+- **`.planning/migration-report.json`** - One-time migration report from legacy artifacts.
+
+See [how-to/forge-loop-workflow](how-to/forge-loop-workflow), [how-to/forge-loop-manual-usage](how-to/forge-loop-manual-usage), and [how-to/forge-loop-agent-usage](how-to/forge-loop-agent-usage).
+
+## Expected repo layout
+
+Monorepo: **root** contains `.planning/`, `apps/`, `packages/`, `vendor/`, `docs/`, `scripts/`. **No top-level `app`** — applications live under `apps/*` (e.g. repo-studio, docs, platform). **Repo Studio** is the primary app for Forge Loop. **Vendor:** submodules and vendored deps (e.g. `vendor/get-shit-done`, `vendor/repo-studio-extensions`, `vendor/twick`; Phase 16/17 add vendor/repo-studio, vendor/platform). **Extensions:** installables and examples in `vendor/repo-studio-extensions`; per-project config at `.repo-studio/extensions`. **Docs:** how-tos and agent-artifacts in `docs/`; docs site app in `apps/docs`. **Legacy:** `docs/agent-artifacts/core/*` are read-only snapshots from `.planning`; archived apps (e.g. studio, consumer-studio) may live under `apps/*` with ARCHIVED.md or in `legacy/`. **.cursor/plans:** ad-hoc Cursor plans; **.planning** is canonical for phase work (ROADMAP, STATE, TASK-REGISTRY, phases).
+
+**Codebase indexing (when implemented):** Vector store: sqlite-vss. Embeddings: Transformers.js + all-MiniLM-L6-v2; model downloaded during installation (no repo, no first-launch surprise). Excludes `.gitignore`, `vendor/` (by default), `.cursorignore`. See DECISIONS (Codebase indexing, Vector stack).
+
+## Legacy continuity snapshots (`docs/agent-artifacts/core`)
+
+- **[agent-artifacts/core/STATUS.md](agent-artifacts/core/STATUS.md)** - Snapshot from `.planning` generated markers.
+- **[agent-artifacts/core/task-registry.md](agent-artifacts/core/task-registry.md)** - Snapshot for backlog continuity.
+- **[agent-artifacts/core/decisions.md](agent-artifacts/core/decisions.md)** - Snapshot for decisions continuity.
+- **[agent-artifacts/core/errors-and-attempts.md](agent-artifacts/core/errors-and-attempts.md)** - Snapshot for failures continuity.
+- **[agent-artifacts/core/forge-loop-migration-temp.md](agent-artifacts/core/forge-loop-migration-temp.md)** - Temporary intake before `.planning` is initialized.
+- **[agent-artifacts/core/docs-building.md](agent-artifacts/core/docs-building.md)** - Doc structure and update policy.
+- **[agent-artifacts/core/tool-usage.md](agent-artifacts/core/tool-usage.md)** - rg, list_dir, Read; AGENT_SECTION grep.
+- **[agent-artifacts/core/editor-integration-exploration.md](agent-artifacts/core/editor-integration-exploration.md)** - Third-party editor integration options.
+- **[agent-artifacts/core/styling-and-ui-consistency.md](agent-artifacts/core/styling-and-ui-consistency.md)** - Styling rules and **workspace and panel composition** (Repo Studio layout constraints). See [how-to 26](how-to/26-styling-debugging-with-cursor).
+- **[ISSUES.md](../ISSUES.md)** (root) - Known product/editor issues.
+- **[AGENTS.md](../AGENTS.md)** (root) - Global agent rules.
+
+## Entrypoints
+
+Root AGENTS.md, README documentation section, and [index](index) for coding-agent context.
+
+## Search strategy
+
+Before retrying a failed approach, check `.planning/ERRORS.md` then sync snapshots if needed. Grep `AGENT_SECTION` in docs for agent blocks.
+
+<Callout variant="note" title="For coding agents">
+File refs: `.planning/ROADMAP.md`, `.planning/STATE.md`, `.planning/TASK-REGISTRY.md`, `.planning/ERRORS.md`
+Related: 19-coding-agent-strategy, root AGENTS.md
+Do not: Treat legacy snapshots as source of truth or write planning state outside `.planning`
+</Callout>

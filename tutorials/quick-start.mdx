@@ -1,0 +1,380 @@
+---
+title: Quick start - Build your first editor
+description: Build a functional editor with Forge in ~10 minutes. WorkspaceShell, DockLayout, CRUD, modals.
+---
+
+# Quick start: Build your first editor
+
+Build a functional editor with the Forge platform from scratch. This tutorial covers the essential components and patterns to get you productive quickly.
+
+## What you'll build
+
+A simple task management editor with:
+
+- Left sidebar (task list)
+- Main viewport (task editor)
+- Right inspector (task properties)
+- Toolbar with actions
+- Status bar
+- Modal dialogs
+
+## Prerequisites
+
+Use **pnpm** (not npm/yarn):
+
+```bash
+pnpm add @forge/dev-kit
+# or in monorepo: workspaces already include @forge/shared, @forge/ui
+```
+
+If building a consumer app, also add `@import '@forge/dev-kit/styles/editor';` to your app CSS.
+
+## Step 1: Create the editor shell (~2 minutes)
+
+Create `TaskEditor.tsx`:
+
+```tsx
+'use client';
+
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceLayout,
+  WorkspacePanel,
+  WorkspaceStatusBar,
+} from '@forge/shared';
+import { Plus } from 'lucide-react';
+
+export function TaskEditor() {
+  return (
+    <WorkspaceShell
+      editorId="tasks"
+      title="Tasks"
+      domain="tasks"
+      className="bg-canvas"
+    >
+      <WorkspaceToolbar className="bg-sidebar border-b">
+        <WorkspaceToolbar.Left>
+          <span className="text-xs font-medium">Tasks</span>
+        </WorkspaceToolbar.Left>
+        <WorkspaceToolbar.Right>
+          <WorkspaceToolbar.Button
+            size="sm"
+            variant="outline"
+            onClick={() => console.log('Create task')}
+          >
+            <Plus size={14} />
+            New Task
+          </WorkspaceToolbar.Button>
+        </WorkspaceToolbar.Right>
+      </WorkspaceToolbar>
+
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Editor content goes here</p>
+      </div>
+
+      <WorkspaceStatusBar>
+        Ready
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+**What you got:**
+
+- Full-height editor shell with data attributes (`data-editor-id`, `data-domain`)
+- Toolbar with left/right sections
+- Placeholder content area
+- Status bar at bottom
+
+## Step 2: Add the layout (~3 minutes)
+
+Replace the placeholder with `WorkspaceLayout`:
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceLayout,
+  WorkspacePanel,
+  WorkspaceStatusBar,
+} from '@forge/shared';
+import { Plus, ListTodo, FileEdit, ScanSearch } from 'lucide-react';
+import { Card } from '@forge/ui/card';
+import { Button } from '@forge/ui/button';
+
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
+}
+
+export function TaskEditor() {
+  const [tasks, setTasks] = useState<Task[]>([
+    { id: 1, title: 'Build editor', description: 'Create task editor', completed: false },
+    { id: 2, title: 'Add features', description: 'Add CRUD operations', completed: false },
+  ]);
+  const [activeTaskId, setActiveTaskId] = useState<number | null>(1);
+
+  const activeTask = tasks.find((t) => t.id === activeTaskId);
+
+  return (
+    <WorkspaceShell
+      editorId="tasks"
+      title="Tasks"
+      domain="tasks"
+      className="bg-canvas"
+    >
+      <WorkspaceToolbar className="bg-sidebar border-b">
+        <WorkspaceToolbar.Left>
+          <span className="text-xs font-medium">{tasks.length} tasks</span>
+        </WorkspaceToolbar.Left>
+        <WorkspaceToolbar.Right>
+          <WorkspaceToolbar.Button
+            size="sm"
+            variant="outline"
+            onClick={() => console.log('Create task')}
+          >
+            <Plus size={14} />
+            New Task
+          </WorkspaceToolbar.Button>
+        </WorkspaceToolbar.Right>
+      </WorkspaceToolbar>
+
+      <WorkspaceLayout
+        layoutId="tasks-editor"
+        leftDefaultSize={20}
+        rightDefaultSize={25}
+      >
+        <WorkspaceLayout.Left>
+          <WorkspaceLayout.Panel id="list" title="Tasks" icon={<ListTodo size={14} />}>
+            <WorkspacePanel panelId="task-list" hideTitleBar scrollable>
+              <div className="space-y-1 p-2">
+                {tasks.map((task) => (
+                  <Button
+                    key={task.id}
+                    variant="ghost"
+                    className="w-full justify-start text-left"
+                    onClick={() => setActiveTaskId(task.id)}
+                    data-state={activeTaskId === task.id ? 'active' : undefined}
+                  >
+                    <span className="truncate">{task.title}</span>
+                  </Button>
+                ))}
+              </div>
+            </WorkspacePanel>
+          </WorkspaceLayout.Panel>
+        </WorkspaceLayout.Left>
+
+        <WorkspaceLayout.Main>
+          <WorkspaceLayout.Panel id="editor" title="Editor" icon={<FileEdit size={14} />}>
+            <WorkspacePanel panelId="task-editor" hideTitleBar scrollable={false}>
+              {activeTask ? (
+                <div className="flex flex-col h-full p-4">
+                  <Card className="p-4">
+                    <h2 className="text-lg font-semibold mb-2">{activeTask.title}</h2>
+                    <p className="text-sm text-muted-foreground">{activeTask.description}</p>
+                  </Card>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-muted-foreground">Select a task</p>
+                </div>
+              )}
+            </WorkspacePanel>
+          </WorkspaceLayout.Panel>
+        </WorkspaceLayout.Main>
+
+        <WorkspaceLayout.Right>
+          <WorkspaceLayout.Panel id="props" title="Properties" icon={<ScanSearch size={14} />}>
+            <WorkspacePanel panelId="task-props" hideTitleBar scrollable>
+              {activeTask ? (
+                <div className="space-y-4 p-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">ID</label>
+                    <p className="text-sm">{activeTask.id}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Status</label>
+                    <p className="text-sm">{activeTask.completed ? 'Completed' : 'Pending'}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground p-4">No task selected</p>
+              )}
+            </WorkspacePanel>
+          </WorkspaceLayout.Panel>
+        </WorkspaceLayout.Right>
+      </WorkspaceLayout>
+
+      <WorkspaceStatusBar>
+        {activeTask ? `Editing: ${activeTask.title}` : 'Ready'}
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+**What you got:**
+
+- 3-pane layout (left | main | right)
+- Resizable panels
+- Task list on left, editor in main, properties on right
+- Active task highlighting
+- Layout persistence via `layoutId`
+
+## Step 3: Add CRUD and modal (~3 minutes)
+
+Add create, update, delete and an overlay for the create form:
+
+```tsx
+import { useCallback, useState } from 'react';
+import { WorkspaceOverlaySurface } from '@forge/shared';
+import type { OverlaySpec, ActiveOverlay } from '@forge/shared';
+import { Input } from '@forge/ui/input';
+import { Textarea } from '@forge/ui/textarea';
+import { Trash } from 'lucide-react';
+
+// In TaskEditor: add state and handlers
+const [activeOverlay, setActiveOverlay] = useState<ActiveOverlay | null>(null);
+
+const handleCreateTask = useCallback((title: string, description: string) => {
+  const newTask: Task = {
+    id: Date.now(),
+    title,
+    description,
+    completed: false,
+  };
+  setTasks((prev) => [...prev, newTask]);
+  setActiveTaskId(newTask.id);
+  setActiveOverlay(null);
+}, []);
+
+const handleUpdateTask = useCallback(
+  (id: number, updates: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+  },
+  []
+);
+
+const handleDeleteTask = useCallback((id: number) => {
+  setTasks((prev) => prev.filter((t) => t.id !== id));
+  if (activeTaskId === id) setActiveTaskId(tasks[0]?.id ?? null);
+}, [activeTaskId, tasks]);
+
+const overlays: OverlaySpec[] = [
+  {
+    id: 'create-task',
+    type: 'modal',
+    title: 'Create Task',
+    size: 'md',
+    render: ({ onDismiss }) => (
+      <CreateTaskForm onCreate={handleCreateTask} onClose={onDismiss} />
+    ),
+  },
+];
+
+// In JSX: wire New Task button and add WorkspaceOverlaySurface
+<WorkspaceToolbar.Button onClick={() => setActiveOverlay({ id: 'create-task' })}>
+  <Plus size={14} /> New Task
+</WorkspaceToolbar.Button>
+
+// At end of WorkspaceShell, before closing tag:
+<WorkspaceOverlaySurface
+  overlays={overlays}
+  activeOverlay={activeOverlay}
+  onDismiss={() => setActiveOverlay(null)}
+/>
+```
+
+**CreateTaskForm** (inline or separate file):
+
+```tsx
+import { Button } from '@forge/ui/button';
+
+function CreateTaskForm({
+  onCreate,
+  onClose,
+}: {
+  onCreate: (title: string, description: string) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (title.trim()) {
+      onCreate(title, description);
+      onClose();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-sm font-medium">Title</label>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Enter task title"
+          autoFocus
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium">Description</label>
+        <Textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Enter task description"
+          rows={4}
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="submit" disabled={!title.trim()}>Create</Button>
+      </div>
+    </form>
+  );
+}
+```
+
+**What you got:**
+
+- Create task modal
+- Edit task (inline in main panel)
+- Delete task (add Trash button next to each task in the list)
+- Real-time status updates
+
+## Step 4: Register in Studio (monorepo)
+
+To run inside Forge Studio, follow [how-to 05 - Building an editor](../how-to/05-building-an-editor): add `my-editor` to `EDITOR_IDS`, create metadata, register in `editor-bootstrap.ts`, and export `editorDescriptor` from your component.
+
+## Key takeaways
+
+1. **WorkspaceShell** — Root container with theme, density, domain
+2. **WorkspaceLayout** — Resizable panel layout (Left, Main, Right)
+3. **WorkspacePanel** — Individual panel wrapper
+4. **WorkspaceOverlaySurface** — Modal overlay system
+5. **WorkspaceToolbar** — Left/Center/Right slots, Button sub-component
+6. **WorkspaceStatusBar** — Bottom status strip
+
+## Next steps
+
+- [Adding panels](adding-panels) — Navigator, inspector, output panels
+- [How-to 05 - Building an editor](../how-to/05-building-an-editor) — Registry, descriptor, Studio integration
+- [How-to 07 - Assistant and AI](../how-to/07-assistant-and-ai) — Domain contract, AI tools
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/`, `packages/dev-kit/`, `apps/studio/components/editors/DialogueEditor.tsx`
+Related: how-to/05-building-an-editor, components/01-editor-shell, tutorials/adding-panels
+Do not: Use npm/yarn; use pnpm. Use @forge/shared or @forge/dev-kit for editor components.
+</Callout>
+

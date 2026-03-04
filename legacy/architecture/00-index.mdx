@@ -1,0 +1,28 @@
+---
+title: Architecture index
+created: 2026-02-06
+updated: 2026-02-07
+---
+
+# Architecture index
+
+Reference docs for app and editor architecture. Main docs index: [00-docs-index.mdx](../00-docs-index.mdx).
+
+**Start here for a map:** [README.md](README.md) — packages/apps overview, data flows, where state lives, API boundaries, and links to the docs below.
+
+| Doc | Summary |
+|-----|---------|
+| [00 - Tools, editors, and systems](00-tools-and-editors.mdx) | Unreal-aligned vocabulary: tools vs editors vs systems and how we map to code. |
+| [01 - Unified editor (App Shell)](01-unified-workspace.mdx) | App Shell owns editor tabs and active editor; only the active editor is rendered. |
+| [02 - Editor architecture](02-workspace-editor-architecture.mdx) | Mental model: WorkspaceShell, controller, editor bridge, chat orchestrator; slots and system contracts. |
+| [03 - CopilotKit and agents](03-copilotkit-and-agents.mdx) | CopilotKit integration, system actions, plan-execute-review-commit, model routing, roadmap pointer. |
+| [04 - Component library and registry](04-component-library-and-registry.mdx) | Shared UI packages, registries, where to add components. |
+| [05 - Editor platform (DockLayout)](05-editor-platform.mdx) | DockLayout and editor architecture; naming migration from WorkspaceShell to WorkspaceShell/DockLayout. |
+| [06 - Model routing and OpenRouter](06-model-routing-and-openrouter.mdx) | OpenAI SDK + baseURL for OpenRouter (CopilotKit-compatible), model list from API, static defaults, ModelSwitcher. Provider stack: OpenRouter (text/image), ElevenLabs (audio), Sora (video planned). |
+| [07 - Editors as MCP Apps](07-modes-as-mcp-apps.mdx) | Studio app-level MCP tools (publish, switch/open/close editor, project); editor registration with Studio; each editor as MCP App (tool + UI resource) for external host embedding. |
+| [08 - CopilotKit vs assistant-ui](08-copilotkit-vs-assistant-ui.mdx) | When to use CopilotKit (system copilot) vs assistant-ui (chat UI). Architecture, packages, API routes. |
+| [09 - Dialogue system and Yarn Spinner](09-dialogue-domain-and-yarn-spinner.mdx) | Dialogue Editor architecture, graph types, node types, AI workflow, Yarn Spinner integration roadmap. |
+| [10 - GamePlayer](10-gameplayer.mdx) | How we build the GamePlayer: playable runtime for Yarn Games, inputs (Dialogue/Character/Writer), phases and slices, order relative to Yarn and MVP. |
+| [11 - MCP vs CopilotKit and assistant-ui](11-mcp-copilotkit-assistant-ui.mdx) | Two control planes (in-browser vs external MCP), auth, possible solutions; caveats recorded for implementation. |
+| [12 - MCP hosts and chat-first](12-mcp-hosts-and-chat-first.mdx) | Host matrix (Cursor, Claude, VS Code, ChatGPT, Atlas, Perplexity), chat-first flows, discovery and setup. |
+| [AI architecture](../ai/00-index.mdx) | Assistant UI migration: domain contract, tools, agents, MCP. Architecture, runtime, migration phases. |

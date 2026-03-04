@@ -1,0 +1,528 @@
+---
+title: EditorDockPanel Complete Reference
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# EditorDockPanel Complete Reference
+
+Individual panel wrapper within `EditorDockLayout`. Provides title bars, scrolling, tabs, and lock overlays.
+
+## Overview
+
+`EditorDockPanel` wraps content within a `EditorDockLayout` slot. It handles:
+
+- **Title bars** with icons and actions (optional)
+- **ScrollArea integration** for scrollable content
+- **Tab rendering** via `PanelTabs` (multi-mode panels)
+- **Lock overlays** during AI operations
+- **Panel identity** via `panelId` for settings scoping
+
+Use `EditorDockPanel` as the direct child of `EditorDockLayout` slots, or nest it within `.Panel` descriptors.
+
+## Installation
+
+```bash
+yarn add @forge/shared
+```
+
+Import:
+
+```tsx
+import { EditorDockPanel } from '@forge/shared/components/editor';
+```
+
+## Basic Usage
+
+```tsx
+<EditorDockPanel panelId="inspector" title="Inspector" icon={<ScanSearch size={14} />}>
+  <PropertyEditor selection={selection} />
+</EditorDockPanel>
+```
+
+## Props API
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `panelId` | `string` | **Required** | Unique panel identifier. Sets `data-panel-id` for settings scoping and CSS targeting. |
+| `title` | `string` | - | Panel title in header bar. Optional; hide with `hideTitleBar`. |
+| `icon` | `React.ReactNode` | - | Icon rendered before title in header. |
+| `tabs` | `PanelTabDef[]` | - | Tab definitions. When provided, renders `PanelTabs` internally and ignores `children`. |
+| `defaultTabId` | `string` | - | Default tab when `tabs` is provided. |
+| `activeTabId` | `string` | - | Controlled active tab ID. |
+| `onTabChange` | `(id: string) => void` | - | Called when active tab changes. |
+| `headerActions` | `React.ReactNode` | - | Actions in header bar (gear icon, close button, etc.). |
+| `hideTitleBar` | `boolean` | `false` | When true, title bar is not rendered. Use when panel identity is shown elsewhere (e.g., dockview tab). |
+| `scrollable` | `boolean` | `true` | When true, wraps content in `ScrollArea`. Set false for viewports (React Flow, Canvas) that manage their own scroll. |
+| `locked` | `boolean` | `false` | When true, overlays panel with `LockedOverlay`. Useful during AI patch application. |
+| `lockedProps` | `Partial<LockedOverlayProps>` | - | Props passed to `LockedOverlay` when `locked=true`. |
+| `children` | `React.ReactNode` | - | Panel content. Used when `tabs` is not provided. |
+| `className` | `string` | - | Additional classes for root element. |
+
+## Title Bar Rendering
+
+### With Title Bar
+
+```tsx
+<EditorDockPanel
+  panelId="properties"
+  title="Properties"
+  icon={<Settings size={14} />}
+  headerActions={
+    <Button size="sm" variant="ghost" onClick={onReset}>
+      <RotateCcw size={12} />
+    </Button>
+  }
+>
+  {/* Content */}
+</EditorDockPanel>
+```
+
+### Without Title Bar (Common)
+
+When panel identity is shown in dockview tabs, hide the title bar:
+
+```tsx
+<EditorDockLayout>
+  <EditorDockLayout.Left>
+    <EditorDockLayout.Panel id="nav" title="Navigator" icon={<BookOpen size={14} />}>
+      <EditorDockPanel panelId="nav-content" hideTitleBar>
+        {/* Navigator content — title shown in dockview tab */}
+      </EditorDockPanel>
+    </EditorDockLayout.Panel>
+  </EditorDockLayout.Left>
+</EditorDockLayout>
+```
+
+## Scrollable vs Non-Scrollable
+
+### Scrollable Content (Default)
+
+For property editors, lists, forms:
+
+```tsx
+<EditorDockPanel panelId="inspector" title="Inspector" scrollable>
+  <div className="space-y-4">
+    <PropertyGroup title="Transform">
+      <Input label="X" value={x} onChange={setX} />
+      <Input label="Y" value={y} onChange={setY} />
+    </PropertyGroup>
+    <PropertyGroup title="Appearance">
+      <ColorPicker label="Fill" value={fill} onChange={setFill} />
+    </PropertyGroup>
+  </div>
+</EditorDockPanel>
+```
+
+**Wrapped in `ScrollArea`** with padding applied automatically.
+
+### Non-Scrollable Viewports
+
+For React Flow, Canvas, CodeMirror:
+
+```tsx
+<EditorDockPanel panelId="viewport" title="Viewport" scrollable={false}>
+  <ReactFlow
+    nodes={nodes}
+    edges={edges}
+    onNodesChange={onNodesChange}
+    onEdgesChange={onEdgesChange}
+  >
+    <Background />
+    <Controls />
+  </ReactFlow>
+</EditorDockPanel>
+```
+
+**No ScrollArea** — content manages its own overflow.
+
+## Tab Mode
+
+When `tabs` is provided, renders `PanelTabs`:
+
+```tsx
+<EditorDockPanel
+  panelId="sidebar"
+  tabs={[
+    {
+      id: 'files',
+      label: 'Files',
+      icon: <FileText size={12} />},
+      content: <FileTree files={files} />,
+    },
+    {
+      id: 'search',
+      label: 'Search',
+      icon: <Search size={12} />,
+      content: <SearchPanel query={query} />,
+    },
+    {
+      id: 'git',
+      label: 'Git',
+      icon: <GitBranch size={12} />,
+      content: <GitPanel repo={repo} />,
+    },
+  ]}
+  defaultTabId="files"
+/>
+```
+
+Title bar is hidden when tabs are used. Tab bar replaces header.
+
+## Lock Overlay
+
+Lock panel during AI operations:
+
+```tsx
+const [isApplying, setIsApplying] = useState(false);
+
+<EditorDockPanel
+  panelId="main"
+  title="Main"
+  scrollable={false}
+  locked={isApplying}
+  lockedProps={{
+    title: "AI Editing",
+    description: "Applying plan to graph...",
+  }}
+>
+  <GraphEditor graph={graph} />
+</EditorDockPanel>
+```
+
+`LockedOverlay` prevents interaction and shows spinner + message.
+
+## Real-World Example: CharacterEditor Navigator
+
+From `apps/studio/components/editors/CharacterEditor.tsx`:
+
+```tsx
+<EditorDockPanel panelId="character-navigator" title="Characters" scrollable={false} hideTitleBar>
+  <CharacterSidebar
+    characters={characters}
+    relationships={relationships}
+    activeCharacterId={activeCharacterId}
+    onSelectCharacter={(id) => {
+      setActiveCharacter(id);
+      setSelectedCharId(id);
+      setSelectedRelId(null);
+      clearHighlights();
+    }}
+    onSelectRelationship={(id) => {
+      setSelectedRelId(id);
+      setSelectedCharId(null);
+    }}
+    onDeleteRelationship={handleDeleteRelationship}
+    onCreateCharacter={() => openOverlay('create-character')}
+  />
+</EditorDockPanel>
+```
+
+- `scrollable={false}` — `CharacterSidebar` manages its own scroll
+- `hideTitleBar` — Title shown in dockview tab
+- `panelId` sets `data-panel-id="character-navigator"` for styling
+
+## Real-World Example: DialogueEditor Inspector
+
+From `apps/studio/components/editors/DialogueEditor.tsx`:
+
+```tsx
+<EditorDockPanel panelId="dialogue-right" hideTitleBar className="h-full">
+  <WorkspaceInspector selection={activeSelection} sections={inspectorSections} />
+</EditorDockPanel>
+```
+
+- `hideTitleBar` — Title shown in dockview tab
+- `WorkspaceInspector` handles scroll internally
+
+## Real-World Example: DialogueEditor Main (Locked)
+
+From `apps/studio/components/editors/DialogueEditor.tsx`:
+
+```tsx
+const isEditorLocked = editorLock.locked || globalLocked === true;
+
+<EditorDockPanel
+  panelId="dialogue-main"
+  title="Dialogue Graphs"
+  hideTitleBar
+  scrollable={false}
+  locked={isEditorLocked}
+  lockedProps={{
+    description: editorLock.reason ?? (globalLocked ? 'Editor locked in settings.' : undefined),
+  }}
+>
+  {mainContent}
+</EditorDockPanel>
+```
+
+Uses `usePanelLock()` hook to manage lock state during AI operations.
+
+## TypeScript Interface
+
+```tsx
+export interface DockPanelProps {
+  panelId: string;
+  title?: string;
+  icon?: React.ReactNode;
+  tabs?: PanelTabDef[];
+  defaultTabId?: string;
+  activeTabId?: string;
+  onTabChange?: (id: string) => void;
+  headerActions?: React.ReactNode;
+  hideTitleBar?: boolean;
+  scrollable?: boolean;
+  locked?: boolean;
+  lockedProps?: Partial<LockedOverlayProps>;
+  children?: React.ReactNode;
+  className?: string;
+}
+
+export interface PanelTabDef {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  content: React.ReactNode;
+  accentColor?: string;
+  closable?: boolean;
+}
+```
+
+## Data Attributes
+
+Sets `data-panel-id` for CSS targeting:
+
+```html
+<div data-panel-id="inspector">
+  ...
+</div>
+```
+
+Target with CSS:
+
+```css
+[data-panel-id="inspector"] {
+  background: var(--background-muted);
+}
+
+[data-panel-id="inspector"] .property-group {
+  border-color: var(--border-subtle);
+}
+```
+
+## Common Patterns
+
+### Pattern: Property Inspector with Sections
+
+```tsx
+<EditorDockPanel panelId="inspector" title="Inspector" icon={<ScanSearch />} scrollable>
+  {selection ? (
+    <div className="space-y-4">
+      <PropertySection title="Transform">
+        <Input label="X" value={node.x} onChange={handleXChange} />
+        <Input label="Y" value={node.y} onChange={handleYChange} />
+      </PropertySection>
+      <PropertySection title="Style">
+        <ColorPicker label="Fill" value={node.fill} onChange={handleFillChange} />
+        <Select label="Stroke" value={node.stroke} onChange={handleStrokeChange} />
+      </PropertySection>
+    </div>
+  ) : (
+    <div className="flex items-center justify-center h-full text-muted-foreground">
+      No selection
+    </div>
+  )}
+</EditorDockPanel>
+```
+
+### Pattern: File Navigator with Search
+
+```tsx
+<EditorDockPanel
+  panelId="files"
+  title="Files"
+  icon={<FileText />}
+  headerActions={
+    <Button size="sm" variant="ghost" onClick={onRefresh}>
+      <RefreshCw size={12} />
+    </Button>
+  }
+  scrollable
+>
+  <div className="space-y-2">
+    <Input
+      placeholder="Search files..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+    />
+    <FileTree files={filteredFiles} onSelect={handleSelect} />
+  </div>
+</EditorDockPanel>
+```
+
+### Pattern: Multi-Tab Sidebar
+
+```tsx
+<EditorDockPanel
+  panelId="sidebar"
+  tabs={[
+    {
+      id: 'graphs',
+      label: 'Graphs',
+      icon: <BookOpen size={12} />,
+      content: <GraphList graphs={graphs} onSelect={handleSelectGraph} />,
+      accentColor: 'hsl(210 80% 60%)',
+    },
+    {
+      id: 'nodes',
+      label: 'Nodes',
+      icon: <Boxes size={12} />,
+      content: <NodePalette items={nodeTypes} />,
+      accentColor: 'hsl(30 80% 60%)',
+    },
+    {
+      id: 'assets',
+      label: 'Assets',
+      icon: <Image size={12} />,
+      content: <AssetLibrary assets={assets} />,
+      accentColor: 'hsl(280 80% 60%)',
+    },
+  ]}
+  defaultTabId="graphs"
+/>
+```
+
+### Pattern: Viewport with Controls
+
+```tsx
+<EditorDockPanel
+  panelId="viewport"
+  title="Viewport"
+  headerActions={
+    <>
+      <Button size="sm" variant="ghost" onClick={onZoomIn}>
+        <ZoomIn size={12} />
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onZoomOut}>
+        <ZoomOut size={12} />
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onFitView}>
+        <Maximize size={12} />
+      </Button>
+    </>
+  }
+  scrollable={false}
+>
+  <Canvas nodes={nodes} edges={edges} />
+</EditorDockPanel>
+```
+
+### Pattern: Locked During Operation
+
+```tsx
+const [isProcessing, setIsProcessing] = useState(false);
+
+const handleApplyChanges = async () => {
+  setIsProcessing(true);
+  try {
+    await applyPatch(patch);
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+<EditorDockPanel
+  panelId="editor"
+  title="Editor"
+  scrollable={false}
+  locked={isProcessing}
+  lockedProps={{
+    title: "Processing",
+    description: "Applying changes to document...",
+  }}
+>
+  <CodeEditor code={code} onChange={setCode} />
+</EditorDockPanel>
+```
+
+## Styling
+
+### Title Bar Styles
+
+Title bar uses CSS variables:
+
+```css
+[data-panel-id="inspector"] .panel-header {
+  min-height: var(--tab-height);
+  padding: 0 var(--panel-padding);
+  border-bottom: 2px solid var(--context-accent);
+  background: var(--card);
+}
+```
+
+### Scroll Area Styles
+
+Scrollable content auto-applies padding:
+
+```tsx
+<EditorDockPanel panelId="props" scrollable>
+  {/* Content gets wrapped in: */}
+  {/* <ScrollArea> */}
+  {/*   <div className="p-[var(--panel-padding)]"> */}
+  {/*     {children} */}
+  {/*   </div> */}
+  {/* </ScrollArea> */}
+</EditorDockPanel>
+```
+
+Override padding:
+
+```tsx
+<EditorDockPanel panelId="props" scrollable className="[&_.scroll-area>div]:p-0">
+  {/* No padding — full control */}
+</EditorDockPanel>
+```
+
+## Performance
+
+1. **Memoize content** — Panels re-render on dockview layout changes
+2. **Use `React.memo` for expensive content** (lists, trees, etc.)
+3. **Virtualize long lists** — Use `react-virtualized` or `@tanstack/react-virtual`
+4. **Defer tab content** — Use `lazy` loading for inactive tabs
+
+```tsx
+const ExpensivePanel = React.memo(function ExpensivePanel({ data }: { data: Data }) {
+  // Heavy rendering logic
+  return <div>{/* ... */}</div>;
+});
+
+<EditorDockPanel panelId="expensive" title="Expensive" scrollable>
+  <ExpensivePanel data={data} />
+</EditorDockPanel>
+```
+
+## Accessibility
+
+- Title bar has semantic heading structure
+- `panelId` used in `aria-labelledby` when title present
+- ScrollArea has keyboard navigation
+- Lock overlay has `aria-live="polite"` for screen readers
+
+## Related Components
+
+- [EditorDockLayout](./dock-layout-complete.mdx) — Parent layout system
+- [PanelTabs](./panel-tabs.mdx) — Tab system for multi-mode panels
+- [WorkspaceInspector](./editor-inspector.mdx) — Selection-driven inspector
+
+## Source Code
+
+Location: `packages/shared/src/shared/components/editor/DockPanel.tsx`
+
+## Best Practices
+
+1. **Always set `panelId`** — Required for CSS targeting and settings
+2. **Hide title bar in dockview layouts** — Avoid duplicate titles
+3. **Use `scrollable={false}` for viewports** — Canvas/Flow manage scroll
+4. **Lock during async operations** — Prevents race conditions
+5. **Memoize expensive content** — Reduce re-render cost
+6. **Use tabs for multi-mode panels** — Better than custom switchers

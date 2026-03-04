@@ -1,0 +1,44 @@
+---
+title: 01 - Foundation
+---
+
+# 01 - Foundation
+
+Repo structure, packages, and key concepts. Run the app and navigate the codebase.
+
+## Repo structure
+
+| Path | Purpose |
+|------|---------|
+| `apps/studio/` | Next.js app: App Shell, Studio, editors, Payload, API routes |
+| `packages/shared/` | Editor UI kit: WorkspaceShell, DockLayout, WorkspaceToolbar, overlays, Assistant UI |
+| `packages/domain-forge/` | Dialogue domain: types, operations, assistant contract |
+| `packages/domain-character/` | Character domain: assistant contract |
+| `packages/ui/` | shadcn UI atoms |
+| `packages/types/` | Payload-generated types |
+| `docs/` | Documentation |
+
+## Key concepts
+
+- **Studio** — Root component; owns registries (editor, menu, panel, settings). Host renders `AppProviders > AppShell > Studio`.
+- **Editor registry** — Editors register via `registerDefaultEditors()` in `apps/studio/lib/editor-registry/editor-bootstrap.ts`. Tabs and content come from registry.
+- **Editor** — Uses `WorkspaceShell`, `WorkspaceToolbar`, `WorkspaceLayout`, `WorkspaceStatusBar`, `WorkspaceOverlaySurface`.
+- **Domain package** — Logic and assistant contract per editor (e.g. `packages/domain-forge`).
+
+## Running the app
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Env setup: `pnpm env:portal` or `pnpm env:setup`. After Payload collection changes: `pnpm payload:types`.
+
+**Next:** [02 - Editor shell and slots](02-editor-shell)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/components/Studio.tsx`, `apps/studio/lib/editor-registry/editor-bootstrap.ts`, `apps/studio/lib/app-shell/store.ts`, `package.json`
+Related: onboarding/06-next-steps, how-to/05-building-an-editor
+Do not: Add manual editor branches in AppShell; use registry. Use pnpm not yarn
+</Callout>
+

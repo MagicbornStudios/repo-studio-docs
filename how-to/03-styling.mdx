@@ -1,0 +1,46 @@
+---
+title: 03 - Styling and theming
+---
+
+# 03 - Styling and theming
+
+Design tokens, editor themes, and where UI atoms live.
+
+## Design tokens
+
+Semantic tokens in `packages/shared/src/shared/styles/themes.css`:
+`--background`, `--foreground`, `--border`, `--muted`, etc. Prefer these over raw colors.
+
+| Token | Use |
+|-------|-----|
+| `--background`, `--foreground` | Body, main canvas |
+| `--card`, `--card-foreground` | Cards, panels |
+| `--border`, `--input` | Borders, inputs |
+| `--muted`, `--muted-foreground` | Secondary text |
+
+## Theme
+
+- **App theme** — `ui.theme` (settings) + `AppThemeProvider`; sets `<html data-theme="...">`. File: `apps/studio/components/providers/AppThemeProvider.tsx`
+- **Editor override** — `WorkspaceShell` accepts `theme`; sets `data-theme` on editor root
+- **Values** — `dark` | `light` (Spotify-inspired palettes)
+
+<ShowcaseLink href="components/showcase/atoms#theme-density" label="View theme & density in Catalog" />
+
+## Density
+
+- **Default** — `compact`. Override via `ui.density` (app settings) or `data-density` on `WorkspaceShell`.
+- **Tokens** — `--control-height`, `--panel-padding`, `--tab-height` (see [Design: styling](design/01-styling-and-theming.mdx)).
+
+## UI atoms
+
+From `packages/ui`: `@forge/ui/button`, `@forge/ui/card`, `@forge/ui/dialog`, etc. Add via `npx shadcn@latest add <name>` in the UI package.
+
+**Catalog:** [Components Showcase → Atoms](components/showcase/atoms.mdx)
+
+**Next:** [04 - Data and state](04-data-and-state)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/styles/themes.css`, `apps/studio/app/globals.css`, `packages/ui/`
+Related: design/01-styling-and-theming, styling-and-ui-consistency
+Do not: Add `* { padding: 0 }` or `* { margin: 0 }`; strips default padding from buttons/labels
+</Callout>

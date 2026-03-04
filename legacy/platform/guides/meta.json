@@ -1,0 +1,9 @@
+{
+  "title": "Guides",
+  "pages": [
+    "architecture",
+    "patterns",
+    "performance",
+    "theming-system"
+  ]
+}

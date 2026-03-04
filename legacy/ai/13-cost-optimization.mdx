@@ -1,0 +1,653 @@
+---
+title: Cost Optimization Strategies
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Cost Optimization Strategies
+
+Practical techniques for reducing AI costs while maintaining quality.
+
+## Cost Structure
+
+### Current Baseline (Naive Approach)
+
+**Assumptions:**
+- Single model for all operations: `anthropic/claude-3.5-sonnet`
+- 1000 operations/day
+- Average 500 tokens input, 200 tokens output per operation
+
+**Monthly cost:**
+```
+Input:  1000 ops/day × 30 days × 500 tokens × $3/M = $45
+Output: 1000 ops/day × 30 days × 200 tokens × $15/M = $90
+Total: $135/month
+```
+
+### Optimized Approach
+
+**Strategy:** Multi-model routing + caching + batching
+
+**Monthly cost:**
+```
+Trivial ops (70%): $0.15/M → $3.15
+Creative ops (20%): $3/M (cached) → $9.00
+Complex ops (10%): $0.55/M → $1.65
+Total: $13.80/month
+```
+
+**Savings: 90% reduction ($135 → $13.80)**
+
+---
+
+## Technique 1: Multi-Model Routing
+
+### Implementation
+
+```typescript
+const MODEL_ROUTING = {
+  trivial: 'openai/gpt-4o-mini',           // $0.15/M
+  simple: 'openai/gpt-4o-mini',            // $0.15/M
+  complex: 'deepseek/deepseek-reasoner',   // $0.55/M
+  creative: 'anthropic/claude-3.5-sonnet', // $3/M
+};
+
+function selectModel(toolComplexity: OperationComplexity): string {
+  return MODEL_ROUTING[toolComplexity];
+}
+```
+
+### Cost Breakdown
+
+| Complexity | % of Ops | Model | Cost/M | Monthly |
+|------------|----------|-------|--------|---------|
+| Trivial | 50% | gpt-4o-mini | $0.15 | $2.25 |
+| Simple | 20% | gpt-4o-mini | $0.15 | $0.90 |
+| Complex | 10% | deepseek-reasoner | $0.55 | $1.65 |
+| Creative | 20% | claude-3.5-sonnet | $3.00 | $18.00 |
+| **Total** | **100%** | | | **$22.80** |
+
+**vs naive ($135): 83% savings**
+
+---
+
+## Technique 2: Prompt Caching (Anthropic)
+
+### When to Use
+
+Caching works when you have:
+- **Repeated system prompts** (character creation)
+- **Shared context** (project world description)
+- **Similar operations** (batch creating characters)
+
+### Example: Character Batch Creation
+
+**Without caching:**
+```typescript
+// Create 10 characters, each with full world context
+for (const char of characters) {
+  await createCharacter({
+    systemPrompt: projectWorldContext,  // 2000 tokens, repeated 10x
+    character: char,
+  });
+}
+
+// Cost: 10 × 2000 input tokens = 20,000 tokens
+// At $3/M: $0.06
+```
+
+**With caching:**
+```typescript
+// First call: Full cost
+await createCharacter({
+  systemPrompt: {
+    text: projectWorldContext,
+    cache_control: { type: 'ephemeral' },  // Cache this
+  },
+  character: characters[0],
+});
+
+// Next 9 calls: Cache hit (90% discount on cached portion)
+for (const char of characters.slice(1)) {
+  await createCharacter({
+    systemPrompt: { /* cached */ },
+    character: char,
+  });
+}
+
+// Cost: 2000 + (9 × 200) = 3,800 tokens
+// At $3/M: $0.011
+```
+
+**Savings: 81% ($0.06 → $0.011)**
+
+### Implementation
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+
+async function createWithCaching(messages, systemPrompt) {
+  return await anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 1024,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages,
+  });
+}
+```
+
+### Cache Duration
+
+- **Anthropic:** 5 minutes
+- **OpenAI:** Not supported
+- **Strategy:** Batch operations within 5-minute window
+
+---
+
+## Technique 3: Batched Operations
+
+### Problem
+
+Creating N items individually = N API calls = N × overhead
+
+### Solution
+
+```typescript
+// Bad: N calls
+async function createCharacters(chars: Character[]) {
+  const results = [];
+  for (const char of chars) {
+    results.push(await character_create({ name: char.name }));
+  }
+  return results;
+}
+
+// Good: 1 call
+async function createCharactersBatch(chars: Character[]) {
+  return await character_createBatch({
+    characters: chars.map(c => ({ name: c.name, ... })),
+    sharedContext: projectWorldContext,  // Shared, cached
+  });
+}
+```
+
+### Tool Design
+
+```typescript
+{
+  name: 'character_createBatch',
+  description: 'Create multiple characters at once with shared context',
+  parameters: {
+    type: 'object',
+    properties: {
+      characters: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            personality: { type: 'string' },
+            // ...
+          },
+        },
+      },
+      sharedContext: { type: 'string' },
+    },
+  },
+  execute: async (args) => {
+    // Single API call, prompt caching on sharedContext
+    return await generateBatch(args.characters, args.sharedContext);
+  },
+}
+```
+
+### Savings Example
+
+**5 characters:**
+- Individual: 5 × $0.01 = $0.05
+- Batch (cached): $0.01
+- **Savings: 80%**
+
+---
+
+## Technique 4: Streaming vs Blocking
+
+### Cost Consideration
+
+Streaming doesn't reduce cost, but improves perceived performance.
+
+**However:** Streaming can reduce wasted tokens on early stop.
+
+```typescript
+// User clicks "Stop" after 50 tokens
+// Streaming: Pay for 50 tokens
+// Blocking: Pay for full response (200 tokens)
+```
+
+### When to Stream
+
+| Operation | Stream? | Why |
+|-----------|---------|-----|
+| `forge_createNode` | ❌ | Instant JSON response |
+| `forge_generateDialogue` | ✅ | User sees progress |
+| `character_create` | ❌ | Structured data |
+| `character_generateBackground` | ✅ | Long prose |
+| `forge_createPlan` | ✅ | Multi-step, progressive |
+
+### Adaptive Streaming
+
+```typescript
+{
+  name: 'forge_generateDialogue',
+  streamingThreshold: 50,  // Stream if > 50 tokens expected
+
+  execute: async (args, context) => {
+    const estimatedLength = estimateResponseLength(args);
+
+    if (estimatedLength > 50) {
+      return await streamResponse(args);
+    } else {
+      return await blockingResponse(args);
+    }
+  },
+}
+```
+
+---
+
+## Technique 5: Smart Fallbacks
+
+### Tiered Fallback
+
+```typescript
+const FALLBACK_CHAIN = {
+  'anthropic/claude-3.5-sonnet': [
+    'openai/gpt-4o',             // Similar quality, different provider
+    'deepseek/deepseek-chat',     // Lower cost, decent quality
+  ],
+  'openai/gpt-4o': [
+    'openai/gpt-4o-mini',         // Same provider, cheaper
+    'google/gemini-2.0-flash',    // Fast, cheap
+  ],
+  'openai/gpt-4o-mini': [
+    'qwen/qwq-32b-preview',       // Free tier
+  ],
+};
+
+async function executeWithFallback(modelId: string, params) {
+  try {
+    return await callModel(modelId, params);
+  } catch (error) {
+    if (error.status === 429 || error.status === 503) {
+      const fallbacks = FALLBACK_CHAIN[modelId] || [];
+      for (const fallback of fallbacks) {
+        try {
+          return await callModel(fallback, params);
+        } catch {
+          continue;
+        }
+      }
+    }
+    throw error;
+  }
+}
+```
+
+### Cost Impact
+
+If primary model is rate-limited, fallback to cheaper model:
+- Primary: $3/M (unavailable)
+- Fallback: $0.55/M (available)
+- **Result:** Operation succeeds, 82% cost reduction
+
+---
+
+## Technique 6: Context Compression
+
+### Problem
+
+Large context = high cost
+
+**Example:**
+- Full graph: 8000 tokens
+- Graph summary: 800 tokens
+- **Savings: 90%**
+
+### Compression Strategies
+
+#### 1. Summarization
+
+```typescript
+function compressGraph(graph: ForgeGraphDoc): GraphSummary {
+  return {
+    nodeCount: graph.flow.nodes.length,
+    edgeCount: graph.flow.edges.length,
+    nodeTypes: countBy(graph.flow.nodes, 'type'),
+    // Instead of full node content, just IDs and types
+    nodeIds: graph.flow.nodes.map(n => ({ id: n.id, type: n.type })),
+  };
+}
+```
+
+**When to use:**
+- Tool needs graph structure, not content
+- Example: `forge_createEdge` (just needs node IDs)
+
+#### 2. Progressive Detail
+
+```typescript
+function buildContext(detail: 'minimal' | 'standard' | 'full') {
+  switch (detail) {
+    case 'minimal':
+      return { nodeCount, edgeCount };
+    case 'standard':
+      return { nodeCount, edgeCount, nodeIds, edgeIds };
+    case 'full':
+      return { ...graph };  // Full graph
+  }
+}
+
+// Use minimal for trivial ops, full for creative
+const detail = toolComplexity === 'trivial' ? 'minimal' : 'full';
+const context = buildContext(detail);
+```
+
+#### 3. Lazy Loading
+
+```typescript
+// Don't include full graph in every request
+// Instead, provide a "get more context" tool
+
+{
+  name: 'forge_getFullGraph',
+  description: 'Get complete graph data (use sparingly, high token cost)',
+  execute: async () => {
+    return await getFullGraph();  // Expensive
+  },
+}
+
+// AI calls this only when needed
+```
+
+---
+
+## Technique 7: Request Deduplication
+
+### Problem
+
+User rapidly clicks "Create node" 3 times → 3 identical requests
+
+### Solution
+
+```typescript
+const requestCache = new Map<string, Promise>();
+
+async function executeTool(tool, args) {
+  const key = hashRequest(tool.name, args);
+
+  // Check cache
+  if (requestCache.has(key)) {
+    return await requestCache.get(key);
+  }
+
+  // Execute and cache
+  const promise = actualExecute(tool, args);
+  requestCache.set(key, promise);
+
+  // Clear after 1 second
+  setTimeout(() => requestCache.delete(key), 1000);
+
+  return await promise;
+}
+```
+
+**Savings:** 3 identical requests → 1 request = 67% reduction
+
+---
+
+## Technique 8: Prefetching & Caching
+
+### Client-Side Caching
+
+```typescript
+// Cache tool results for 5 minutes
+const resultCache = new Map<string, { result: any, timestamp: number }>();
+
+async function executeTool(tool, args) {
+  const key = hashRequest(tool.name, args);
+  const cached = resultCache.get(key);
+
+  if (cached && Date.now() - cached.timestamp < 300000) {  // 5 min
+    return cached.result;
+  }
+
+  const result = await actualExecute(tool, args);
+  resultCache.set(key, { result, timestamp: Date.now() });
+
+  return result;
+}
+```
+
+**Use case:** User asks "What's in this graph?" twice → Second time is free
+
+### Semantic Caching (Advanced)
+
+```typescript
+// Cache by semantic similarity, not exact match
+import { embed } from '@huggingface/inference';
+
+const semanticCache = new Map<string, { embedding: number[], result: any }>();
+
+async function executeWithSemanticCache(tool, args) {
+  const query = JSON.stringify(args);
+  const queryEmbedding = await embed(query);
+
+  // Find similar cached results
+  for (const [key, cached] of semanticCache.entries()) {
+    const similarity = cosineSimilarity(queryEmbedding, cached.embedding);
+
+    if (similarity > 0.95) {  // 95% similar
+      return cached.result;  // Cache hit
+    }
+  }
+
+  // Cache miss, execute
+  const result = await actualExecute(tool, args);
+  semanticCache.set(query, { embedding: queryEmbedding, result });
+
+  return result;
+}
+```
+
+**Example:**
+- Query 1: "Create a merchant character named Bob"
+- Query 2: "Make a merchant NPC called Robert"
+- **Result:** Cache hit (semantically similar)
+
+---
+
+## Technique 9: Output Length Control
+
+### Problem
+
+Model generates 1000 tokens when 200 would suffice
+
+### Solution
+
+```typescript
+{
+  name: 'forge_generateDialogue',
+  parameters: {
+    maxLength: {
+      type: 'number',
+      description: 'Maximum response length in words',
+      default: 100,
+    },
+  },
+  execute: async (args) => {
+    return await generateText({
+      ...args,
+      max_tokens: args.maxLength * 1.5,  // ~1.5 tokens per word
+      instructions: `Keep response under ${args.maxLength} words.`,
+    });
+  },
+}
+```
+
+**Savings:** 1000 tokens → 200 tokens = 80% reduction on output cost
+
+---
+
+## Technique 10: Model-Specific Optimization
+
+### Anthropic: Prompt Caching
+
+Already covered. **Savings: 50-90%**
+
+### OpenAI: Fine-Tuning (Future)
+
+Train a custom model on your dialogue style:
+
+```typescript
+// Fine-tune gpt-4o-mini on your project's dialogue
+const fineTunedModel = await openai.fineTuning.create({
+  training_file: 'dialogue_examples.jsonl',
+  model: 'gpt-4o-mini',
+});
+
+// Use for dialogue generation
+// Cost: $0.30/M vs $3/M for Sonnet
+// Quality: Matches your style better
+```
+
+**Savings: 90% + better quality**
+
+### DeepSeek: Reasoning Optimization
+
+Use DeepSeek Reasoner for planning, not execution:
+
+```typescript
+// Plan with DeepSeek ($0.55/M)
+const plan = await deepseek.createPlan(goal);
+
+// Execute with Mini ($0.15/M)
+for (const step of plan.steps) {
+  await gptMini.execute(step);
+}
+```
+
+**vs using Sonnet for both:**
+- Sonnet: $3/M × 2 = $6/M
+- Optimized: $0.55 + $0.15 = $0.70/M
+- **Savings: 88%**
+
+---
+
+## Measurement & Tracking
+
+### Cost Dashboard
+
+Track these metrics:
+
+```typescript
+interface CostMetrics {
+  daily: {
+    totalCost: number;
+    costByDomain: Record<string, number>;
+    costByModel: Record<string, number>;
+    costByComplexity: Record<OperationComplexity, number>;
+  };
+  monthly: {
+    budget: number;
+    spent: number;
+    remaining: number;
+    projectedOverage: number;
+  };
+  efficiency: {
+    cacheHitRate: number;
+    avgCostPerOperation: number;
+    savingsVsNaive: number;  // Percentage
+  };
+}
+```
+
+### Alerts
+
+Set up cost alerts:
+
+```typescript
+const COST_ALERTS = {
+  daily: 10,      // Alert if daily cost > $10
+  monthly: 250,   // Alert if monthly cost > $250
+  perOp: 0.05,    // Alert if single operation > $0.05
+};
+
+async function checkAlerts(cost: number, type: 'daily' | 'monthly' | 'perOp') {
+  if (cost > COST_ALERTS[type]) {
+    await sendAlert({
+      type: 'cost_threshold_exceeded',
+      threshold: COST_ALERTS[type],
+      actual: cost,
+    });
+  }
+}
+```
+
+---
+
+## ROI Calculation
+
+### Cost vs Value
+
+**Q: When is it worth spending more?**
+
+**A: When user value > cost**
+
+**Example: Creative dialogue generation**
+
+| Model | Cost/op | Quality | User Satisfaction | Value |
+|-------|---------|---------|-------------------|-------|
+| gpt-4o-mini | $0.0001 | 6/10 | 60% | Low |
+| claude-3.5-sonnet | $0.01 | 9/10 | 90% | **High** |
+
+**Conclusion:** For creative tasks, premium model is worth 100x cost
+
+**Counter-example: Node creation**
+
+| Model | Cost/op | Quality | User Satisfaction | Value |
+|-------|---------|---------|-------------------|-------|
+| gpt-4o-mini | $0.0001 | 10/10 | 100% | **High** |
+| claude-3.5-sonnet | $0.01 | 10/10 | 100% | Same |
+
+**Conclusion:** Mini is sufficient, Sonnet is wasted
+
+---
+
+## Summary: Expected Savings
+
+| Technique | Savings | Effort | Priority |
+|-----------|---------|--------|----------|
+| Multi-model routing | 70-90% | Medium | 🔥 High |
+| Prompt caching | 50-90% | Low | 🔥 High |
+| Batched operations | 70-80% | Medium | High |
+| Context compression | 60-90% | Low | High |
+| Smart fallbacks | 20-50% | Low | Medium |
+| Request deduplication | 30-60% | Low | Medium |
+| Streaming optimization | 10-30% | Low | Low |
+| Output length control | 20-50% | Low | Low |
+
+**Combined potential: 90%+ total cost reduction**
+
+---
+
+## References
+
+- [Model Strategy](./10-model-strategy.mdx)
+- [AI Roadmap](./11-ai-roadmap.mdx)
+- [Technical Considerations](./12-technical-considerations.mdx)

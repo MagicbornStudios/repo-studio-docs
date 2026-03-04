@@ -1,0 +1,65 @@
+---
+title: MCP hosts and chat-first integration
+created: 2026-02-09
+updated: 2026-02-09
+---
+
+# MCP hosts and chat-first integration
+
+Studio and editors will be **controlled completely by chats** across Cursor, Claude, ChatGPT, Atlas, Perplexity, and in-browser assistants. This doc provides a **host matrix**, **chat-first flows** with codebase references, and **discovery and setup**. See [07 - Editors as MCP Apps](07-modes-as-mcp-apps.mdx) and [11 - MCP vs CopilotKit and assistant-ui](11-mcp-copilotkit-assistant-ui.mdx).
+
+---
+
+## Host matrix
+
+| Host | Support / plan | Setup notes |
+|------|----------------|-------------|
+| **Cursor** | MCP-supported. Developer in Unreal (or any IDE) can author content via Cursor chat; agent uses Studio MCP tools. | Add Studio MCP server to Cursor MCP config. Auth: token or local Studio bridge. Future: "Quick start for Cursor" guide. |
+| **Claude Desktop** | MCP-supported. Same tool surface; user asks Claude to publish, open editor, etc. | Add Studio MCP server to Claude Desktop config (see [vendor/twick MCP agent](../../vendor/twick/packages/agents/mcp-agent/) for distribution pattern: install script, config merge). Future: "Quick start for Claude" guide. |
+| **VS Code** | MCP via extension. Same tool surface as Cursor. | MCP extension + Studio server config; auth as above. |
+| **ChatGPT** | Future. If/when ChatGPT supports MCP or custom tools; document as target. | TBD. |
+| **Atlas, Perplexity** | Documented as targets. How they discover and call MCP (or a bridge) and auth. | Host-specific constraints TBD. |
+| **In-browser assistants** | Target. Browser extension or embedded chat that talks to Studio MCP (or same backend). | May use same session as Studio UI; auth shared. |
+
+---
+
+## Chat-first flows (in context of codebase)
+
+### Author dialogue in Cursor
+
+**Flow:** User asks Cursor agent to add a node to the Forge graph. Agent calls an MCP tool (e.g. `forge_createNode` or equivalent). Tool executes domain logic.
+
+**Codebase:** Domain logic for Forge graph edits lives in [packages/domain-forge](../../packages/domain-forge) (e.g. copilot actions). Future MCP tool will call into the same layer. See [07 - Editors as MCP Apps](07-modes-as-mcp-apps.mdx) (editor registration).
+
+### Publish from Claude
+
+**Flow:** User asks Claude to publish the current project. Agent calls `studio_publish`. Server creates a listing from the current project.
+
+**Codebase:** Listing creation: [CreateListingSheet](../../apps/studio/components/listings/CreateListingSheet.tsx), [useCreateListing](../../apps/studio/lib/data/hooks/use-listings.ts). Project context and listing creation must be available to MCP server (project ID, auth). See [11 - MCP vs CopilotKit and assistant-ui](11-mcp-copilotkit-assistant-ui.mdx) (auth, project resolution).
+
+### Open Strategy editor in VS Code
+
+**Flow:** User asks agent to open the Strategy editor. Agent calls `studio_openEditor` with `editorId: 'strategy'`.
+
+**Codebase:** App shell state and editor list: [app-shell store](../../apps/studio/lib/app-shell/store.ts), [AppShell](../../apps/studio/components/AppShell.tsx) (openEditor, switchEditor, closeEditor). In headless mode, "open" may mean ensuring the editor's tools are available or returning state for a host that can show UI.
+
+---
+
+## Discovery and setup
+
+**How to add the Forge/Studio MCP server:**
+
+- **Cursor:** Add server entry to Cursor MCP configuration (e.g. in project or user settings). Provide server command or URL and any env vars (e.g. `STUDIO_API_TOKEN`, `STUDIO_URL`). Link to future "Quick start for Cursor" when it exists.
+- **Claude Desktop:** Add server to `claude_desktop_config.json` (or use an install script that merges config, as in [vendor/twick/packages/agents/mcp-agent/](../../vendor/twick/packages/agents/mcp-agent/) — see README and SHIPPING.md for distribution pattern). Link to future "Quick start for Claude" when it exists.
+- **VS Code:** Install MCP extension; add Studio MCP server to extension config; same auth as Cursor.
+- **Other hosts:** Document when we support them; discovery may be via URL, config file, or plugin marketplace.
+
+**Auth and env:** Document required env vars or config keys (e.g. API token, Studio base URL). See [11 - MCP vs CopilotKit and assistant-ui](11-mcp-copilotkit-assistant-ui.mdx) for auth options.
+
+---
+
+## References
+
+- [07 - Editors as MCP Apps](07-modes-as-mcp-apps.mdx) — Studio app tools, editor registration.
+- [11 - MCP vs CopilotKit and assistant-ui](11-mcp-copilotkit-assistant-ui.mdx) — Two control planes, auth.
+- [vendor/twick MCP agent](../../vendor/twick/packages/agents/mcp-agent/) — Example distribution pattern for Claude Desktop (install script, config merge).

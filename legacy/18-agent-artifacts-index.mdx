@@ -1,0 +1,84 @@
+---
+title: Agent artifacts index
+
+created: 2026-02-04
+updated: 2026-02-10
+---
+
+# Agent artifacts index
+
+These files are maintained for AI/coding agents to read and use when modifying the codebase. Keep them accurate and greppable; avoid redundant copies.
+
+## Agent quick start
+
+**You are in the right place.** This index lists all agent-only docs.
+
+- **Next step:** Read **[Coding agent strategy](19-coding-agent-strategy.mdx)** for the loop and actions.
+- **Loop in one sentence:** STATUS + AGENTS (root + area) → pick one slice from STATUS/task-registry → implement → update STATUS (Ralph Wiggum Done) and any affected docs.
+- Then use the list below to open STATUS, task-registry, errors-and-attempts, etc., as needed.
+
+## AGENTS.md vs agent-artifacts
+
+- **AGENTS.md** (root + per-package): **Rules, conventions, and boundaries** for an area. Stable; agents read them before a slice. One canonical file per critical area.
+- **agent-artifacts/core/**: **State and history.** STATUS = current state + Ralph Wiggum **Done** list (audit trail of completed slices). decisions = ADRs. errors-and-attempts = failure log. tool-usage = how to search/navigate. compacting-and-archiving = when/how to compact and archive.
+- **Ralph Wiggum** in this repo: the **slice workflow** (read STATUS + AGENTS.md → implement one slice → update STATUS/artifacts) and the **Done list** in STATUS. Not the generic "autonomous retry until success" loop.
+
+## Living agent artifacts (core)
+
+- **[agent-artifacts/core/STATUS.md](agent-artifacts/core/STATUS.md)** — Current state, Ralph Wiggum loop, next steps. For **"what can I do next?"**, see STATUS § Next and § What you can do next (impact sizes). Next work can be **coding** (STATUS, task-registry) or **business/strategy docs** (`docs/business/`, `docs/product/`): marketing plan, revenue narrative, ecosystem strategy, unit economics, etc.; same slice-and-update loop. For **granular tasks** (tiers, small pickable work), see task-registry and task-breakdown-system.
+- **[agent-artifacts/core/task-registry.md](agent-artifacts/core/task-registry.md)** — Index of initiatives (Tier 0) and quick picks for granular tasks. Use for "what can I do next?" at task level. Initiatives include platform-mono (done), developer-program, and **dev-kit-single-entrypoint** (single entrypoint, docs, optional create-forge-app).
+- **[agent-artifacts/core/task-breakdown-system.md](agent-artifacts/core/task-breakdown-system.md)** — Process and format for tiered breakdowns; when to create; how to pick and update tasks.
+- **[agent-artifacts/core/task-breakdown-ui-polish.md](agent-artifacts/core/task-breakdown-ui-polish.md)** — UI polish initiative breakdown (compact modern, icons, spacing).
+- **[agent-artifacts/core/technical-debt-roadmap.md](agent-artifacts/core/technical-debt-roadmap.md)** — Technical debt and refactors; pre-production and ongoing. For "what's next for technical debt," read this file.
+- **[agent-artifacts/core/decisions.md](agent-artifacts/core/decisions.md)** — Architecture decisions and rationale.
+- **[agent-artifacts/core/errors-and-attempts.md](agent-artifacts/core/errors-and-attempts.md)** — Known failures and fixes (do not repeat). **User correction overrides agent assumptions**: when the user rejects a hypothesis or forbids a fix, stop and document it; do not re-implement. DockLayout: Dockview restored; lost panels → `resetLayout()` ref; Twick context → see entry.
+- **[agent-artifacts/core/tool-usage.md](agent-artifacts/core/tool-usage.md)** — How to search and navigate: rg, list_dir, Read; Windows vs Linux.
+- **[agent-artifacts/core/knip-findings.md](agent-artifacts/core/knip-findings.md)** — Knip: how it works, what the current run found, how to triage (dead code).
+- **[agent-artifacts/core/compacting-and-archiving.md](agent-artifacts/core/compacting-and-archiving.md)** — When and how to compact sections; archive folder; one-line pointers.
+- **[agent-artifacts/core/debugging-zustand-devtools.md](agent-artifacts/core/debugging-zustand-devtools.md)** — Debugging Zustand stores with Redux DevTools (humans and agents).
+- **[agent-artifacts/core/enhanced-features-backlog.md](agent-artifacts/core/enhanced-features-backlog.md)** — Ideas backlog (propose → triage → implement). Process in same doc.
+- **[roadmap/potential-ideas.md](roadmap/potential-ideas.md)** — Exploratory ideas (not yet committed). Triage or add; when accepted, promote to STATUS, task registry, or backlog. See [roadmap index](roadmap/00-roadmap-index.mdx).
+- **[agent-artifacts/core/styling-and-ui-consistency.md](agent-artifacts/core/styling-and-ui-consistency.md)** — Styling and UI consistency rules; process for styling passes (implement, update docs/STATUS; optional screenshots—humans capture, automation errors). See [how-to 26](../../how-to/26-styling-debugging-with-cursor.mdx).
+- **[agent-artifacts/core/standard-practices.md](agent-artifacts/core/standard-practices.md)** — Logging, env, health, security, and "as we grow" checklist. One place for what we do now vs soon.
+- **agent-artifacts/archive/** — Compacted chunks (e.g. STATUS-done-YYYY-MM.md) and **legacy plan docs** (e.g. plan-dockview-restore-*, plan-editor-layout-*). Plans are **not** living docs in core; do not add new plan docs to core. Track work via STATUS Next, task-registry, ISSUES, roadmap. Main docs point here; read main artifact first.
+- **docs/ai/** — AI architecture (Assistant UI, domain contract, tools, agents, MCP). Living docs with code refs and diagrams. Migration phases in [ai/migration/](ai/migration/00-index.mdx). Source plan: [archive/plan-assistant-ui-copilotkit-replacement.md](agent-artifacts/archive/plan-assistant-ui-copilotkit-replacement.md).
+- **[ISSUES.md](../ISSUES.md)** (root) — Known product/editor issues (e.g. Video editor non-functional and locked). Check before suggesting work that assumes a feature is available.
+- **[AGENTS.md](../AGENTS.md)** (root) — Global agent rules, loop, conventions.
+
+## Playground (simulation)
+
+For **AI architecture virtual simulations** (pretend the Assistant UI system works, roleplay as chat assistant, surface gaps):
+
+- **[docs/ai/playground/AGENTS.md](ai/playground/AGENTS.md)** — Simulation rules, Ralph Wiggum loop, in-character/out-of-character behavior.
+- **[docs/ai/playground/agent-artifacts/README.md](ai/playground/agent-artifacts/README.md)** — Simulation-only loop; isolation from main core artifacts.
+- **[docs/ai/playground/agent-artifacts/STATUS.md](ai/playground/agent-artifacts/STATUS.md)** — Simulation state and Ralph Wiggum Done.
+- **[docs/ai/playground/agent-artifacts/task-registry.md](ai/playground/agent-artifacts/task-registry.md)** — Pickable simulation tasks.
+
+Use playground artifacts when doing AI chat simulations. Use main core artifacts for real implementation.
+
+## Per-package / per-area AGENTS.md
+
+- [packages/shared/src/shared/AGENTS.md](../packages/shared/src/shared/AGENTS.md) (includes workspace internal-types rules)
+- [packages/ui/AGENTS.md](../packages/ui/AGENTS.md)
+- [packages/agent-engine/AGENTS.md](../packages/agent-engine/AGENTS.md)
+
+## Documentation conventions (human vs agent)
+
+- **Living agent artifacts:** `docs/agent-artifacts/core/*.md` (STATUS, decisions, errors-and-attempts, tool-usage, compacting-and-archiving, debugging-zustand-devtools) and `docs/agent-artifacts/archive/` for compacted chunks. Purpose: current state, decisions, failure log, tool guidance, compacting process. Updated after each slice or when something breaks. No number prefix; humans and agents reference this folder.
+- **Official human-facing docs:** Numbered `.mdx` in `docs/` (00, 10–19), `docs/how-to/` (00–09, 20–22), `docs/architecture/` (01–09), `docs/design/` (01–), `docs/product/` (MVP and first revenue, [Dev-kit and keys](product/dev-kit-and-keys.mdx)), [docs/business/](business/00-index.mdx) (revenue, Stripe, listings and clones), `docs/roadmap/`. Purpose: tutorials, architecture, code organization, product/strategy, and the agent index/strategy (18–19). Kept up to date with the product.
+- **Root / package:** `README.md`, `SETUP.md`, `AGENTS.md`, `SKILLS.md` (capabilities contract), `CONTRIBUTING.md` (human workflow) at repo root; they point at `docs/18-agent-artifacts-index.mdx` and `docs/agent-artifacts/core/` for artifact locations.
+- **No duplicates:** One canonical file per topic; no parallel .md when a .mdx exists. One artifact folder for the three core living docs.
+
+## Link conventions
+
+- Use **relative paths** so links work from both the repo and the in-app docs viewer.
+- From a file in **docs/** (e.g. 12-workspace-design.mdx): use `agent-artifacts/core/...` or `18-agent-artifacts-index.mdx`.
+- From a file in **docs/subdir/** (e.g. how-to/, architecture/): use `../agent-artifacts/core/...` and `../18-agent-artifacts-index.mdx`.
+- From a file in **docs/agent-artifacts/core/**: use `../../18-agent-artifacts-index.mdx` and `./filename.md` for same-folder refs.
+- Keep numbered docs stable; don't renumber. Use indexes (00-index.mdx) as primary navigation; cross-links are secondary. When reorganizing, update indexes first, then audit cross-links.
+
+## Search strategy
+
+**Before retrying a failed approach**, always check [errors-and-attempts](agent-artifacts/core/errors-and-attempts.md).
+
+For any task: (1) Prefer this index and core artifacts for **current state** and **failure log**; use numbered docs for architecture/how-to. (2) Grep `docs/` and relevant `AGENTS.md` first. (3) Check [agent-artifacts/core/errors-and-attempts.md](agent-artifacts/core/errors-and-attempts.md) before retrying a failed pattern. (4) See [19-coding-agent-strategy.mdx](19-coding-agent-strategy.mdx) for how we use and extend these artifacts. (5) Use [tool-usage.md](agent-artifacts/core/tool-usage.md) for search/navigate (rg, list_dir, Read).

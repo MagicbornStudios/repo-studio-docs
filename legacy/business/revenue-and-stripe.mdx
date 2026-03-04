@@ -1,0 +1,113 @@
+---
+title: Revenue and Stripe
+created: 2026-02-08
+updated: 2026-02-11
+---
+
+# Revenue and Stripe
+
+Revenue model and payment implementation for the platform. Technical decisions live in [agent-artifacts/core/decisions.md](../agent-artifacts/core/decisions.md).
+
+---
+
+## Revenue model
+
+**Both platform and creator get paid** (Unity Asset Store / Bandlab style).
+
+- Creators list projects, templates, or Strategy cores in the catalog. **Listing creation is free**.
+- **Buyers** pay the creator-set clone price. Funds are routed through Stripe Connect and the platform takes an application fee.
+- Catalog and creator operations are org-aware. Revenue and payout setup are shown in org context.
+- Plan/capability gates still apply to listing and paid-clone access (`PLATFORM_LIST`, `PLATFORM_MONETIZE`).
+
+---
+
+## Stripe Connect (day one, org-scoped)
+
+We use **Stripe Connect from day one** for clone purchases so creators receive payment directly.
+
+- Connect account identity is tracked on the **organization** (`organizations.stripeConnectAccountId`) with onboarding status on organization records.
+- Create-account API: `POST /api/stripe/connect/create-account` (accepts org context, idempotent create-or-return behavior).
+- Onboarding-link API: `POST /api/stripe/connect/onboarding-link` (org context).
+- Buyer checkout for paid clones routes payment to the seller org's connected account and applies platform fee.
+- Payout transfers are handled by Stripe Connect. We do not run manual payout jobs.
+
+**Platform Stripe account:** platform account id may be tracked as `STRIPE_ACCOUNT_ID` for dashboard/support parity. Runtime API calls continue using secret keys.
+
+**Platform requirements (Connect and product):** support email/url, privacy policy URL, terms URL, and business profile details should stay current in env/app settings and Stripe account settings.
+
+---
+
+## Checkout and invoicing boundaries
+
+We use **Stripe hosted Checkout** and Stripe primitives by default.
+
+- **Paid clone purchase:** hosted Checkout session (`mode=payment`) + webhook settlement.
+- **Pro subscription:** hosted Checkout (`mode=subscription`) for plan upgrades.
+- **Free listing clone:** no Stripe checkout; uses `POST /api/catalog/:id/clone`.
+- **Invoicing:** Stripe invoicing for future B2B/custom billing; no custom invoicing UI in this slice.
+
+---
+
+## Storage billing and quota upgrades
+
+Storage is tracked and billed in org context:
+
+- `organizations.storageQuotaBytes` + `organizations.storageUsedBytes` drive quota state.
+- Storage delta ledger is persisted in `storage-usage-events`.
+- Storage warning and hard-limit behavior is enforced on growth operations (uploads, clone growth).
+- Platform storage upgrade checkout uses `POST /api/me/storage/upgrade-checkout-session`.
+- Stripe webhook applies add-on quota idempotently via session metadata.
+
+---
+
+## Revenue and payout tracking
+
+Per-license financial fields are persisted on `licenses`:
+
+- `amountCents`
+- `platformFeeCents`
+- seller org attribution (`sellerOrganization`)
+
+Webhook settlement writes these values when checkout completes, allowing creator and platform aggregates.
+
+Current platform surfaces:
+
+- `/dashboard/revenue` consumes `GET /api/me/revenue` (org-scoped summary + transactions)
+- `/dashboard/billing` exposes plan and Connect onboarding state/actions
+
+---
+
+## AI usage financial visibility
+
+AI usage costs are persisted in `ai-usage-events` for billing-grade reporting:
+
+- request id (idempotent key), user, organization, provider/model
+- token counts and computed USD costs at event time
+- route context and timestamp
+
+Platform financial views use:
+
+- `GET /api/me/ai-usage`
+- `GET /api/me/ai-usage/summary`
+
+**Boundary:** PostHog is useful for analytics and funnels, not an auditable billing ledger.
+
+---
+
+## Application fee and payout policy
+
+- Application fee formula (take rate) remains configurable/TBD and should be documented here and in decisions when finalized.
+- **Single seller per listing** for now. No split payouts in MVP.
+- Multi-seller payout splits and IP split logic are deferred until broader creator workflows are in place.
+
+---
+
+## Developer program payouts (after MVP)
+
+Approved editors in the official Studio suite can receive a defined revenue split while they remain official. Community listings do not receive the official split. See [Developer program and editor ecosystem](developer-program-and-editors.mdx).
+
+---
+
+## Enterprise access requests (manual-gated)
+
+Enterprise capabilities (source access, premium support, custom editor requests) are requested in org context through `POST /api/me/enterprise/requests` and reviewed manually. This is intentionally non-automated in the current slice.

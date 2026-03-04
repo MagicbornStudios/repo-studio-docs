@@ -1,0 +1,117 @@
+---
+title: AI Architecture
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# AI Architecture
+
+Living documentation for Forge Studio's AI system: Assistant UI integration, domain contracts, tools, agents, and MCP. **Source plan:** [archive/plan-assistant-ui-copilotkit-replacement.md](../agent-artifacts/archive/plan-assistant-ui-copilotkit-replacement.md).
+
+---
+
+## Vision
+
+"Create a character" from app-level chat → full character creation in chat UI with components → review/audio → save → later edit in Character tab without chat. Same pattern for dialogue, storylets, and all editors.
+
+---
+
+## Core principles
+
+- **Preserve domain logic**: domain-forge, domain-character operations stay intact
+- **UI-first**: Assistant UI Frame API for in-chat components
+- **Tool-based**: Same action/tool pattern as CopilotKit but using Assistant UI conventions
+- **MCP-compatible**: Tools map cleanly to MCP spec for external control
+- **Incremental migration**: Both systems coexist during transition
+
+---
+
+## How the system works
+
+```mermaid
+flowchart LR
+  subgraph User["User"]
+    U[User types in chat]
+  end
+  
+  subgraph Client["Client"]
+    AC[AssistantChat]
+    DC[Domain Contract]
+    T[Tools]
+    AC --> DC
+    DC --> T
+  end
+  
+  subgraph API["API"]
+    RT[/api/assistant-chat]
+  end
+  
+  subgraph Model["OpenRouter"]
+    LLM[Chat completions]
+  end
+  
+  U --> AC
+  AC --> RT
+  RT --> LLM
+  LLM --> RT
+  RT --> AC
+  T --> ES[Editor State]
+```
+
+1. User types in the Assistant chat panel
+2. Chat sends messages to `/api/assistant-chat` (AI SDK streaming)
+3. Model may call domain tools (e.g. `forge_createNode`, `character_create`)
+4. Tools execute against editor state; results render in chat (Plan, Progress Tracker, etc.)
+5. Editor applies changes and highlights affected entities
+
+---
+
+## Documentation index
+
+### Architecture & Implementation
+
+| Doc | Summary |
+|-----|---------|
+| [01 - Architecture overview](01-architecture-overview.mdx) | Package structure, core principles, data flow |
+| [02 - Domain integration](02-domain-integration.mdx) | DomainAssistantContract, DomainTool, use-domain-assistant |
+| [03 - Domains (Forge, Character)](03-domains-forge-character.mdx) | Forge and Character implementations |
+| [03 - Domains (Writer)](03-domains-writer.mdx) | Writer/Lexical domain, block-level tools, Notion-style |
+| [04 - Runtime and components](04-runtime-and-components.mdx) | API route, DialogueAssistantPanel, tool-ui Plan, Progress Tracker |
+| [05 - Agent system](05-agent-system.mdx) | BaseAgent, AgentRegistry, AppAgent delegation |
+| [06 - MCP integration](06-mcp-integration.mdx) | MCP server, editor apps, auth |
+| [07 - Components reference](07-components-reference.mdx) | Assistant UI, tool-ui, DiffPreview, ElevenLabs |
+| [08 - Best practices](08-best-practices.mdx) | Diff strategy, component alignment, tool naming |
+
+### Strategy & Planning
+
+| Doc | Summary |
+|-----|---------|
+| [10 - Model strategy](10-model-strategy.mdx) | Multi-model routing, domain-specific models, complexity classification, user control |
+| [11 - AI roadmap](11-ai-roadmap.mdx) | Quarterly phases, tracks (Model Intelligence, Capabilities, Infrastructure), success metrics |
+| [12 - Technical considerations](12-technical-considerations.mdx) | Model registry, performance, context management, error handling, security, observability |
+| [13 - Cost optimization](13-cost-optimization.mdx) | Caching, batching, compression, fallbacks, 90%+ cost reduction techniques |
+| [15 - Instruction templating & workflows](15-instruction-templating-and-workflow-orchestration.mdx) | Type-safe instruction generation, LangGraph vs vanilla, multi-agent orchestration |
+| [20 - Complete system architecture](20-complete-system-architecture.mdx) | Current implementation status, active files, migration progress |
+| [21 - Agent conversation flows](21-agent-conversation-flows.mdx) | 5 complete conversation examples with cross-editor data flow |
+
+### Migration
+
+| Doc | Summary |
+|-----|---------|
+| [Migration](migration/00-index.mdx) | Phases 1–7, coexistence, rollback, verification. **Progress** table tracks what's done vs pending. |
+| [Playground](playground/AGENTS.md) | Virtual simulation, session logs, fix guides |
+
+### Cross-References
+
+| Doc | Summary |
+|-----|---------|
+| [14 - AI context index](14-ai-context-index.mdx) | All AI docs across codebase, reading paths, quick answers |
+
+---
+
+## References
+
+- [08 - CopilotKit vs assistant-ui](../architecture/08-copilotkit-vs-assistant-ui.mdx) — Current vs future AI stack
+- [11 - MCP vs CopilotKit and assistant-ui](../architecture/11-mcp-copilotkit-assistant-ui.mdx) — Two control planes, auth
+- [task-breakdown-mcp-studio-editors](../agent-artifacts/core/task-breakdown-mcp-studio-editors.md) — MCP initiative lanes
+- **[14 - AI context index](14-ai-context-index.mdx)** — Complete AI documentation map, reading paths

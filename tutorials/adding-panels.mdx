@@ -1,0 +1,62 @@
+---
+title: Adding panels
+---
+
+# Tutorial: Adding panels to your editor
+
+Multi-panel layout: navigator, main canvas, inspector, output.
+
+## Step 1: Basic 2-pane
+
+```tsx
+import { WorkspaceShell, WorkspaceToolbar, WorkspaceInspector, WorkspaceStatusBar } from '@forge/shared';
+
+<WorkspaceShell>
+  <WorkspaceToolbar>...</WorkspaceToolbar>
+  <div className="flex flex-1 min-h-0">
+    <div className="flex-1">Canvas</div>
+    <WorkspaceInspector selection={selection}>...</WorkspaceInspector>
+  </div>
+  <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+</WorkspaceShell>
+```
+
+## Step 2: WorkspaceLayout
+
+Use `WorkspaceLayout` with declarative slot children:
+
+```tsx
+<WorkspaceLayout>
+  <WorkspaceLayout.Left>
+    <WorkspaceLayout.Panel id="navigator" title="Navigator">
+      <NavigatorPanel />
+    </WorkspaceLayout.Panel>
+  </WorkspaceLayout.Left>
+  <WorkspaceLayout.Main>
+    <WorkspaceLayout.Panel id="main" title="Main">
+      <MainCanvas />
+    </WorkspaceLayout.Panel>
+  </WorkspaceLayout.Main>
+  <WorkspaceLayout.Right>
+    <WorkspaceLayout.Panel id="inspector" title="Inspector">
+      <InspectorPanel />
+    </WorkspaceLayout.Panel>
+  </WorkspaceLayout.Right>
+</WorkspaceLayout>
+```
+
+Slot children are canonical. Define panel placement directly in JSX via `WorkspaceLayout.Left/Main/Right/Bottom`.
+
+For workspace apps, use one `WorkspaceLayout` per workspace tab and compose only the panels for that workspace.
+
+## Step 3: Panel tabs
+
+`PanelTabs` within a panel for multiple views. See [components/09-panel-tabs](../components/09-panel-tabs).
+
+**Next:** [AI integration](ai-integration)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/`, `WorkspaceLayout`, `WorkspacePanel`
+Related: how-to/02-editor-shell, components/02-dock-layout
+Do not: Use ad-hoc layout; extend via `WorkspaceLayout` slots
+</Callout>

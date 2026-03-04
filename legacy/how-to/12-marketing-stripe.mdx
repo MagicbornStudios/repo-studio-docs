@@ -1,0 +1,52 @@
+---
+title: 12 - Platform Stripe (minimal)
+created: 2026-02-05
+updated: 2026-02-12
+---
+
+# 12 - Platform Stripe (minimal)
+
+Minimal Stripe integration for platform billing and listing checkout.
+
+## Env (Studio)
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PRICE_ID_PRO`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID_STORAGE_ADDON` (storage upgrade checkout)
+- `STORAGE_ADDON_BYTES` (bytes granted per storage add-on purchase)
+
+See `apps/studio/.env.example`.
+
+Recommended env workflow:
+
+- `pnpm env:setup -- --app studio`
+- `pnpm env:doctor -- --app studio --mode local`
+
+## Pro plan checkout
+
+- **Route:** `POST /api/stripe/create-checkout-session` (Studio). Requires auth cookie.
+- **Body:** `{ successUrl?, cancelUrl? }`.
+- **Response:** `{ url }` for hosted Stripe Checkout.
+- **Webhook:** `POST /api/stripe/webhook` updates `user.plan` to `pro` after `checkout.session.completed`.
+
+## Listing checkout (creator marketplace)
+
+- **Route:** `POST /api/stripe/connect/create-checkout-session`.
+- **Body:** `{ listingId, successUrl?, cancelUrl?, baseUrl? }`.
+- **Success result route:** `GET /api/checkout/session-result?session_id=...`.
+- **Free listing clone route (no Stripe):** `POST /api/catalog/:id/clone`.
+- Platform routes using this flow:
+  - `/catalog/[slug]` checkout action
+  - `/checkout/success`
+  - `/checkout/cancel`
+  - `/dashboard/licenses` (post-purchase clone-again UX)
+
+## Free vs paid clone flow
+
+- **Free listing (`price=0`)**: platform calls `POST /api/catalog/:id/clone`, then routes to `/checkout/success?mode=free...`.
+- **Paid listing (`price>0`)**: platform creates Stripe Checkout via `POST /api/stripe/connect/create-checkout-session`, then resolves details with `GET /api/checkout/session-result` on success.
+
+Use hosted Checkout only (no custom card UI in platform).
+
+**Next:** [13 - Marketing email / newsletter](13-marketing-email-newsletter.mdx)

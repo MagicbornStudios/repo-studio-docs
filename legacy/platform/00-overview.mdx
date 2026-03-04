@@ -1,0 +1,292 @@
+---
+title: Platform Overview
+created: 2026-02-11
+updated: 2026-02-11
+icon: "🏗️"
+---
+
+# 🏗️ Forge Platform
+
+**Professional editor infrastructure for building AI-powered creative tools**
+
+---
+
+## What is Forge?
+
+Forge is a production-ready platform for building professional desktop-class editors in the browser. Built by experienced engineers with years of architectural knowledge, Forge provides the foundational UI components, layout systems, and AI integration patterns needed to create tools like Character Editors, Dialogue Editors, Video Editors, and more.
+
+### Core Philosophy
+
+- **🎯 Opinionated Design** - We've made the hard decisions so you don't have to
+- **🧩 Composable Components** - Mix and match building blocks to create your editor
+- **🤖 AI-First** - Deep integration with AI workflows and agent systems
+- **⚡ Production Ready** - Battle-tested components with TypeScript safety
+- **🎨 Beautiful by Default** - Based on shadcn/ui with consistent design language
+
+---
+
+## What We Provide
+
+### 🏗️ Studio Components
+Professional editor UI building blocks:
+- **WorkspaceShell** - Root container with theming and layout
+- **DockLayout** - VSCode-style resizable panel system
+- **WorkspaceToolbar** - Extensible toolbar with menubar integration
+- **WorkspaceInspector** - Selection-driven properties panel
+- **SettingsPanel** - Complete settings UI with inheritance
+
+### 🎨 Pre-built Editors
+Reference implementations showing best practices:
+- **Character Editor** - Relationship graph with AI assistant
+- **Dialogue Editor** - Dual-pane YarnSpinner graph editor
+- **Video Editor** - Timeline-based media editing
+- **Strategy Editor** - Workflow and planning tools
+
+### 🤖 AI Integration
+Production-ready AI workflows:
+- **Domain Contracts** - Structured AI agent definitions
+- **Tool System** - Execute operations with custom UI rendering
+- **Plan-Review-Execute** - Multi-step workflow with user approval
+- **Multi-Agent Coordination** - Cross-domain data sharing
+
+### ⚙️ Settings System
+Type-safe, hierarchical configuration:
+- **Scoped Settings** - App → Project → Editor → Viewport inheritance
+- **UI-First Design** - Generate schemas from declarative components
+- **Visual Overrides** - See where settings come from, reset easily
+- **Code Generation** - Auto-generate TypeScript types from UI
+
+---
+
+## Who Should Use Forge?
+
+### ✅ Perfect For
+
+- **Creative Tool Builders** - Building character creators, dialogue editors, game design tools
+- **AI Product Teams** - Need solid UI foundation for AI-powered features
+- **Internal Tool Developers** - Building custom workflow editors for your company
+- **Indie Developers** - Want professional editor UX without building from scratch
+
+### 🎯 Use Cases
+
+- Character and relationship management
+- Dialogue and narrative design
+- Video and audio editing
+- Workflow and strategy planning
+- Data visualization and manipulation
+- Any editor with panels, toolbars, and selection-driven UI
+
+---
+
+## Tech Stack
+
+<div className="grid grid-cols-2 gap-4 my-6">
+  <div className="rounded-lg border p-4">
+    <h3 className="text-sm font-semibold mb-2">🎨 UI Foundation</h3>
+    <ul className="text-sm space-y-1 text-muted-foreground">
+      <li>• React 19 + TypeScript</li>
+      <li>• shadcn/ui + Tailwind CSS</li>
+      <li>• Radix UI primitives</li>
+      <li>• dockview for layouts</li>
+    </ul>
+  </div>
+
+  <div className="rounded-lg border p-4">
+    <h3 className="text-sm font-semibold mb-2">🤖 AI Integration</h3>
+    <ul className="text-sm space-y-1 text-muted-foreground">
+      <li>• Assistant UI framework</li>
+      <li>• OpenRouter multi-model routing</li>
+      <li>• LangGraph workflows</li>
+      <li>• Custom tool rendering</li>
+    </ul>
+  </div>
+
+  <div className="rounded-lg border p-4">
+    <h3 className="text-sm font-semibold mb-2">📦 Monorepo</h3>
+    <ul className="text-sm space-y-1 text-muted-foreground">
+      <li>• Yarn workspaces</li>
+      <li>• Turborepo build system</li>
+      <li>• Shared packages</li>
+      <li>• Domain isolation</li>
+    </ul>
+  </div>
+
+  <div className="rounded-lg border p-4">
+    <h3 className="text-sm font-semibold mb-2">💾 Data Layer</h3>
+    <ul className="text-sm space-y-1 text-muted-foreground">
+      <li>• Payload CMS</li>
+      <li>• TanStack Query</li>
+      <li>• Zustand stores</li>
+      <li>• React Flow graphs</li>
+    </ul>
+  </div>
+</div>
+
+---
+
+## Documentation Index
+
+### 📚 Tutorials
+
+Complete step-by-step guides:
+- **[AI Integration Tutorial](./tutorials/ai-integration.mdx)** - Build your first AI-powered editor with domain contracts, tools, and custom UI rendering
+
+### 🎓 Guides
+
+Best practices and patterns:
+- **[Component Patterns](./guides/patterns.mdx)** - Slot composition, data-driven rendering, controlled patterns, state management
+- **[Theming & Styling](./guides/theming.mdx)** - CSS variables, theme switching, density modes, customization
+- **[Performance Optimization](./guides/performance.mdx)** - React rendering, virtualization, debouncing, profiling
+
+### 📖 Reference
+
+Technical documentation:
+- **[Package Structure](./reference/packages.mdx)** - Monorepo architecture, import patterns, dependency management
+
+### 🔗 Other Resources
+
+- [📚 Component Showcase](./components/00-index.mdx) - Browse all available components
+- [🎓 Developer Guide](./developer-guide/00-index.mdx) - Learn how to build editors
+- [🤖 AI System](./ai-system/00-index.mdx) - AI integration patterns
+- [⚙️ Settings](./settings/00-index.mdx) - Configuration system
+- [🗺️ Roadmap](./roadmap.mdx) - What's coming next
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/forge-agent
+
+# Install dependencies
+yarn install
+
+# Start the studio
+yarn dev
+```
+
+### Create Your First Editor
+
+```typescript
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  EditorDockLayout,
+  WorkspaceStatusBar,
+} from '@forge/shared/components/editor';
+
+export function MyEditor() {
+  return (
+    <WorkspaceShell editorId="my-editor" title="My Editor">
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left>
+          <Button>Action</Button>
+        </WorkspaceToolbar.Left>
+      </WorkspaceToolbar>
+
+      <EditorDockLayout layoutId="my-editor-layout">
+        <EditorDockLayout.Left>
+          <EditorDockPanel id="navigator" title="Navigator">
+            <MyNavigator />
+          </EditorDockPanel>
+        </EditorDockLayout.Left>
+
+        <EditorDockLayout.Main>
+          <EditorDockPanel id="viewport" title="Main">
+            <MyViewport />
+          </EditorDockPanel>
+        </EditorDockLayout.Main>
+      </EditorDockLayout>
+
+      <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Platform Status
+
+### ✅ Production Ready
+
+- **Studio Components** - WorkspaceShell, DockLayout, Toolbar, Inspector, Settings
+- **Settings System** - Hierarchical scoping with UI-first design
+- **Component API** - Stable, documented, TypeScript-safe
+
+### 🚧 Active Development
+
+- **AI Workflows** - LangGraph integration, checkpoint persistence
+- **Character Domain** - Tools implementation in progress
+- **Writer Domain** - Notion-style page editor planning
+
+### 📋 Roadmap
+
+- **MCP Integration** - Model Context Protocol for editor apps
+- **Multi-model Routing** - Intelligent model selection by task complexity
+- **Cost Optimization** - Prompt caching, batching, compression
+- **Multimodal AI** - Vision, audio, and media generation
+
+---
+
+## Community & Support
+
+<div className="grid grid-cols-3 gap-4 my-6">
+  <div className="rounded-lg border p-4 text-center">
+    <h3 className="text-sm font-semibold mb-2">📖 Documentation</h3>
+    <p className="text-xs text-muted-foreground">Comprehensive guides and API docs</p>
+  </div>
+
+  <div className="rounded-lg border p-4 text-center">
+    <h3 className="text-sm font-semibold mb-2">💬 Discord</h3>
+    <p className="text-xs text-muted-foreground">Join our community</p>
+  </div>
+
+  <div className="rounded-lg border p-4 text-center">
+    <h3 className="text-sm font-semibold mb-2">🐛 GitHub</h3>
+    <p className="text-xs text-muted-foreground">Report issues, contribute</p>
+  </div>
+</div>
+
+---
+
+## License
+
+**MIT License** - Use Forge in your commercial and open-source projects.
+
+---
+
+## About the Team
+
+Forge is built by a serious development team with years of engineering experience and deep architectural knowledge. We've spent countless hours solving the hard problems of building professional editors so you can focus on your unique features.
+
+We're committed to:
+- **📚 Ample Documentation** - Consumer-facing, developer-friendly guides
+- **🎨 Crystal Clear Examples** - Real-world usage patterns
+- **🏗️ Solid Foundations** - Production-tested component APIs
+- **🤖 AI Innovation** - Pushing the boundaries of AI-assisted creative tools
+
+---
+
+## Next Steps
+
+<div className="grid grid-cols-2 gap-4 my-6">
+  <a href="./tutorials/ai-integration.mdx" className="block rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+    <h3 className="text-sm font-semibold mb-1">🤖 AI Integration Tutorial</h3>
+    <p className="text-xs text-muted-foreground">Build your first AI-powered editor</p>
+  </a>
+
+  <a href="./guides/patterns.mdx" className="block rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+    <h3 className="text-sm font-semibold mb-1">🎨 Component Patterns</h3>
+    <p className="text-xs text-muted-foreground">Learn best practices and patterns</p>
+  </a>
+
+  <a href="./guides/theming.mdx" className="block rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+    <h3 className="text-sm font-semibold mb-1">🌈 Theming Guide</h3>
+    <p className="text-xs text-muted-foreground">Customize your editor's appearance</p>
+  </a>
+
+  <a href="./reference/packages.mdx" className="block rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+    <h3 className="text-sm font-semibold mb-1">📦 Package Reference</h3>
+    <p className="text-xs text-muted-foreground">Understand the monorepo structure</p>
+  </a>
+</div>

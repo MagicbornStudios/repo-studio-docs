@@ -1,0 +1,110 @@
+---
+title: Coding agent strategy
+
+created: 2026-02-04
+updated: 2026-02-10
+---
+
+# Coding agent strategy
+
+How we use agent artifacts in this codebase, and how to extend or benchmark agent workflows.
+
+## Entrypoints
+
+Agents find this doc via: **root [AGENTS.md](../AGENTS.md)**, **README § Documentation → For coding agents**, and **docs [00-docs-index](00-docs-index.mdx) § I'm a coding agent.** Always use this strategy when making changes.
+
+## Purpose
+
+We maintain explicit **agent artifacts** so that:
+
+- **Consistent behavior:** Agents (and humans) have a single source of truth for "what is true now," "what we decided," and "what not to repeat."
+- **Fewer repeated mistakes:** Known failures and fixes are greppable; agents check before retrying a pattern.
+- **Onboarding:** Treat the agent like a new hire—it only reads what's explicit. STATUS, decisions, errors-and-attempts, and per-area AGENTS.md give it the same context we'd give a developer.
+
+## Strategy is per editor
+
+Strategy is applied **per editor**, not per repo type. Each editor (Dialogue, Video, Writer, Strategy) has its own strategy/artifacts/loop. This doc describes the **meta-strategy** (how we use artifacts across editors). Each editor follows the same loop pattern but may have editor-specific artifacts (e.g. Dialogue has graph-specific STATUS/decisions; Video has timeline-specific ones).
+
+## What we treat as agent artifacts
+
+See **[18-agent-artifacts-index.mdx](18-agent-artifacts-index.mdx)** for the full index. In short:
+
+- **agent-artifacts/core/STATUS.md** — Current state, Ralph Wiggum loop, next steps. Updated after each slice.
+- **agent-artifacts/core/decisions.md** — Architecture decision records (persistence, data layer, boundaries). Updated when we accept or reject a significant choice.
+- **agent-artifacts/core/errors-and-attempts.md** — Log of known failures and fixes. Do not repeat; add new entries when we fix something that cost time.
+- **agent-artifacts/core/tool-usage.md** — How to search and navigate: rg, list_dir, Read; Windows vs Linux equivalents. See [tool-usage.md](agent-artifacts/core/tool-usage.md).
+- **agent-artifacts/core/compacting-and-archiving.md** — When and how to compact sections and archive; thresholds and one-line pointers. We compact when artifact sections grow large so context windows stay effective. See [compacting-and-archiving.md](agent-artifacts/core/compacting-and-archiving.md).
+- **AGENTS.md** (root + per-package) — Rules, conventions, and loops for the area. One canonical file per critical area; no duplicate "for agents" copies elsewhere.
+- **agent-artifacts/core/task-registry.md** — Index of initiatives (Tier 0) and quick picks for granular tasks. Use for "what can I do next?" at task level.
+- **agent-artifacts/core/task-breakdown-system.md** — Process and format for tiered breakdowns; when to create; how to pick and update tasks.
+
+**Task breakdown and tiers:** We break Epic/Large initiatives into **tiers** (Initiative → Lane → Slice → Task). Breakdowns live in `agent-artifacts/core/` (task-registry + task-breakdown-*.md). Use them to answer "what's next" with **granular, pickable tasks** and to see **parent reference** for any small task.
+
+## How agents are expected to use them (actions)
+
+1. **Before a slice:** Read [agent-artifacts/core/STATUS.md](agent-artifacts/core/STATUS.md) and the relevant AGENTS.md (root + [packages/shared/src/shared/AGENTS.md](../packages/shared/src/shared/AGENTS.md) when touching shared editor or workspace types). Use **rg** (or grep), **list_dir**/LS, and **Read** to locate and confirm files; check [agent-artifacts/core/errors-and-attempts.md](agent-artifacts/core/errors-and-attempts.md) before retrying a failed pattern. **User correction overrides agent assumptions**: if the user explicitly rejects a hypothesis or forbids a fix, stop and document it in errors-and-attempts; do not be stubborn. Understand current state and next.
+2. **To see what you can do next:** **High level:** Read [STATUS § Next](agent-artifacts/core/STATUS.md) (and [product roadmap](roadmap/product.mdx)). Each item has an **impact size** (Small / Medium / Large / Epic). **Granular / small tasks:** Read [task-registry.md](agent-artifacts/core/task-registry.md) and, when applicable, the [task-breakdown-system](agent-artifacts/core/task-breakdown-system.md). Prefer **Tier 3 (Small)** or **Tier 2 (Medium)** tasks with `status: open` when you want a single PR or a quick win; each task links to its parent initiative for context. **For technical debt:** read [technical-debt-roadmap.md](agent-artifacts/core/technical-debt-roadmap.md); pick an open item; when done, update that file and add a Done line in STATUS. Prefer **one slice per item** to reduce overlap and merge conflicts. **When you start an item:** (1) set the item's status to `in_progress` in the artifact that lists it (task-registry for Tier 0 initiatives, or the per-initiative breakdown for Tier 2/3 tasks), and (2) add a short "In progress: …" line in the Ralph Wiggum section of STATUS so other agents or contributors don't pick the same work. When proposing or implementing work that touches platform, settings, or paywall, check STATUS Next and roadmap for impact and dependencies; add new initiatives to the [enhanced-features backlog](agent-artifacts/core/enhanced-features-backlog.md) as `proposed` and to STATUS Next once accepted.
+3. **Prefer canonical artifacts:** Use the agent artifacts index and core artifacts (STATUS, decisions, errors-and-attempts) for **current state** and **failure log**. Use numbered docs (10–19, how-to, architecture) for architecture and how-to, not for live state. Avoid relying on stray READMEs for "what is true now."
+4. **Before changing a pattern:** Use rg (or grep) to find occurrences; use list_dir/Read to confirm file locations. See [tool-usage.md](agent-artifacts/core/tool-usage.md).
+5. **When changing persistence or data layer:** Read [agent-artifacts/core/decisions.md](agent-artifacts/core/decisions.md) and [11-tech-stack.mdx](11-tech-stack.mdx); update them when making or rejecting a significant choice.
+6. **After a slice:** **Doc scan required** — scan relevant docs (design, architecture, how-to, AGENTS, agent artifacts) for drift and update them if needed. Record the scan and doc updates in STATUS. Then update STATUS (including the Ralph Wiggum Done list) and any AGENTS/README that the change affects. Ensure any new or edited doc under `docs/` has YAML frontmatter with at least **`title`** (string). When cleaning up dead code, run `pnpm knip` and address or document reported issues.
+7. **When adding a new area with distinct rules:** Add an AGENTS.md and link from the index.
+8. **Scope of edits:** When implementing a slice, scope all file edits to the repo (apps, packages, docs). Do not modify files under `.tmp/` or other agent-download directories; they are reference material, not our code.
+9. **When making UI/styling changes:** After implementing, update design docs and STATUS (and errors-and-attempts when adding a fix). Do **not** run browser screenshot automation—it errors too often. An "after" screenshot is **optional**; when one is needed, **humans** should capture it (run the app, use Cursor browser tools or any screenshot tool), save to **docs/images/** with a descriptive filename, and reference it in the relevant doc or STATUS. See [agent-artifacts/core/styling-and-ui-consistency.md](agent-artifacts/core/styling-and-ui-consistency.md) and [how-to 26 - Styling debugging with Cursor](how-to/26-styling-debugging-with-cursor.mdx).
+
+## General strategy vs domain granularity
+
+- **General strategy (static, standard):** Applies to all agents. Entry: 18-agent-artifacts-index, STATUS, decisions, errors-and-attempts, tool-usage, compacting. One canonical place; easy to find.
+- **Domain granularity (fine control):** Different domains or packages need their own rules and boundaries → **AGENTS.md** per area. Add a new AGENTS.md when you introduce a **new package** or **critical area** that needs its own rules (naming, boundaries, "do not," owner). Keep one canonical file per area; link from root AGENTS.md and 18-agent-artifacts-index. Do not add AGENTS.md for every subfolder; only for areas with distinct conventions or failure modes.
+
+## Index integrity
+
+If you **add, remove, or relocate** any `AGENTS.md` or any core agent artifact (files listed in [18-agent-artifacts-index.mdx](18-agent-artifacts-index.mdx)), you **must** update:
+
+- Root [AGENTS.md](../AGENTS.md) (if AGENTS.md or entrypoints changed)
+- [18-agent-artifacts-index.mdx](18-agent-artifacts-index.mdx)
+
+This keeps the catalog self-healing and prevents omitted or stale entries.
+
+## When to summarize / compact
+
+When a living doc section (Done list, errors-and-attempts entries, long decisions) exceeds a threshold, compact that subsection and move detail to the archive; keep a one-line summary or pointer in the main doc. See [compacting-and-archiving.md](agent-artifacts/core/compacting-and-archiving.md).
+
+**Triggers (enforce compacting):**
+
+- **STATUS "Ralph Wiggum" Done list:** When it exceeds **~25 lines** of Done items (or ~25 discrete entries), compact per [compacting-and-archiving.md](agent-artifacts/core/compacting-and-archiving.md): summarize older items, move full list to `agent-artifacts/archive/STATUS-done-YYYY-MM.md`, keep the most recent 10–15 in STATUS.
+- **Plan docs:** Do **not** add plan documents to `agent-artifacts/core/`. Plans are **ephemeral** (Cursor or other agent planning systems); we do not keep them as living docs. Track work via STATUS § Next, [task-registry](agent-artifacts/core/task-registry.md), [ISSUES.md](../ISSUES.md), and roadmaps. If a legacy plan file exists in core, move it to `agent-artifacts/archive/` and leave a one-line pointer in STATUS or decisions.
+
+## Doc placement (where things go)
+
+Single rule to reduce doc sprawl and keep links stable:
+
+- **Root:** Only **entrypoint and policy**: README, AGENTS.md, CONTRIBUTING.md, SKILLS.md, ISSUES.md. No living state or task lists at root.
+- **Living agent core:** Only in **docs/agent-artifacts/core/** (STATUS, task-registry, task-breakdown-*, decisions, errors-and-attempts, tool-usage, compacting-and-archiving, knip-findings, debugging-zustand-devtools, enhanced-features-backlog, styling-and-ui-consistency). No plan docs in core.
+- **Plans:** Plans are **not** stored as living docs. Use Cursor/agent planning for the duration of a task; capture outcomes in STATUS, decisions, errors-and-attempts, ISSUES, or task-registry/roadmap. Legacy plan files belong in **docs/agent-artifacts/archive/** with a one-line pointer from STATUS or decisions.
+- **Architecture and how-to:** Numbered docs in docs/ (00, 10–19), docs/architecture/, docs/how-to/. Architecture map: [architecture/README.md](architecture/README.md).
+- **Human docs index:** [00-docs-index.mdx](00-docs-index.mdx). Agent index: [18-agent-artifacts-index.mdx](18-agent-artifacts-index.mdx).
+
+This keeps searches fast and agent loops predictable: one place for state (core), one place for policy (root), no plan sprawl.
+
+## Steering from outdated documentation
+
+- **Canonical locations:** 18-agent-artifacts-index, agent-artifacts/core/*.md, root and per-package AGENTS.md. Prefer these over stray READMEs or numbered docs for "current state" and "what not to repeat."
+- **Deprecation:** If we retire or move a doc, add a short note at the top: "Deprecated. See [canonical link]."
+
+## Adding or changing agent artifacts
+
+- **New AGENTS.md:** Add one when you introduce a new package or a critical area that needs its own rules (e.g. naming, boundaries, "do not"). Keep one source of truth; link from root AGENTS.md or 18-agent-artifacts-index.mdx.
+- **errors-and-attempts:** Add an entry when you fix something that wasted time (wrong API, import order, duplicate registration). Short: problem + fix; link to example code if helpful.
+- **decisions:** Add (or update) when you make or reject a significant architectural choice. Format: decision, rationale, and "update this doc when X."
+- **Avoid duplication:** Do not copy agent content into multiple files. Point to the canonical doc from READMEs or human-facing guides.
+
+## Implementing your own / benchmarking
+
+This setup supports:
+
+- **Custom agent workflows:** Same entry points (18-agent-artifacts-index.mdx, AGENTS.md) every run; "stateless but iterative" loops: rehydrate with STATUS + relevant AGENTS.md + spec, then implement.
+- **Benchmarking and fine-tuning:** You can measure agent accuracy and speed against "did it read STATUS first?", "did it check errors-and-attempts before retry?", "did it update STATUS after?" Use the same artifact set so runs are comparable.
+- **Toolchain integration:** In Cursor/Claude/VSCode, configure rules to "always include docs/18-agent-artifacts-index.mdx and root AGENTS.md (plus matching domain AGENTS.md) in context." For full loop and placement rules, include **19-coding-agent-strategy.mdx** in context; for capabilities include **SKILLS.md** when relevant. Document that in your own runbook.
+
+For more on task structure and agent workflows (spec-first, validation scripts, checkpoints), see the strategies referenced in the repo docs and your own runbooks.

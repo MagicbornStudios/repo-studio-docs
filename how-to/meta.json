@@ -1,0 +1,27 @@
+{
+  "title": "How-to guides",
+  "pages": [
+    "00-index",
+    "---Foundation---",
+    "01-foundation",
+    "02-editor-shell",
+    "03-styling",
+    "04-data-and-state",
+    "---Building editors---",
+    "05-building-an-editor",
+    "06-dialogue-walkthrough",
+    "---AI integration---",
+    "07-assistant-and-ai",
+    "08-adding-ai-to-editors",
+    "---Reference---",
+    "24-vendoring-third-party-code",
+    "25-verdaccio-local-registry",
+    "26-styling-debugging-with-cursor",
+    "27-posthog-llm-analytics",
+    "28-vercel-supabase-launch",
+    "---Forge Loop---",
+    "forge-loop-workflow",
+    "forge-loop-manual-usage",
+    "forge-loop-agent-usage"
+  ]
+}

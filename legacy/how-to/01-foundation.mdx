@@ -1,0 +1,49 @@
+---
+title: 01 - Foundation
+
+created: 2026-02-04
+updated: 2026-02-12
+---
+
+# 01 - Foundation
+
+Repo structure, packages, and key concepts so you can run the app and navigate the codebase.
+
+## Repo structure
+
+- **apps/studio/** - Next.js app: App Shell, editors, CopilotKit, Payload, API routes.
+- **packages/shared/** - Editor UI kit and headless contracts (`WorkspaceShell`, `DockLayout`, toolbars, overlays).
+- **packages/domain-forge/** - Dialogue system (domain package): types, operations, Copilot contract (actions, context, suggestions).
+- **packages/ui/** - shadcn UI atoms (Button, Card, Dialog, etc.).
+- **packages/types/** - Payload-generated types and system/domain aliases (`ForgeGraphDoc`, etc.).
+- **docs/** - Documentation; how-tos live in `docs/how-to/`.
+
+## Key concepts
+
+- **App Shell**: Owns editor tabs and the active editor. Only one editor is mounted at a time. See `apps/studio/components/AppShell.tsx` and `apps/studio/lib/app-shell/store.ts`.
+- **Editor**: A system-specific surface (Dialogue = graph, Video = timeline). Each uses `WorkspaceShell` from shared and composes WorkspaceHeader, WorkspaceToolbar, DockLayout, WorkspaceStatusBar, WorkspaceOverlaySurface.
+- **System (domain package)**: Logic and Copilot contract for an editor (e.g. `packages/domain-forge`). Types come from `packages/types`.
+
+## Running the app
+
+```bash
+pnpm install
+pnpm env:setup
+pnpm dev
+```
+
+Env setup is manifest-driven:
+
+- `pnpm env:sync:examples` regenerates `apps/studio/.env.example` and `apps/platform/.env.example`.
+- `pnpm env:setup -- --app studio|platform|all` creates/updates `.env.local` files interactively.
+- `pnpm env:doctor -- --app studio|platform|all --mode local|preview|production [--vercel]` checks drift and required keys (masked output).
+- `pnpm env:portal` opens the web UI for Studio + Platform + Vercel config.
+- `pnpm env:bootstrap` runs before `dev:studio` / `dev:platform`; when keys are missing, the portal opens.
+
+After changing Payload collections, run `pnpm payload:types`.
+
+## What the AI can do at this stage
+
+N/A - concepts only. No editor or agent wiring yet.
+
+**Next:** [02 - Editor shell and slots](02-workspace-shell.md)

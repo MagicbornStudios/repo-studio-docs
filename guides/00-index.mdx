@@ -1,0 +1,24 @@
+---
+title: Guides
+---
+
+# Guides
+
+Patterns, theming, performance. Tutorial style with snippets.
+
+| Guide | Summary |
+|-------|---------|
+| [Building a complete Studio](building-studio.mdx) | App shell, registry, first editor, data, Assistant, settings |
+| [Studio vs Platform](studio-vs-platform.mdx) | Creator/authoring vs customer/marketplace; env boundary, when to work in each |
+| [Environment variables](reference/environment-variables.mdx) | All env vars by app and section; manifest, portal, bootstrap |
+| [Environment portal](env-portal.mdx) | Web UI for .env.local; when it opens, fill → save → rerun; Vercel sync |
+| [Settings codegen](architecture/settings-tree-as-source-and-codegen.mdx) | Tree-as-source, SettingsField, pnpm settings:generate |
+| [Patterns](patterns) | Slot composition, state, feature gating |
+| [Theming](theming) | Design tokens, data-theme, density |
+| [Performance](performance) | Memoization, virtualization |
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/`, `packages/ui/`
+Related: design/01-styling-and-theming, how-to/03-styling
+Do not: Add ad-hoc patterns; follow design docs
+</Callout>

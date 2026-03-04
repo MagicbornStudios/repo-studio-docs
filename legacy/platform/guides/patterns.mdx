@@ -1,0 +1,1322 @@
+---
+title: Component Patterns
+created: 2026-02-12
+updated: 2026-02-12
+icon: "🎨"
+---
+
+# 🎨 Component Patterns & Best Practices
+
+**Production-tested patterns for building robust Forge editors**
+
+This guide covers component architecture patterns, state management strategies, and best practices extracted from real Forge editors (Character, Dialogue, Video). Learn how to build maintainable, performant editors that scale.
+
+---
+
+## Table of Contents
+
+- [Slot-Based Composition](#slot-based-composition)
+- [Data-Driven Rendering](#data-driven-rendering)
+- [Controlled vs Uncontrolled](#controlled-vs-uncontrolled)
+- [State Management](#state-management)
+- [Feature Gating](#feature-gating)
+- [Cross-Component Communication](#cross-component-communication)
+- [Performance Patterns](#performance-patterns)
+- [Error Boundaries](#error-boundaries)
+- [Loading States](#loading-states)
+- [Optimistic Updates](#optimistic-updates)
+
+---
+
+## Slot-Based Composition
+
+### When to Use Slots
+
+Slots provide **flexible composition points** without prop drilling. Use slots when:
+
+- Multiple components need to inject UI into the same location
+- You want to avoid deeply nested prop chains
+- Child components should be decoupled from parent implementation
+
+### EditorDockLayout Slots
+
+```typescript
+// From DialogueEditor.tsx - Real production code
+<EditorDockLayout
+  layoutId="dialogue-mode"
+  viewport={{ viewportId, viewportType: 'react-flow' }}
+  slots={{
+    left: { title: 'Library' },
+    main: { title: 'Dialogue Graphs' },
+  }}
+  onPanelClosed={handlePanelClosed}
+>
+  {/* Left slot */}
+  <EditorDockLayout.Left>
+    <EditorDockLayout.Panel id="left" title="Library" icon={<BookOpen size={14} />}>
+      {leftPanel}
+    </EditorDockLayout.Panel>
+  </EditorDockLayout.Left>
+
+  {/* Main slot */}
+  <EditorDockLayout.Main>
+    <EditorDockLayout.Panel id="main" title="Dialogue Graphs" icon={<LayoutDashboard size={14} />}>
+      {mainContent}
+    </EditorDockLayout.Panel>
+  </EditorDockLayout.Main>
+
+  {/* Right slot - Multiple panels */}
+  <EditorDockLayout.Right>
+    <EditorDockLayout.Panel id="right" title="Inspector" icon={<ScanSearch size={14} />}>
+      {inspectorContent}
+    </EditorDockLayout.Panel>
+    <EditorDockLayout.Panel id={CHAT_PANEL_ID} title="Chat" icon={<MessageCircle size={14} />}>
+      {chatContent}
+    </EditorDockLayout.Panel>
+  </EditorDockLayout.Right>
+</EditorDockLayout>
+```
+
+### Benefits
+
+1. **Flexibility** - Add/remove panels without changing layout logic
+2. **Decoupling** - Panels don't need to know about each other
+3. **Type Safety** - Slot IDs are typed and validated
+4. **Persistence** - Layout remembers panel sizes and positions
+
+### Pattern: Named Slots with TypeScript
+
+```typescript
+// Define slot configuration
+interface EditorSlots {
+  left?: React.ReactNode;
+  main: React.ReactNode;
+  right?: React.ReactNode;
+  bottom?: React.ReactNode;
+}
+
+interface EditorLayoutProps {
+  slots: EditorSlots;
+  layoutId: string;
+  onPanelClosed?: (slotId: string) => void;
+}
+
+// Consumers provide strongly-typed slots
+<EditorLayout
+  layoutId="my-editor"
+  slots={{
+    main: <MainViewport />,
+    right: <InspectorPanel />,
+  }}
+/>
+```
+
+---
+
+## Data-Driven Rendering
+
+### Config Objects vs JSX
+
+**Use config objects** when rendering repetitive UI from data.
+
+### Example: Toolbar Menus (Character Editor)
+
+```typescript
+// From CharacterEditor.tsx
+const fileMenuItems = useMemo(
+  () => [
+    {
+      id: 'new-character',
+      label: 'New character',
+      onSelect: () => openOverlay(CREATE_CHARACTER_OVERLAY_ID),
+    },
+  ],
+  [openOverlay]
+);
+
+const viewMenuItems = useMemo(
+  () => {
+    const panelIcons: Record<string, React.ReactNode> = {
+      left: <PanelLeft size={16} />,
+      right: <PanelRight size={16} />,
+    };
+
+    const layoutSubmenu = [
+      ...panelSpecs.map((spec) => ({
+        id: `panel-${spec.id}`,
+        label: panelVisibility[spec.key] === false ? `Show ${spec.label}` : `Hide ${spec.label}`,
+        icon: panelIcons[spec.id] ?? <LayoutPanelTop size={16} />,
+        onSelect: () => setPanelVisible(spec.key, !(panelVisibility[spec.key] !== false)),
+      })),
+      { id: 'view-sep-layout', type: 'separator' as const },
+      {
+        id: 'restore-all-panels',
+        label: 'Restore all panels',
+        icon: <LayoutPanelTop size={16} />,
+        onSelect: () => {
+          restoreAllPanels();
+          layoutRef.current?.resetLayout();
+        },
+      },
+    ];
+
+    return [
+      {
+        id: 'layout',
+        label: 'Layout',
+        icon: <LayoutPanelTop size={16} />,
+        submenu: layoutSubmenu,
+      },
+    ];
+  },
+  [panelSpecs, panelVisibility, setPanelVisible, restoreAllPanels]
+);
+
+// Render from config
+<WorkspaceMenubarContribution>
+  <WorkspaceMenubarMenuSlot id="file" label="File" items={fileMenuItems} />
+  <WorkspaceMenubarMenuSlot id="view" label="View" items={viewMenuItems} />
+</WorkspaceMenubarContribution>
+```
+
+### Benefits
+
+1. **Testability** - Test data structures, not rendered JSX
+2. **Serializable** - Can save/load menu configurations
+3. **Dynamic** - Easy to add/remove items conditionally
+4. **Memoization** - `useMemo` prevents unnecessary re-renders
+
+### Pattern: Config-Driven Components
+
+```typescript
+// Define the config shape
+interface ActionConfig {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  shortcut?: string;
+  disabled?: boolean;
+  onSelect: () => void;
+  submenu?: ActionConfig[];
+}
+
+// Component renders from config
+function ActionMenu({ items }: { items: ActionConfig[] }) {
+  return (
+    <Menu>
+      {items.map(item => (
+        item.submenu ? (
+          <SubmenuItem key={item.id} {...item} />
+        ) : (
+          <MenuItem key={item.id} {...item} />
+        )
+      ))}
+    </Menu>
+  );
+}
+
+// Usage: provide config objects
+const actions = useMemo<ActionConfig[]>(
+  () => [
+    { id: 'save', label: 'Save', icon: <Save />, shortcut: 'Ctrl+S', onSelect: handleSave },
+    { id: 'export', label: 'Export', icon: <Download />, onSelect: handleExport },
+  ],
+  [handleSave, handleExport]
+);
+
+<ActionMenu items={actions} />
+```
+
+---
+
+## Controlled vs Uncontrolled
+
+### Controlled Pattern (Recommended)
+
+Parent owns state, child receives props and callbacks.
+
+```typescript
+// From DialogueEditor.tsx - Controlled selection
+const [selectedNarrativeNodeIds, setSelectedNarrativeNodeIds] = useState<string[]>([]);
+const [selectedNarrativeEdgeIds, setSelectedNarrativeEdgeIds] = useState<string[]>([]);
+
+<GraphEditor
+  selectedNodeIds={selectedNarrativeNodeIds}
+  selectedEdgeIds={selectedNarrativeEdgeIds}
+  onSelectionChange={(nodeIds, edgeIds) => {
+    setSelectedNarrativeNodeIds(nodeIds);
+    setSelectedNarrativeEdgeIds(edgeIds);
+  }}
+/>
+```
+
+### When to Use Controlled
+
+- Selection state
+- Form inputs
+- Modal visibility
+- Panel open/closed state
+- Any state that needs to be coordinated with other components
+
+### Uncontrolled Pattern
+
+Component manages its own state internally.
+
+```typescript
+// Internal state, exposed via ref
+function MyComponent({ onValueChange }: Props, ref: ForwardedRef<MyHandle>) {
+  const [internalValue, setInternalValue] = useState('');
+
+  useImperativeHandle(ref, () => ({
+    getValue: () => internalValue,
+    setValue: (value: string) => setInternalValue(value),
+  }));
+
+  return (
+    <input
+      value={internalValue}
+      onChange={(e) => {
+        setInternalValue(e.target.value);
+        onValueChange?.(e.target.value);
+      }}
+    />
+  );
+}
+```
+
+### When to Use Uncontrolled
+
+- Viewport position/zoom (expensive to coordinate)
+- Editor text content (performance-critical)
+- Canvas drawing state
+- Animation state
+
+### Hybrid Pattern (Best of Both)
+
+```typescript
+// From CharacterEditor.tsx - viewport ref for imperative control
+const viewportRef = useRef<CharacterViewportHandle | null>(null);
+
+// Controlled selection
+const [selectedCharId, setSelectedCharId] = useState<number | null>(null);
+
+<RelationshipGraphEditor
+  ref={viewportRef}  // Uncontrolled viewport
+  characters={characters}
+  activeCharacterId={activeCharacterId}  // Controlled active item
+  onCharacterSelect={(id) => {
+    setSelectedCharId(id);  // Parent controls selection
+    if (id != null) setActiveCharacter(id);
+  }}
+/>
+
+// Imperative operations via ref
+function handleFitView() {
+  viewportRef.current?.fitView();
+}
+```
+
+---
+
+## State Management
+
+### Local State (useState)
+
+**When**: State only affects one component
+
+```typescript
+function NodePalette() {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredItems = useMemo(
+    () => items.filter(item => item.label.includes(searchQuery)),
+    [items, searchQuery]
+  );
+
+  return (
+    <>
+      <SearchInput value={searchQuery} onChange={setSearchQuery} />
+      <ItemList items={filteredItems} />
+    </>
+  );
+}
+```
+
+### Zustand Store (Domain State)
+
+**When**: State shared across multiple components in the same editor
+
+```typescript
+// From apps/studio/lib/domains/forge/store.ts
+interface ForgeGraphsState {
+  projectId: number | null;
+  narrativeGraph: ForgeGraphDoc | null;
+  storyletGraph: ForgeGraphDoc | null;
+  activeScope: ForgeGraphScope;
+  dirtyByScope: Record<ForgeGraphScope, boolean>;
+
+  setProject: (projectId: number | null) => void;
+  setGraph: (scope: ForgeGraphScope, graph: ForgeGraphDoc) => void;
+  applyOperations: (scope: ForgeGraphScope, ops: ForgeGraphPatchOp[]) => void;
+  markSaved: (scope: ForgeGraphScope) => void;
+}
+
+export const useForgeGraphsStore = create<ForgeGraphsState>()(
+  devtools(
+    persist(
+      immer((set, get) => ({
+        projectId: null,
+        narrativeGraph: null,
+        storyletGraph: null,
+        activeScope: 'narrative',
+        dirtyByScope: { narrative: false, storylet: false },
+
+        setProject: (projectId) => {
+          set({ projectId });
+        },
+
+        setGraph: (scope, graph) => {
+          set((state) => {
+            if (scope === 'narrative') {
+              state.narrativeGraph = graph;
+            } else {
+              state.storyletGraph = graph;
+            }
+          });
+        },
+
+        applyOperations: (scope, ops) => {
+          set((state) => {
+            const graph = scope === 'narrative' ? state.narrativeGraph : state.storyletGraph;
+            if (!graph) return;
+
+            // Apply operations (using Immer for immutability)
+            for (const op of ops) {
+              if (op.type === 'createNode') {
+                graph.flow.nodes.push(createNode(op));
+              } else if (op.type === 'updateNode') {
+                const node = graph.flow.nodes.find(n => n.id === op.nodeId);
+                if (node) Object.assign(node.data, op.updates);
+              }
+              // ... more operations
+            }
+
+            state.dirtyByScope[scope] = true;
+          });
+        },
+
+        markSaved: (scope) => {
+          set((state) => {
+            state.dirtyByScope[scope] = false;
+          });
+        },
+      })),
+      {
+        name: 'forge-graphs',
+        partialize: (state) => ({
+          projectId: state.projectId,
+          activeScope: state.activeScope,
+          drafts: {
+            narrative: state.narrativeGraph ? {
+              documentId: state.narrativeGraph.id,
+              graph: state.narrativeGraph,
+              isDirty: state.dirtyByScope.narrative,
+            } : undefined,
+            storylet: state.storyletGraph ? {
+              documentId: state.storyletGraph.id,
+              graph: state.storyletGraph,
+              isDirty: state.dirtyByScope.storylet,
+            } : undefined,
+          },
+        }),
+      }
+    ),
+    { name: 'ForgeGraphs' }
+  )
+);
+```
+
+### TanStack Query (Server State)
+
+**When**: Fetching/mutating server data
+
+```typescript
+// From apps/studio/lib/data/hooks/index.ts
+export function useCharacters(projectId: number | null) {
+  return useQuery({
+    queryKey: ['characters', projectId],
+    queryFn: () => fetchCharacters(projectId!),
+    enabled: projectId != null,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useCreateCharacter() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateCharacterInput) => createCharacter(data),
+    onSuccess: (created, variables) => {
+      // Optimistic update
+      queryClient.setQueryData(
+        ['characters', variables.project],
+        (old: CharacterDoc[] = []) => [...old, created]
+      );
+    },
+    onError: (err, variables) => {
+      // Rollback on error
+      queryClient.invalidateQueries({ queryKey: ['characters', variables.project] });
+    },
+  });
+}
+
+// Usage in editor
+const { data: characters } = useCharacters(projectId);
+const createCharacterMutation = useCreateCharacter();
+
+const handleCreate = async (data: CreateCharacterInput) => {
+  const result = await createCharacterMutation.mutateAsync(data);
+  return result;
+};
+```
+
+### State Management Decision Tree
+
+```
+Is this server data?
+├─ Yes → TanStack Query
+└─ No → Is it shared across multiple components?
+    ├─ Yes → Zustand store
+    └─ No → useState
+```
+
+---
+
+## Feature Gating
+
+### Strategy 1: Disable
+
+Show the feature but make it non-interactive.
+
+```typescript
+// From CharacterEditor.tsx - Tools gated by entitlements
+const entitlements = useEntitlements();
+const toolsEnabled =
+  toolsEnabledSetting !== false &&
+  entitlements.has(CAPABILITIES.STUDIO_AI_TOOLS) &&
+  entitlements.has(CAPABILITIES.STUDIO_AI_CHAT);
+
+<DialogueAssistantPanel
+  contract={toolsEnabled ? characterAssistantContract : undefined}
+  toolsEnabled={toolsEnabled}
+/>
+```
+
+### Strategy 2: Hide
+
+Don't render the feature at all.
+
+```typescript
+// From DialogueEditor.tsx - Conditional panel rendering
+const showChatPanel = useSettingsStore((s) =>
+  s.getSettingValue('panel.visible.dialogue-chat', { editorId, viewportId })
+) as boolean | undefined;
+
+const chatContent = showChatPanel === false ? undefined : (
+  <div className="h-full min-h-0">
+    <DialogueAssistantPanel contract={forgeAssistantContract} />
+  </div>
+);
+```
+
+### Strategy 3: Replace
+
+Swap implementation based on feature flag.
+
+```typescript
+// Model provider switching
+const langGraphEnabled = isLangGraphEnabledClient();
+
+const assistantTransportHeaders = useMemo<Record<string, string> | undefined>(() => {
+  if (!langGraphEnabled) return undefined;
+
+  return {
+    'x-forge-ai-domain': 'forge',
+    'x-forge-ai-editor-id': editorId,
+    'x-forge-ai-viewport-id': activeScope,
+  };
+}, [langGraphEnabled, editorId, activeScope]);
+```
+
+### Pattern: Feature Flag Hook
+
+```typescript
+// Centralized feature gating
+function useFeature(feature: string): boolean {
+  const entitlements = useEntitlements();
+  const settings = useSettingsStore();
+
+  return useMemo(() => {
+    // Check entitlements
+    if (feature === 'ai-tools' && !entitlements.has(CAPABILITIES.STUDIO_AI_TOOLS)) {
+      return false;
+    }
+
+    // Check settings
+    const settingValue = settings.getSettingValue(`features.${feature}`);
+    if (settingValue === false) return false;
+
+    // Default: enabled
+    return true;
+  }, [feature, entitlements, settings]);
+}
+
+// Usage
+const aiEnabled = useFeature('ai-tools');
+const exportEnabled = useFeature('export-pdf');
+```
+
+---
+
+## Cross-Component Communication
+
+### Pattern 1: Callback Props (Direct)
+
+Parent coordinates between siblings.
+
+```typescript
+function Editor() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  return (
+    <>
+      {/* Component A sets selection */}
+      <ListView
+        items={items}
+        onSelect={(id) => setSelectedId(id)}
+      />
+
+      {/* Component B reacts to selection */}
+      <DetailView
+        selectedId={selectedId}
+        onClear={() => setSelectedId(null)}
+      />
+    </>
+  );
+}
+```
+
+### Pattern 2: Shared Store (Indirect)
+
+Components communicate via Zustand store.
+
+```typescript
+// Store
+const useEditorStore = create<EditorState>((set) => ({
+  selectedId: null,
+  setSelectedId: (id) => set({ selectedId: id }),
+}));
+
+// Component A
+function ListView() {
+  const setSelectedId = useEditorStore((s) => s.setSelectedId);
+  return <div onClick={() => setSelectedId('item-1')} />;
+}
+
+// Component B
+function DetailView() {
+  const selectedId = useEditorStore((s) => s.selectedId);
+  return <div>{selectedId}</div>;
+}
+```
+
+### Pattern 3: Event Bus (Complex)
+
+For deeply nested or dynamically mounted components.
+
+```typescript
+// Event bus
+type EditorEvent =
+  | { type: 'selection:changed'; id: string }
+  | { type: 'item:deleted'; id: string }
+  | { type: 'viewport:zoom'; level: number };
+
+const editorEvents = new EventEmitter<EditorEvent>();
+
+// Publisher
+function ListView() {
+  const handleSelect = (id: string) => {
+    editorEvents.emit({ type: 'selection:changed', id });
+  };
+}
+
+// Subscriber
+function DetailView() {
+  useEffect(() => {
+    const unsub = editorEvents.on('selection:changed', (event) => {
+      setSelectedId(event.id);
+    });
+    return unsub;
+  }, []);
+}
+```
+
+### Pattern 4: Context (Rare)
+
+Only when state needs to be available to deeply nested children without prop drilling.
+
+```typescript
+// EditorLayoutProvider - provides layout context to descendants
+const EditorLayoutContext = React.createContext<EditorLayoutContextValue | null>(null);
+
+export function EditorLayoutProvider({ editorId, viewportId, children }: Props) {
+  const value = useMemo(
+    () => ({ editorId, viewportId }),
+    [editorId, viewportId]
+  );
+
+  return (
+    <EditorLayoutContext.Provider value={value}>
+      {children}
+    </EditorLayoutContext.Provider>
+  );
+}
+
+// Usage in deep child
+function DeepComponent() {
+  const layout = useEditorLayout();
+  return <div>Editor ID: {layout.editorId}</div>;
+}
+```
+
+---
+
+## Performance Patterns
+
+### React.memo
+
+**When**: Component re-renders frequently but props rarely change
+
+```typescript
+// Expensive component that shouldn't re-render unless props change
+export const NodePaletteItem = React.memo(function NodePaletteItem({
+  item,
+  onDragStart,
+}: NodePaletteItemProps) {
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(item)}
+      className="palette-item"
+    >
+      {item.icon}
+      <span>{item.label}</span>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if item ID changes
+  return prevProps.item.id === nextProps.item.id;
+});
+```
+
+### useMemo
+
+**When**: Expensive computation that should only run when dependencies change
+
+```typescript
+// From DialogueEditor.tsx - expensive menu generation
+const viewMenuItems = useMemo(
+  () => {
+    const layoutSubmenu = panelSpecs.map((spec) => ({
+      id: `panel-${spec.id}`,
+      label: panelVisibility[spec.key] === false ? `Show ${spec.label}` : `Hide ${spec.label}`,
+      icon: panelIcons[spec.id],
+      onSelect: () => setPanelVisible(spec.key, !panelVisibility[spec.key]),
+    }));
+
+    return [
+      { id: 'layout', label: 'Layout', submenu: layoutSubmenu },
+    ];
+  },
+  [panelSpecs, panelVisibility, setPanelVisible]
+);
+```
+
+### useCallback
+
+**When**: Passing callbacks to memoized children
+
+```typescript
+// From DialogueEditor.tsx - stable callback references
+const handleNarrativeSelectionChange = useCallback(
+  (nodeIds: string[], edgeIds: string[]) => {
+    setActiveScope('narrative');
+    setSelectedNarrativeNodeIds(nodeIds);
+    setSelectedNarrativeEdgeIds(edgeIds);
+    clearHighlights();
+  },
+  [setActiveScope, clearHighlights]
+);
+
+// Memoized component won't re-render unless this callback's deps change
+<GraphEditor onSelectionChange={handleNarrativeSelectionChange} />
+```
+
+### Virtualization
+
+**When**: Rendering long lists (100+ items)
+
+```typescript
+// Using react-window
+import { FixedSizeList } from 'react-window';
+
+function VirtualizedList({ items }: { items: Item[] }) {
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => (
+    <div style={style}>
+      <ItemComponent item={items[index]} />
+    </div>
+  );
+
+  return (
+    <FixedSizeList
+      height={600}
+      itemCount={items.length}
+      itemSize={50}
+      width="100%"
+    >
+      {Row}
+    </FixedSizeList>
+  );
+}
+```
+
+### Debouncing
+
+**When**: Expensive operations triggered by rapid user input
+
+```typescript
+import { useDebouncedCallback } from 'use-debounce';
+
+function SearchInput() {
+  const [query, setQuery] = useState('');
+
+  const debouncedSearch = useDebouncedCallback(
+    (value: string) => {
+      // Expensive search operation
+      performSearch(value);
+    },
+    300 // 300ms delay
+  );
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => {
+        setQuery(e.target.value);
+        debouncedSearch(e.target.value);
+      }}
+    />
+  );
+}
+```
+
+---
+
+## Error Boundaries
+
+### Basic Error Boundary
+
+```typescript
+import { Component, ErrorInfo, ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error boundary caught:', error, errorInfo);
+    // Send to error tracking service
+    trackError(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="error-boundary">
+          <h2>Something went wrong</h2>
+          <details>
+            <summary>Error details</summary>
+            <pre>{this.state.error?.message}</pre>
+          </details>
+          <button onClick={() => this.setState({ hasError: false })}>
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+### Usage
+
+```typescript
+// Wrap editor sections
+function App() {
+  return (
+    <ErrorBoundary fallback={<EditorErrorFallback />}>
+      <DialogueEditor />
+    </ErrorBoundary>
+  );
+}
+
+// Or wrap specific panels
+function Editor() {
+  return (
+    <EditorDockLayout>
+      <EditorDockLayout.Left>
+        <ErrorBoundary fallback={<PanelError name="Navigator" />}>
+          <NavigatorPanel />
+        </ErrorBoundary>
+      </EditorDockLayout.Left>
+    </EditorDockLayout>
+  );
+}
+```
+
+---
+
+## Loading States
+
+### Pattern 1: Suspense (Data Fetching)
+
+```typescript
+import { Suspense } from 'react';
+
+function Editor() {
+  return (
+    <Suspense fallback={<EditorSkeleton />}>
+      <EditorContent />
+    </Suspense>
+  );
+}
+
+function EditorContent() {
+  // This throws a promise until data is ready
+  const data = use(fetchData());
+  return <div>{data}</div>;
+}
+```
+
+### Pattern 2: Manual Loading States
+
+```typescript
+function Editor() {
+  const { data, isLoading, error } = useCharacters(projectId);
+
+  if (isLoading) {
+    return <EditorLoadingState />;
+  }
+
+  if (error) {
+    return <EditorErrorState error={error} />;
+  }
+
+  return <EditorContent characters={data} />;
+}
+```
+
+### Pattern 3: Skeleton UI (Preferred)
+
+```typescript
+function CharacterList() {
+  const { data: characters, isLoading } = useCharacters(projectId);
+
+  return (
+    <div className="character-list">
+      {isLoading ? (
+        // Show skeleton matching final layout
+        Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="character-item skeleton">
+            <div className="avatar skeleton-box" />
+            <div className="name skeleton-text" />
+          </div>
+        ))
+      ) : (
+        characters?.map(char => (
+          <CharacterItem key={char.id} character={char} />
+        ))
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## Optimistic Updates
+
+### Pattern: Optimistic Create
+
+```typescript
+// From CharacterEditor.tsx pattern
+const createCharacterMutation = useCreateCharacter();
+
+const handleCreateCharacter = useCallback(
+  async (data: CharacterUpsertPayload): Promise<CharacterDoc> => {
+    // Generate temporary ID
+    const tempId = `temp_${Date.now()}`;
+
+    // Add optimistic character immediately
+    const optimisticChar: CharacterDoc = {
+      id: tempId as any,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    addCharacter(optimisticChar);
+
+    try {
+      // Send to server
+      const result = await createCharacterMutation.mutateAsync({
+        ...data,
+        project: projectId!,
+      });
+
+      // Replace temp with real character
+      updateCharacterLocal(tempId as any, { id: result.id });
+
+      return result as CharacterDoc;
+    } catch (err) {
+      // Remove optimistic character on error
+      removeCharacter(tempId as any);
+      throw err;
+    }
+  },
+  [createCharacterMutation, projectId, addCharacter, updateCharacterLocal, removeCharacter]
+);
+```
+
+### Pattern: Optimistic Update
+
+```typescript
+const updateCharacterMutation = useUpdateCharacter();
+
+const handleUpdateCharacter = useCallback(
+  async (id: number, updates: Partial<CharacterDoc>) => {
+    // Save old state for rollback
+    const oldCharacter = characters.find(c => c.id === id);
+
+    // Apply optimistically
+    updateCharacterLocal(id, updates);
+
+    try {
+      // Send to server
+      await updateCharacterMutation.mutateAsync({ id, ...updates });
+    } catch (err) {
+      // Rollback on error
+      if (oldCharacter) {
+        updateCharacterLocal(id, oldCharacter);
+      }
+      toast.error('Failed to update character');
+    }
+  },
+  [updateCharacterMutation, characters, updateCharacterLocal]
+);
+```
+
+---
+
+## Real-World Examples
+
+### Example 1: Dual-Viewport Editor (Dialogue)
+
+```typescript
+// From DialogueEditor.tsx - managing two graph viewports
+const [activeScope, setActiveScope] = useState<'narrative' | 'storylet'>('narrative');
+const [selectedNarrativeNodeIds, setSelectedNarrativeNodeIds] = useState<string[]>([]);
+const [selectedStoryletNodeIds, setSelectedStoryletNodeIds] = useState<string[]>([]);
+
+// Separate refs for each viewport
+const narrativeViewportRef = useRef<ForgeViewportHandle | null>(null);
+const storyletViewportRef = useRef<ForgeViewportHandle | null>(null);
+
+// Selection changes activate that viewport
+const handleNarrativeSelectionChange = useCallback(
+  (nodeIds: string[], edgeIds: string[]) => {
+    setActiveScope('narrative');  // Switch active viewport
+    setSelectedNarrativeNodeIds(nodeIds);
+    clearHighlights();
+  },
+  [setActiveScope, clearHighlights]
+);
+
+// Render both panels
+<ForgeGraphPanel
+  scope="narrative"
+  graph={narrativeGraph}
+  isActive={activeScope === 'narrative'}
+  selectedNodeIds={selectedNarrativeNodeIds}
+  onSelectionChange={handleNarrativeSelectionChange}
+  onViewportReady={handleNarrativeViewportReady}
+/>
+<ForgeGraphPanel
+  scope="storylet"
+  graph={storyletGraph}
+  isActive={activeScope === 'storylet'}
+  selectedNodeIds={selectedStoryletNodeIds}
+  onSelectionChange={handleStoryletSelectionChange}
+  onViewportReady={handleStoryletViewportReady}
+/>
+```
+
+### Example 2: Panel Visibility Management
+
+```typescript
+// From DialogueEditor.tsx - coordinated panel visibility
+const showLeftPanel = useSettingsStore((s) =>
+  s.getSettingValue('panel.visible.dialogue-left', { editorId, viewportId })
+) as boolean | undefined;
+
+const showRightPanel = useSettingsStore((s) =>
+  s.getSettingValue('panel.visible.dialogue-right', { editorId, viewportId })
+) as boolean | undefined;
+
+// Panels conditionally rendered based on settings
+const leftPanel = showLeftPanel === false ? undefined : (
+  <EditorDockPanel panelId="dialogue-left" title="Library">
+    <ForgeGraphList />
+  </EditorDockPanel>
+);
+
+const rightPanel = showRightPanel === false ? undefined : (
+  <EditorDockPanel panelId="dialogue-right" title="Inspector">
+    <WorkspaceInspector />
+  </EditorDockPanel>
+);
+```
+
+### Example 3: Modal Overlay System
+
+```typescript
+// From CharacterEditor.tsx - declarative overlay system
+const [activeOverlay, setActiveOverlay] = useState<ActiveOverlay | null>(null);
+
+const openOverlay = useCallback((id: string, payload?: Record<string, unknown>) => {
+  setActiveOverlay({ id, payload });
+}, []);
+
+const dismissOverlay = useCallback(() => setActiveOverlay(null), []);
+
+// Define overlays as config
+const overlays = useMemo<OverlaySpec[]>(
+  () => [
+    {
+      id: CREATE_CHARACTER_OVERLAY_ID,
+      type: 'modal',
+      title: 'Create Character',
+      size: 'md',
+      render: ({ onDismiss }) => (
+        <CreateCharacterModal
+          onCreate={handleCreateCharacter}
+          onClose={onDismiss}
+        />
+      ),
+    },
+    {
+      id: EDIT_CHARACTER_OVERLAY_ID,
+      type: 'modal',
+      title: 'Edit Character',
+      size: 'lg',
+      render: ({ onDismiss, payload }) => {
+        const characterId = Number(payload?.characterId);
+        const editingCharacter = characters.find((c) => c.id === characterId);
+        return (
+          <CreateCharacterModal
+            character={editingCharacter}
+            onCreate={handleCreateCharacter}
+            onClose={onDismiss}
+          />
+        );
+      },
+    },
+  ],
+  [characters, handleCreateCharacter]
+);
+
+// Render overlay surface
+<WorkspaceOverlaySurface
+  overlays={overlays}
+  activeOverlay={activeOverlay}
+  onDismiss={dismissOverlay}
+/>
+
+// Open from anywhere
+<Button onClick={() => openOverlay(CREATE_CHARACTER_OVERLAY_ID)}>
+  Create
+</Button>
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+### 1. Prop Drilling
+
+**Bad:**
+```typescript
+<Editor>
+  <Toolbar userId={userId} />
+  <Layout userId={userId}>
+    <Panel userId={userId}>
+      <Content userId={userId} />
+    </Panel>
+  </Layout>
+</Editor>
+```
+
+**Good:**
+```typescript
+// Use context or store
+const userId = useAppStore((s) => s.userId);
+```
+
+### 2. Inline Functions in Render
+
+**Bad:**
+```typescript
+{items.map(item => (
+  <Item
+    key={item.id}
+    onClick={() => handleClick(item.id)}  // New function every render
+  />
+))}
+```
+
+**Good:**
+```typescript
+const handleClick = useCallback((id: string) => {
+  // handle click
+}, []);
+
+{items.map(item => (
+  <Item key={item.id} onClick={handleClick} itemId={item.id} />
+))}
+```
+
+### 3. Missing Dependency Arrays
+
+**Bad:**
+```typescript
+const value = useMemo(() => computeExpensive(data), []);  // Stale data
+```
+
+**Good:**
+```typescript
+const value = useMemo(() => computeExpensive(data), [data]);
+```
+
+### 4. Over-Memoization
+
+**Bad:**
+```typescript
+const trivialValue = useMemo(() => a + b, [a, b]);  // Unnecessary
+```
+
+**Good:**
+```typescript
+const trivialValue = a + b;  // Just compute it
+```
+
+### 5. Mutating State Directly
+
+**Bad:**
+```typescript
+const [items, setItems] = useState([]);
+items.push(newItem);  // Mutation!
+```
+
+**Good:**
+```typescript
+const [items, setItems] = useState([]);
+setItems([...items, newItem]);  // Immutable update
+```
+
+---
+
+## Summary
+
+### Key Takeaways
+
+1. **Use slots** for flexible composition without prop drilling
+2. **Config-driven rendering** for repetitive UI from data
+3. **Controlled patterns** for coordinated state, **uncontrolled** for performance
+4. **Zustand** for domain state, **TanStack Query** for server state, **useState** for local
+5. **Feature gate** with disable, hide, or replace strategies
+6. **Memoize** expensive computations and stable callbacks
+7. **Error boundaries** prevent full app crashes
+8. **Optimistic updates** make UI feel instant
+
+### Next Steps
+
+- [AI Integration Tutorial](../tutorials/ai-integration.mdx) - Add AI to your editor
+- [Performance Guide](./performance.mdx) - Optimize rendering and data
+- [Theming Guide](./theming.mdx) - Customize appearance
+
+---
+
+## Reference: Pattern Decision Trees
+
+### State Management
+
+```
+Where is the data from?
+├─ Server → TanStack Query
+└─ Client → How many components need it?
+    ├─ One → useState
+    ├─ Multiple in same editor → Zustand store
+    └─ Entire app → App-level store (EditorStore, SettingsStore)
+```
+
+### Component Communication
+
+```
+How are components related?
+├─ Parent-Child → Props and callbacks
+├─ Siblings → Shared state in parent
+├─ Distant relatives → Zustand store
+└─ Deeply nested → Context (rare)
+```
+
+### Performance Optimization
+
+```
+What's the bottleneck?
+├─ Expensive computation → useMemo
+├─ Frequent re-renders → React.memo
+├─ Callback instability → useCallback
+├─ Long list rendering → Virtualization
+└─ Rapid input → Debouncing
+```
+
+---
+
+**You now have production-tested patterns for building maintainable, performant Forge editors.**

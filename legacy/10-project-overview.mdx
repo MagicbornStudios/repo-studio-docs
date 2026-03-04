@@ -1,0 +1,266 @@
+---
+title: Forge Agent - Project overview
+
+created: 2026-02-04
+updated: 2026-02-11
+---
+
+# Forge Agent - Project overview
+
+## Product vision
+
+Forge Agent is an **AI-first interactive narrative storytelling engine**. It
+combines visual graph editing, AI-assisted authoring, and multi-modal content
+creation into a unified editor platform inspired by Unreal Engine's editor UI.
+
+### MVP and first revenue
+
+We focus on **funding quickly** while delivering clear value. **MVP** = one end-to-end clone/download; **success** = first paid clone end-to-end; first paid = **cloneable project/template**; **creators list from day one**; **paid + free tier**; **catalog** (users + orgs); **revenue share** (platform + creator). **Yarn export in MVP.** **MVP editors** = Dialogue, Character, Writer, GamePlayer; Video and Strategy editor **not in MVP**. **MVP infra** = Vercel + Payload. **Platform** = `apps/platform` (landing + customer platform). Two hero moments: (1) **Author a small game fully with AI** using Studio, or (2) **Layer Studio on existing projects** — create content and **download** our **Codebase Agent Strategy** core (docs + AGENTS.md). See [MVP and first revenue](product/mvp-and-revenue.mdx) for audience, positioning, clone semantics, and evolution.
+
+### Positioning and audience
+
+- **Positioning:** Game/narrative **content authoring engine**, AI- and chat-first. We are a **thin** game engine — the content + agent layer, not a full engine.
+- **Audience:** Writers; game content/narrative teams; indie game devs; AAA teams (prototype or enhance coding agents and analytics for more ambitious games).
+
+### Core identity
+
+- **Interactive narrative storytelling** - build branching dialogue, character
+  relationships, and cinematic sequences with AI assistance.
+- **Yarn Spinner compatible** - first-class support for the Yarn Spinner
+  dialogue scripting language used across Unity, Unreal, and Godot.
+- **Editors as MCP Apps** - each editor can be exposed as an MCP App for
+  embedding in external hosts (Claude Desktop, Cursor, VS Code).
+
+### Editors
+
+| Editor | Purpose | Status |
+|------|---------|--------|
+| **Dialogue** | Yarn Spinner dialogue graph editing (narratives + storylets) | Primary (MVP) |
+| **Character** | Character relationship graph editing | In progress (MVP) |
+| **Writer** | Lexical-based, branching narrative, interactive narrative + Yarn; thin engine produces Yarn Games | Planned (MVP) |
+| **GamePlayer** | Playable runtime for Yarn Games (thin engine) | MVP (to be built) |
+| **Video** | Twick timeline video editing | Not in MVP (locked until after MVP) |
+| **Strategy** | AI agent strategy chat (assistant-ui + tool-ui); Strategy = core docs + AGENTS.md | Not in MVP (downloadable core in scope) |
+
+### Key capabilities
+
+- Editor shell with resizable, dockable, lockable panels (DockLayout).
+- CopilotKit for in-app AI context, actions, and suggestions.
+- assistant-ui + tool-ui for conversational AI interfaces.
+- Payload CMS (SQLite) for local-first persistence.
+- Payload-generated types used across systems (domain packages) for consistent schemas.
+- **Plan tiers** (free vs paid); **cloud subscription** for standard users (no API keys).
+- **Platform financial visibility**: org-scoped revenue + AI usage views in the customer dashboard.
+- **OpenRouter** first-class for multi-model AI; **ElevenLabs** and **Sora** (OpenAPI) for advanced media.
+- **Strategy** = core docs + AGENTS.md; downloadable core. Clone semantics: pay once → access indefinitely, clone as many times as desired; version snapshot at clone.
+
+## Tech stack
+
+- Next.js 15 (App Router, Turbopack)
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+- shadcn/ui (Radix UI)
+- Zustand
+- CopilotKit (system copilot - context, actions, suggestions)
+- assistant-ui + tool-ui (Strategy chat UI - threads, messages, tool rendering)
+- OpenRouter via OpenAI SDK + baseURL; ElevenLabs for audio; video (Sora) planned - see [06 - Model routing and OpenRouter](architecture/06-model-routing-and-openrouter.mdx)
+- React Flow
+- Payload CMS (SQLite)
+
+---
+
+## Architecture (high level)
+
+- **App Shell** (`apps/studio/components/AppShell.tsx`, `apps/studio/lib/app-shell/store.ts`): owns editor tabs and the active editor. Only the active editor is rendered.
+- **Editors**: Dialogue is primary. Character and Video are editors; Strategy is the assistant-ui strategy editor.
+- **Shared**: `packages/shared/src/shared` contains the editor UI kit, headless contracts, assistant-ui/tool-ui components, and styling tokens.
+- **Agent engine**: `packages/agent-engine` provides the workflow runtime (steps + events + SSE helpers).
+- **Dev kit**: `packages/dev-kit` re-exports `@forge/shared` and `@forge/agent-engine` for consumers (UI atoms are in `@forge/ui`).
+- **Systems (domain packages)**: Dialogue system logic lives in `packages/domain-forge` and consumes types from `packages/types`.
+- **Types**: Payload generates types into `packages/types/src/payload-types.ts`. Domain aliases live in `packages/types/src/payload.ts` and `packages/types/src/graph.ts`.
+- **Persistence**: Payload runs inside the Studio app. Collections live under `apps/studio/payload/collections`.
+- **Settings**: Config-based defaults in `apps/studio/lib/settings/config.ts`. Overrides are loaded from Payload (`settings-overrides`) on app init via `GET /api/settings` and `hydrateFromOverrides`; saved explicitly via the settings sheet Save button and `POST /api/settings`.
+
+Note: API routes exist inside the Studio app for CopilotKit, assistant-chat, and Payload operations, but they are internal to the app and not treated as separate services.
+
+---
+
+## Codebase layout (what each folder does)
+
+| Path | Purpose |
+|------|---------|
+| **apps/studio/app/** | Next.js App Router: layout, page, globals.css, internal API routes. |
+| **apps/studio/components/** | Studio UI (AppShell, editors, settings, providers, shadcn UI). |
+| **apps/studio/payload/** | Payload config and collections for Studio. |
+| **apps/studio/lib/** | App logic (stores, model router, settings, graph operations, utils). |
+| **packages/shared/** | Shared editor UI kit and headless contracts. |
+| **packages/agent-engine/** | Workflow runtime (steps + events + SSE). |
+| **packages/dev-kit/** | Meta-package that re-exports forge shared + agent-engine for consumers (UI atoms in `@forge/ui`). |
+| **packages/domain-forge/** | Dialogue system (domain package) logic (types, store, operations, copilot wiring). |
+| **packages/ui/** | Shared shadcn UI atoms (Radix-based primitives). |
+| **packages/types/** | Payload-generated types + domain aliases (source of truth). |
+| **docs/** | Documentation (STATUS, architecture, design, guides). How-to guides live in `docs/how-to/` (numbered 00-09, 21-22) and are also served in-app at `/docs`. |
+| **__tests__/** | Jest tests. |
+| **__mocks__/** | Jest mocks (server-only, etc.). |
+
+---
+
+## File tree (current)
+
+```
+AGENTS.md
+README.md
+SETUP.md
+pnpm-workspace.yaml
+package.json
+
+apps/
+  studio/
+    app/
+      layout.tsx
+      page.tsx
+      api/
+        assistant-chat/route.ts
+        copilotkit/route.ts
+        graphs/route.ts
+        graphs/[id]/route.ts
+        model-settings/route.ts
+        settings/route.ts
+    components/
+      AppShell.tsx
+      GraphEditor.tsx
+      CreateNodeModal.tsx
+      copilot/
+      editors/
+      forge/
+      media/
+      editors/
+      providers/
+      settings/
+      video/
+    lib/
+      app-shell/
+      domains/
+        video/
+      model-router/
+      settings/
+    payload/
+      collections/
+        projects.ts
+        users.ts
+        agent-sessions.ts
+        forge-graphs.ts
+        settings-overrides.ts
+        video-docs.ts
+      collections/index.ts
+    payload.config.ts
+    next.config.ts
+    postcss.config.mjs
+    tsconfig.json
+    components.json
+
+packages/
+  shared/
+    src/
+      index.ts
+      shared/
+        components/
+          app/
+          assistant-ui/
+          editor/
+          tool-ui/
+          workspace/
+        copilot/
+        styles/
+        workspace/
+        AGENTS.md
+    package.json
+  domain-forge/
+    src/
+      copilot/
+      operations.ts
+      scene.ts
+      store.ts
+      types.ts
+      index.ts
+    package.json
+  ui/
+    src/
+      components/
+        ui/
+      lib/
+      index.ts
+    package.json
+  types/
+    src/
+      graph.ts
+      payload.ts
+      payload-types.ts
+      index.ts
+    package.json
+
+examples/
+  consumer/
+    app/
+      api/
+        assistant-chat/route.ts
+      page.tsx
+
+docs/
+  agent-artifacts/core/
+  10-project-overview.mdx
+  architecture/
+  design/
+  how-to/
+
+scripts/
+  generate-payload-types.mjs
+
+__tests__/
+__mocks__/
+
+types/
+  README.md
+```
+
+---
+
+## Key configuration files
+
+| File | Purpose |
+|------|---------|
+| **package.json** | Workspace root scripts (pnpm filters for Studio). |
+| **apps/studio/package.json** | Studio app deps and scripts. |
+| **apps/studio/tsconfig.json** | Studio TS config and path aliases. |
+| **apps/studio/next.config.ts** | Next config + transpile workspace packages. |
+| **apps/studio/payload.config.ts** | Payload config; generates types into `packages/types`. |
+| **packages/types/src/payload-types.ts** | Generated Payload types (do not edit). |
+| **packages/types/src/payload.ts** | Domain aliases for payload-generated types. |
+| **apps/studio/components.json** | shadcn/ui config. |
+| **jest.config.js** | Jest config with moduleNameMapper for workspace aliases. |
+
+---
+
+## Entry and data flow
+
+- **Entry**: `apps/studio/app/layout.tsx` -> `apps/studio/app/page.tsx`.
+- **AppShell**: Reads app-shell store and renders the active editor. Editor tabs use shared components from `@forge/shared`.
+- **Dialogue editor**: Composes `WorkspaceShell` and `DockLayout` from `@forge/shared` with the GraphEditor as the main surface.
+- **CopilotKit**: The active editor registers context + actions from system wiring; the chat uses those to propose edits.
+- **Payload**: Collections define persisted shapes; generated types are used by system logic for type safety.
+
+---
+
+## How-to guides
+
+Numbered guides in `docs/how-to/` build an editor from the ground up. They are served in the Studio app at **/docs** (sidebar + article). Order: 01 Foundation -> 02 Editor shell and slots -> 03 Styling -> 04 Data and state -> 05 Building an editor -> 06 Dialogue Editor walkthrough -> 07 Copilot and AI integration -> 08 Adding AI to editors -> 09 Video Editor walkthrough -> 21 Workspace -> Editor migration -> 22 AI generation components. Each guide includes "What the AI can do at this stage" and points to real code.
+
+---
+
+## References
+
+- **AGENTS.md** (root): Agent rules and boundaries.
+- **docs/agent-artifacts/core/STATUS.md**: Current state and Ralph Wiggum loop.
+- **docs/how-to/00-index.mdx**: Index of how-tos and reference doc links.
+- **packages/shared/src/shared/AGENTS.md**: Shared and editor platform rules (includes workspace internal-types).

@@ -1,0 +1,45 @@
+---
+title: 11 - Platform auth
+created: 2026-02-05
+updated: 2026-02-12
+---
+
+# 11 - Platform auth
+
+How authentication works between the customer platform (`apps/platform`) and Studio (Payload).
+
+## Payload users
+
+- Users live in Studio Payload (`users` collection).
+- Auth is cookie-based. Payload login sets an HTTP-only cookie, and `GET /api/me` returns the current user when that cookie is sent.
+
+## Login flow
+
+1. User submits email/password on `/login` in platform.
+2. Platform calls `POST {STUDIO_API_URL}/api/users/login` with `credentials: 'include'`.
+3. Studio validates credentials and sets the auth cookie.
+4. Platform redirects to `/dashboard/overview` (or `returnUrl`), and subsequent requests to Studio APIs send the cookie.
+
+## Platform auth context
+
+- `AuthProvider` is in `apps/platform/src/components/auth/AuthProvider.tsx`.
+- On mount, it fetches `GET {STUDIO_API_URL}/api/me` with `credentials: 'include'`.
+- `useAuth()` exposes `{ user, isLoading }` for header/account guards.
+- Login page (`apps/platform/src/app/(platform)/login/page.tsx`) redirects immediately after a successful login request and refreshes auth in the background to avoid redirect stalls when `/api/me` is slow.
+
+## Env and startup checks
+
+- Platform resolves Studio API base via `apps/platform/src/lib/env.ts`.
+- `NEXT_PUBLIC_STUDIO_APP_URL` is required outside local development fallback contexts.
+- Use:
+  - `pnpm env:setup -- --app platform`
+  - `pnpm env:doctor -- --app platform --mode local`
+- `pnpm dev:platform` automatically runs `pnpm env:bootstrap -- --app platform` before boot (portal opens when keys missing).
+
+## Cross-origin notes
+
+- If platform and studio are different origins, CORS must allow credentials.
+- Studio accepts local defaults (`http://localhost:3001`) and can be extended with `CORS_ALLOWED_ORIGINS` (comma-separated) or `PLATFORM_APP_URL` in `apps/studio/.env.local`.
+- For production subdomains (for example `platform.example.com` and `app.example.com`), set cookie domain to `.example.com` where applicable.
+
+**Next:** [12 - Platform Stripe](12-marketing-stripe.mdx)

@@ -1,0 +1,222 @@
+---
+title: Product roadmap
+created: 2026-02-06
+updated: 2026-02-11
+---
+
+# Product roadmap
+
+Forge Agent is an **AI-first interactive narrative storytelling engine** — a **game/narrative content authoring engine**, thin on engine, strong on content and AI. This roadmap tracks editors, platform initiatives, and integrations. Each item follows the **Ralph Wiggum loop**: read STATUS -> implement a slice -> update STATUS and artifacts.
+
+**MVP and first revenue:** **MVP editors** = Dialogue, Character, Writer, GamePlayer. Video and Strategy codebase editor **not in MVP**. **Creators list from day one.** **MVP** = Vercel + Payload; **platform** = `apps/platform`; **success** = first paid clone end-to-end. See **[MVP and first revenue](../product/mvp-and-revenue.mdx)** for audience, positioning, and evolution.
+
+**Production target:** 2/14. We are in development until then; migration and rollback strategy apply after production.
+
+**For the canonical "what can I do next?" list with impact sizes, see [STATUS.md](../agent-artifacts/core/STATUS.md) § Next.** Epic and large initiatives are broken into **tiers** (initiative → lane → slice → task); see [task registry](../agent-artifacts/core/task-registry.md) for pickable tasks.
+
+---
+
+## Active editors
+
+### Dialogue editor (Yarn Spinner)
+
+**Status:** In progress (primary editor).
+
+**Focus:**
+
+- Yarn Spinner dialogue graph editing (narratives + storylets).
+- Plan -> patch -> review -> commit workflow with DockLayout.
+- Domain copilot actions and highlights for dialogue graphs.
+- Dual graph panels (narrative + storylet) with shared chrome.
+
+### Character editor
+
+**Status:** In progress.
+
+**Focus:**
+
+- Character relationship graph editing with React Flow.
+- Tabbed sidebar with node palette and drag-drop creation.
+- Character voice integration (ElevenLabs).
+
+### GamePlayer
+
+**Status:** MVP (to be built).
+
+**Focus:**
+
+- Playable runtime for **Yarn Games** (thin engine).
+- Authors build in Dialogue/Character/Writer, then play in GamePlayer.
+
+**How we build it:** See [10 - GamePlayer (how we build it)](../architecture/10-gameplayer.mdx): runtime = **Pixi'VN** (demos and builds); prerequisites (Yarn export/import), Phase 1 (editor tab, load dialogue, minimal runtime), Phase 2 (character/voice, variables, polish). We will add **adapters** (Yarn first, then RenPy, Ink, Twine) so other ecosystems can import projects and run them in our player. Yarn Spinner comes before GamePlayer; GamePlayer is part of MVP.
+
+### Video editor
+
+**Status:** Not in MVP. Locked until after MVP (capability `studio.video.editor`). See [ISSUES.md](../../ISSUES.md).
+
+**Focus (when unlocked):**
+
+- Twick timeline editor surface.
+- Track list and timeline panels.
+- Pending: map Twick state to VideoDoc draft and connect persistence.
+
+### Strategy editor (CodebaseAgentStrategyEditor)
+
+**Status:** Not in MVP. The in-app Strategy editor is out of scope for MVP; it ships after MVP.
+
+**Focus (when in scope):**
+
+- assistant-ui and tool-ui based chat editor.
+- Streaming AI SDK chat endpoint (`/api/assistant-chat`).
+- Shared component exported from `@forge/shared` for consumer apps.
+
+**Scope:** Help users define and refine **per-editor strategies** for their
+codebases and produce plans and agent artifacts for any coding agent (Cursor,
+Codex, Claude, etc.). Support for standard Unity and Unreal codebase
+structures is in scope.
+
+**Strategy definition:** Strategy = our **core docs + AGENTS.md** (agent-artifacts, decisions, STATUS, etc.). The **downloadable Strategy core** and **TRACE** (for proof) are in scope for MVP; the in-app Strategy editor is not.
+
+---
+
+## Platform initiatives
+
+### Studio and editors as MCP (chat-first)
+
+**Status:** After MVP (not part of MVP).
+
+**Goal:** Studio and editors **controlled completely by chats** across Cursor, Claude, ChatGPT, Atlas, Perplexity, and in-browser assistants. **Studio app** is exposed as MCP (publish, update listing, switch/open/close editor, project context). **Each editor** is an MCP app and **registers** with Studio; new editors bring their MCP and register so the Studio MCP Server can discover and route their tools.
+
+**Phases:**
+
+1. **Studio MCP Server and app tools** — studio_switchEditor, studio_openEditor, studio_closeEditor, studio_getProject, studio_listProjects, studio_publish, studio_updateListing. See [07 - Editors as MCP Apps](../architecture/07-modes-as-mcp-apps.mdx).
+2. **Editor registration** — Define `McpAppDescriptor` per editor (tools + UI resources); editors register with Studio; Studio MCP Server aggregates and exposes them. Third-party and community editors implement the same contract ([Developer program](../business/developer-program-and-editors.mdx)).
+3. **MCP vs CopilotKit/assistant-ui** — Document and (optionally) implement unified tool backend or dual-surface approach. Caveats and possible solutions: [11 - MCP vs CopilotKit and assistant-ui](../architecture/11-mcp-copilotkit-assistant-ui.mdx).
+4. **Host integration** — Host matrix and setup docs: Cursor, Claude, VS Code, ChatGPT, Atlas, Perplexity. [12 - MCP hosts and chat-first](../architecture/12-mcp-hosts-and-chat-first.mdx). Register with MCP hosts; streaming tool results.
+
+**Impact: Large.** Architecture: [07 - Editors as MCP Apps](../architecture/07-modes-as-mcp-apps.mdx). Caveats and auth: [11](../architecture/11-mcp-copilotkit-assistant-ui.mdx). Host matrix and setup: [12](../architecture/12-mcp-hosts-and-chat-first.mdx). Task breakdown: [task-breakdown-mcp-studio-editors.md](../agent-artifacts/core/task-breakdown-mcp-studio-editors.md).
+
+### Developer program and editor ecosystem
+
+**Status:** After MVP (not part of MVP).
+
+**Goal:** Let developers submit editors/apps built with the dev kit (web tech); approved editors in the official Studio suite receive a defined revenue split from platform flows while official (not Studio usage-metered pay); community apps are listable and installable but do not receive official payouts. Submission via GitHub repo (private; we fork for paid users). Approved editors, data contracts, first-class narrative (Forge graph, Yarn), preferred integrations (Babylon.js, Kaplay, Phaser, video). See [Business: Developer program and editor ecosystem](../business/developer-program-and-editors.mdx).
+
+**Impact: Epic.**
+
+### Dev-kit: single entrypoint and ease of use
+
+**Status:** Open. Track in [STATUS § Next #18](../agent-artifacts/core/STATUS.md) and [task breakdown](../agent-artifacts/core/task-breakdown-dev-kit-single-entrypoint.md).
+
+**Goal:** One package (`@forge/dev-kit`), one style import (bundled dockview + overrides), no dockview or internal paths in user code. Extremely easy install → one CSS line → one snippet (or optional create-forge-app). Tons of customer-facing docs (Quick start, guides, reference); internal docs (architecture 04, Verdaccio 25, dev-kit-and-keys).
+
+**Pillars:**
+
+1. **Single entrypoint** — Package + CSS bundle/export; one recommended import path in all customer docs.
+2. **Ease of use** — Quick start; optional CLI (create-forge-app) to scaffold Strategy-first app.
+3. **Customer-facing docs** — Marketing site: Quick start, Install, First editor, Layout/shell, Styling, API keys, Components/API reference, Editors, Private registry.
+4. **Internal docs** — Repo: architecture 04, how-to 25 (Verdaccio), dev-kit-and-keys; STATUS/decisions reference single entrypoint and no dockview leak.
+5. **Optional create-forge-app** — CLI that scaffolds a standalone Next app with Strategy editor.
+
+**Impact: Medium–Large.** Pick by slice/task from [task registry](../agent-artifacts/core/task-registry.md) initiative `dev-kit-single-entrypoint`.
+
+**Reference:** [Dev-kit and keys](../product/dev-kit-and-keys.mdx).
+
+### First-class Yarn Spinner support
+
+**Status:** **MVP** — Yarn export (and import) is in MVP.
+
+**Goal:** Full integration with the [Yarn Spinner](https://yarnspinner.dev)
+dialogue scripting language.
+
+**Scope (MVP):**
+
+- **Export/import `.yarn` files** from dialogue graphs (in MVP).
+- Yarn syntax preview alongside the visual graph.
+- Variable panel for declaring and tracking Yarn variables.
+- Command palette for common Yarn commands.
+
+**Impact: Medium.** Architecture: [09 - Dialogue system and Yarn Spinner](../architecture/09-dialogue-domain-and-yarn-spinner.mdx).
+
+### Full Yarn Spinner implementation
+
+**Status:** Planned (later).
+
+**Goal:** Complete Yarn Spinner toolchain in-browser.
+
+**Scope:**
+
+- Compile graphs to Yarn bytecode.
+- Runtime preview (play through dialogue).
+- Localization and string table export.
+- Custom commands and functions.
+- Unity/Unreal export packages.
+
+---
+
+## Platform (future)
+
+These items are tracked in STATUS § Next with impact sizes. **First revenue = paid clone/download** (see [MVP and first revenue](../product/mvp-and-revenue.mdx)).
+
+- **Platform** = `apps/platform` (landing + customer platform).
+- **Catalog at MVP** — Users and orgs can browse and list. **Creators list from day one** (catalog + Connect + payouts at MVP). The **public catalog page** is at `/catalog` in the platform app (Unity Asset Store / Bandlab style card grid).
+- **Paid and free tier** — Plan tiers required at MVP.
+- **Revenue share** — Platform and creator both get paid (Unity Asset Store / Bandlab style); Stripe Connect or similar for payouts.
+- **Monetization (clone to account / download)** — **MVP-critical.** Users can let others clone a project (or template, or Strategy core) to their account for a price, or download the build. Listings, checkout, Stripe Connect or similar. **Impact: Epic.**
+- **Plan tiers and capabilities for platform** — **MVP-critical.** Extend plans and `CAPABILITIES` to gate platform features (e.g. who can list, who can clone/download paid items). **Impact: Small–Medium.**
+- **Publish and host project builds** — **MVP.** Authors publish a project build; we host playable narrative so players can play builds. Build pipeline, storage, playable runtime. **Impact: Large.**
+
+### Creator dashboard
+
+**Status:** In progress. Track in [task registry](../agent-artifacts/core/task-registry.md) initiative `creator-dashboard` and [task breakdown](../agent-artifacts/core/task-breakdown-creator-dashboard.md).
+
+**Goal:** Full account management in the **platform app** (customer-facing). Canonical routes are `/dashboard/*` (overview, listings, games, revenue, billing, licenses, settings, api-keys). `/account/*` remains compatibility redirects. **Studio** remains minimal: only **publish** (create listing from current project) and **update listing** (if project already linked) in the app bar; no listings management, catalog, or revenue UI in Studio.
+
+**Implemented baseline:** Vercel-style dashboard shell standardization, creator APIs (`GET /api/me/listings`, `GET /api/me/projects`), free clone route (`POST /api/catalog/:id/clone`), Unity-style catalog filtering, and dashboard pages for creator/account flows.
+
+**Implemented expansion:** Organization-first customer context (`organizations`, memberships, active org switching), org-scoped creator/revenue APIs (`/api/me/orgs`, `/api/me/orgs/active`, `/api/me/revenue?orgId=...`), AI usage ledger + org-scoped usage APIs (`/api/me/ai-usage`, `/api/me/ai-usage/summary`), and Stripe Connect org-context onboarding/account actions.
+
+**Implemented hardening and billing extension:** org-scoped storage metering and quota visibility (`/api/me/storage/summary`, `/api/me/storage/breakdown`), storage upgrade checkout (`/api/me/storage/upgrade-checkout-session`), enterprise request intake (`/api/me/enterprise/requests`), idempotent Stripe webhook settlement for licenses/storage-upgrades, and clone/storage enforcement for org-attributed projects.
+
+**Follow-up:** full build publish/host pipeline for playable builds remains tracked under `publish-host`.
+
+**Impact: Large.**
+
+### Platform business vertical alignment
+
+**Status:** Mixed (some implemented, some in progress).
+
+- **Implemented (MVP baseline):** marketplace catalog + clone flows, creator dashboard routes, Stripe Connect onboarding/actions, org-scoped ownership context, AI usage financial visibility.
+- **In progress:** publish/host pipeline for playable builds, take-rate policy finalization, deeper payout operations/reporting.
+- **After MVP:** official developer ecosystem payout lifecycle and broader multi-seller split logic.
+
+### Import and play
+
+**Status:** Open. Yarn first (MVP); then Ink, Twine, Ren'Py. Optional: AI-assisted import (see [Potential ideas](potential-ideas.md)).
+
+**Goal:** **Adapters** translate existing project formats (Yarn, Ink, Twine, Ren'Py) into our project/graph and Pixi'VN Json so imported projects can play in GamePlayer and be published. **Optional future:** AI-assisted import pipeline to parse and map external formats into our schema when structure differs. See [Ecosystem and import strategy](../business/ecosystem-and-import-strategy.mdx) and [10 - GamePlayer](../architecture/10-gameplayer.mdx).
+
+**Impact: Medium–Large.**
+
+---
+
+## Planned editors
+
+### Writer editor
+
+**Status:** Planned.
+
+**Notion-like, Lexical-based** (Facebook Lexical). Write normally; **branching narrative** (different takes) in the project. **Interactive narrative, choices, dialogue** with AI and graphing. Yarn Spinner for formalized dialogue; thin engine produces **Yarn Games** (simple, opinionated). Content scales to AAA (Unity/Unreal/Godot); Strategy editor helps with agent productivity for bigger engines. **Pages** and **blocks** Payload collections and CRUD hooks are in place (`usePages`, `usePage`, `useCreatePage`, `useUpdatePage`, `useBlocks`, `useBlock`, `useCreateBlock`, `useUpdateBlock`). Data structure aligns with Notion API concepts. WriterEditor UI and editor shell not yet implemented. Same loop pattern (artifacts + strategy) as other editors.
+
+---
+
+## Other roadmap items
+
+- Vision/image input (model registry + chat upload).
+- Co-agents (documented, not used).
+- Optional agent graphs/subgraphs in runtime.
+- Video workflow panel (plan -> patch -> review) mirroring Dialogue. **Impact: Medium.**
+
+See [STATUS § Next](../agent-artifacts/core/STATUS.md) for the full list with impact sizes, and
+[03 - CopilotKit and agents](../architecture/03-copilotkit-and-agents.mdx)
+Section 12.

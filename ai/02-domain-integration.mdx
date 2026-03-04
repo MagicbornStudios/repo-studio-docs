@@ -1,0 +1,40 @@
+---
+title: 02 - Domain integration
+---
+
+# 02 - Domain integration
+
+Every domain implements `DomainAssistantContract` and wires via `useDomainAssistant`.
+
+## Contract
+
+```ts
+interface DomainAssistantContract {
+  domain: string;
+  getContextSnapshot(): DomainContextSnapshot;
+  getInstructions(): string;
+  createTools(): DomainTool[];
+  getSuggestions(): Array<{ title: string; message: string }>;
+  onHighlight(entities: Record<string, string[]>): void;
+  clearHighlights(): void;
+}
+```
+
+**File:** `packages/shared/src/shared/assistant/domain-contract.ts`
+
+## Wiring
+
+```tsx
+import { useDomainAssistant, DomainToolsRenderer } from '@forge/shared/assistant';
+
+useDomainAssistant(contract, { enabled });
+<DomainToolsRenderer contract={contract} enabled={enabled} />
+```
+
+**Next:** [03 - Domains (Forge, Character)](03-domains-forge-character)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/assistant/domain-contract.ts`, `use-domain-assistant.ts`
+Related: ai/03-domains-forge-character, how-to/07-assistant-and-ai
+Do not: Use useDomainCopilot; use useDomainAssistant
+</Callout>

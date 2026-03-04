@@ -1,0 +1,14 @@
+{
+  "title": "Component Reference",
+  "pages": [
+    "editor-shell-complete",
+    "dock-layout-complete",
+    "dock-panel-complete",
+    "editor-toolbar-complete",
+    "editor-inspector-complete",
+    "editor-overlay-surface-complete",
+    "editor-status-bar-complete",
+    "panel-tabs-complete",
+    "settings-panel-complete"
+  ]
+}

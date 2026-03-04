@@ -1,0 +1,761 @@
+---
+title: PanelTabs - Complete Guide
+description: Tab system for multi-mode panels with icons, accent colors, and controlled/uncontrolled modes
+---
+
+# PanelTabs - Complete Guide
+
+The **PanelTabs** component provides a unified tab system for multi-mode panels. Built on shadcn Tabs (Radix UI), it replaces custom implementations with a theme-aware, accessible solution that supports icons, accent colors, and both controlled and uncontrolled modes.
+
+## Table of Contents
+
+1. [Core Concepts](#core-concepts)
+2. [Component API](#component-api)
+3. [Real Examples](#real-examples)
+4. [Controlled vs Uncontrolled](#controlled-vs-uncontrolled)
+5. [Styling and Themes](#styling-and-themes)
+6. [Common Patterns](#common-patterns)
+
+---
+
+## Core Concepts
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────┐
+│              PanelTabs                        │
+├──────────────────────────────────────────────┤
+│                                               │
+│  ┌─────────────────────────────────────────┐ │
+│  │ TabsList (Triggers)                     │ │
+│  ├─────────┬─────────┬─────────┬──────────┤ │
+│  │ Tab 1 ● │ Tab 2   │ Tab 3 ● │ Tab 4    │ │
+│  └─────────┴─────────┴─────────┴──────────┘ │
+│  ─────────                                    │
+│    Active indicator (accent color)            │
+│                                               │
+│  ┌─────────────────────────────────────────┐ │
+│  │ TabsContent (Active tab content)        │ │
+│  │                                         │ │
+│  │  <Component for active tab>             │ │
+│  │                                         │ │
+│  └─────────────────────────────────────────┘ │
+└──────────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Icon support** - Optional icons per tab
+- **Accent colors** - Per-tab accent colors for active indicator
+- **Controlled/uncontrolled** - Flexible state management
+- **Theme-aware** - Respects light/dark mode
+- **Accessible** - Built on Radix UI primitives
+- **Keyboard navigation** - Arrow keys, Home, End
+
+---
+
+## Component API
+
+### PanelTabs Props
+
+From `C:\Users\benja\Documents\forge-agent\packages\shared\src\shared\components\editor\PanelTabs.tsx`:
+
+```typescript
+export interface PanelTabDef {
+  /** Unique tab identifier */
+  id: string;
+
+  /** Display label in the tab trigger */
+  label: string;
+
+  /** Optional icon rendered before the label */
+  icon?: React.ReactNode;
+
+  /** Tab panel content */
+  content: React.ReactNode;
+
+  /** Optional accent color for the tab indicator/icon */
+  accentColor?: string;
+
+  /** Whether this tab can be closed (future: dockable/detachable) */
+  closable?: boolean;
+}
+
+export interface PanelTabsProps {
+  /** Tab definitions (at least one required) */
+  tabs: PanelTabDef[];
+
+  /** Initial tab when uncontrolled (defaults to first tab) */
+  defaultTabId?: string;
+
+  /** Controlled active tab (overrides internal state) */
+  activeTabId?: string;
+
+  /** Called when a tab is activated */
+  onTabChange?: (id: string) => void;
+
+  className?: string;
+}
+```
+
+### Basic Usage (Uncontrolled)
+
+```tsx
+import { PanelTabs } from '@forge/shared';
+import { BookOpen, Boxes, Settings } from 'lucide-react';
+
+function NavigatorPanel() {
+  const tabs: PanelTabDef[] = [
+    {
+      id: 'graphs',
+      label: 'Graphs',
+      icon: <BookOpen size={12} />,
+      content: <GraphList />,
+    },
+    {
+      id: 'nodes',
+      label: 'Nodes',
+      icon: <Boxes size={12} />,
+      content: <NodePalette />,
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <Settings size={12} />,
+      content: <SettingsPanel />,
+    },
+  ];
+
+  return <PanelTabs tabs={tabs} defaultTabId="graphs" />;
+}
+```
+
+### Controlled Usage
+
+```tsx
+function ControlledPanelTabs() {
+  const [activeTab, setActiveTab] = useState('graphs');
+
+  const tabs: PanelTabDef[] = [
+    {
+      id: 'graphs',
+      label: 'Graphs',
+      icon: <BookOpen size={12} />,
+      content: <GraphList />,
+    },
+    {
+      id: 'nodes',
+      label: 'Nodes',
+      icon: <Boxes size={12} />,
+      content: <NodePalette />,
+    },
+  ];
+
+  return (
+    <div>
+      <PanelTabs
+        tabs={tabs}
+        activeTabId={activeTab}
+        onTabChange={setActiveTab}
+      />
+
+      <div className="p-4">
+        Current tab: {activeTab}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Real Examples
+
+### DialogueEditor Navigator
+
+From `C:\Users\benja\Documents\forge-agent\apps\studio\components\editors\DialogueEditor.tsx`:
+
+```tsx
+function DialogueEditor() {
+  const leftPanelTabs: PanelTabDef[] = [
+    {
+      id: 'narratives',
+      label: 'Narratives',
+      icon: <BookOpen size={12} />,
+      accentColor: 'var(--status-info)',
+      content: (
+        <ForgeGraphList
+          label="Narrative"
+          icon={<BookOpen size={12} />}
+          graphs={narrativeGraphs}
+          activeGraphId={activeNarrativeId}
+          onSelect={setActiveNarrativeId}
+          onCreate={handleCreateNarrative}
+          focusedEditor={focusedEditor}
+        />
+      ),
+    },
+    {
+      id: 'storylets',
+      label: 'Storylets',
+      icon: <Layers size={12} />,
+      accentColor: 'var(--graph-edge-choice-1)',
+      content: (
+        <ForgeGraphList
+          label="Storylet"
+          icon={<Layers size={12} />}
+          graphs={storyletGraphs}
+          activeGraphId={activeStoryletId}
+          onSelect={setActiveStoryletId}
+          onCreate={handleCreateStorylet}
+          focusedEditor={focusedEditor}
+        />
+      ),
+    },
+    {
+      id: 'palette',
+      label: 'Palette',
+      icon: <Boxes size={12} />,
+      content: (
+        <NodePalette
+          items={nodePaletteItems}
+          onDragStart={handleNodeDragStart}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <EditorDockPanel
+      id="left-nav"
+      title="Navigator"
+      side="left"
+      defaultSize={280}
+    >
+      <PanelTabs tabs={leftPanelTabs} defaultTabId="narratives" />
+    </EditorDockPanel>
+  );
+}
+```
+
+### Multi-Tab Inspector
+
+```tsx
+function InspectorPanel() {
+  const tabs: PanelTabDef[] = [
+    {
+      id: 'properties',
+      label: 'Properties',
+      icon: <Settings size={12} />,
+      content: <PropertiesForm />,
+    },
+    {
+      id: 'metadata',
+      label: 'Metadata',
+      icon: <FileText size={12} />,
+      content: <MetadataForm />,
+    },
+    {
+      id: 'history',
+      label: 'History',
+      icon: <History size={12} />,
+      content: <HistoryList />,
+    },
+  ];
+
+  return (
+    <EditorDockPanel
+      id="right-inspector"
+      title="Inspector"
+      side="right"
+      defaultSize={320}
+    >
+      <PanelTabs tabs={tabs} defaultTabId="properties" />
+    </EditorDockPanel>
+  );
+}
+```
+
+### Bottom Output Panel
+
+```tsx
+function OutputPanel() {
+  const tabs: PanelTabDef[] = [
+    {
+      id: 'console',
+      label: 'Console',
+      icon: <Terminal size={12} />,
+      content: <ConsoleOutput />,
+    },
+    {
+      id: 'errors',
+      label: 'Errors',
+      icon: <AlertCircle size={12} />,
+      accentColor: 'var(--status-error)',
+      content: <ErrorList />,
+    },
+    {
+      id: 'warnings',
+      label: 'Warnings',
+      icon: <AlertTriangle size={12} />,
+      accentColor: 'var(--status-warning)',
+      content: <WarningList />,
+    },
+  ];
+
+  return (
+    <EditorDockPanel
+      id="bottom-output"
+      title="Output"
+      side="bottom"
+      defaultSize={200}
+    >
+      <PanelTabs tabs={tabs} defaultTabId="console" />
+    </EditorDockPanel>
+  );
+}
+```
+
+---
+
+## Controlled vs Uncontrolled
+
+### Uncontrolled Mode
+
+**Use when:** Tab state is local to the panel, no external coordination needed.
+
+```tsx
+<PanelTabs
+  tabs={tabs}
+  defaultTabId="graphs"
+  onTabChange={(id) => console.log('Tab changed:', id)}
+/>
+```
+
+**Behavior:**
+- Internal state managed by component
+- `defaultTabId` sets initial tab
+- `onTabChange` called for side effects only
+
+---
+
+### Controlled Mode
+
+**Use when:** Tab state needs to be coordinated with external state (URL, global store, etc.).
+
+```tsx
+const [activeTab, setActiveTab] = useState('graphs');
+
+<PanelTabs
+  tabs={tabs}
+  activeTabId={activeTab}
+  onTabChange={setActiveTab}
+/>
+```
+
+**Behavior:**
+- External state drives active tab
+- `activeTabId` overrides internal state
+- `onTabChange` must update external state
+
+---
+
+### URL Sync Pattern
+
+```tsx
+import { useSearchParams } from 'next/navigation';
+
+function PanelWithURLSync() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const activeTab = searchParams.get('tab') || 'graphs';
+
+  const handleTabChange = (id: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', id);
+    router.push(`?${params.toString()}`);
+  };
+
+  return (
+    <PanelTabs
+      tabs={tabs}
+      activeTabId={activeTab}
+      onTabChange={handleTabChange}
+    />
+  );
+}
+```
+
+---
+
+### Store Sync Pattern
+
+```tsx
+interface EditorState {
+  activeLeftTab: string;
+  setActiveLeftTab: (id: string) => void;
+}
+
+const useEditorStore = create<EditorState>((set) => ({
+  activeLeftTab: 'graphs',
+  setActiveLeftTab: (id) => set({ activeLeftTab: id }),
+}));
+
+function LeftPanel() {
+  const activeTab = useEditorStore((s) => s.activeLeftTab);
+  const setActiveTab = useEditorStore((s) => s.setActiveLeftTab);
+
+  return (
+    <PanelTabs
+      tabs={tabs}
+      activeTabId={activeTab}
+      onTabChange={setActiveTab}
+    />
+  );
+}
+```
+
+---
+
+## Styling and Themes
+
+### Accent Colors
+
+Each tab can have a custom accent color for the active indicator and icon:
+
+```tsx
+const tabs: PanelTabDef[] = [
+  {
+    id: 'narratives',
+    label: 'Narratives',
+    icon: <BookOpen size={12} />,
+    accentColor: 'var(--status-info)',  // Blue
+    content: <NarrativeList />,
+  },
+  {
+    id: 'errors',
+    label: 'Errors',
+    icon: <AlertCircle size={12} />,
+    accentColor: 'var(--status-error)',  // Red
+    content: <ErrorList />,
+  },
+  {
+    id: 'success',
+    label: 'Success',
+    icon: <CheckCircle size={12} />,
+    accentColor: 'var(--status-success)',  // Green
+    content: <SuccessList />,
+  },
+];
+```
+
+**Rendered:**
+
+```
+┌────────────────────────────────────────────┐
+│ ● Narratives  ● Errors  ● Success          │
+│ ─────────                                  │
+│  Blue         Red        Green             │
+└────────────────────────────────────────────┘
+```
+
+### CSS Variables
+
+The component uses these CSS variables for theming:
+
+```css
+--tab-height: 40px;
+--control-padding-x: 12px;
+--control-padding-y: 8px;
+--control-gap: 8px;
+--icon-size: 12px;
+--context-accent: hsl(var(--primary));
+```
+
+### Custom Styling
+
+```tsx
+<PanelTabs
+  tabs={tabs}
+  className="custom-tabs"
+/>
+```
+
+```css
+.custom-tabs [role="tablist"] {
+  background: hsl(var(--muted));
+}
+
+.custom-tabs [role="tab"][data-state="active"] {
+  font-weight: 600;
+}
+```
+
+---
+
+## Common Patterns
+
+### Dynamic Tabs
+
+```tsx
+function DynamicTabs({ features }: { features: string[] }) {
+  const tabs = useMemo(() => {
+    const result: PanelTabDef[] = [
+      {
+        id: 'main',
+        label: 'Main',
+        icon: <Home size={12} />,
+        content: <MainPanel />,
+      },
+    ];
+
+    if (features.includes('advanced')) {
+      result.push({
+        id: 'advanced',
+        label: 'Advanced',
+        icon: <Sliders size={12} />,
+        content: <AdvancedPanel />,
+      });
+    }
+
+    if (features.includes('debug')) {
+      result.push({
+        id: 'debug',
+        label: 'Debug',
+        icon: <Bug size={12} />,
+        content: <DebugPanel />,
+      });
+    }
+
+    return result;
+  }, [features]);
+
+  return <PanelTabs tabs={tabs} />;
+}
+```
+
+---
+
+### Conditional Content
+
+```tsx
+const tabs: PanelTabDef[] = [
+  {
+    id: 'list',
+    label: 'List',
+    icon: <List size={12} />,
+    content: items.length > 0 ? <ItemList items={items} /> : <EmptyState />,
+  },
+  {
+    id: 'grid',
+    label: 'Grid',
+    icon: <Grid size={12} />,
+    content: items.length > 0 ? <ItemGrid items={items} /> : <EmptyState />,
+  },
+];
+```
+
+---
+
+### Lazy Loading
+
+```tsx
+const tabs: PanelTabDef[] = [
+  {
+    id: 'light',
+    label: 'Light',
+    icon: <Zap size={12} />,
+    content: <LightPanel />,  // Always loaded
+  },
+  {
+    id: 'heavy',
+    label: 'Heavy',
+    icon: <Database size={12} />,
+    content: (
+      <Suspense fallback={<Skeleton />}>
+        <LazyHeavyPanel />  // Lazy loaded
+      </Suspense>
+    ),
+  },
+];
+```
+
+---
+
+### Badge Counts
+
+```tsx
+const tabs: PanelTabDef[] = [
+  {
+    id: 'errors',
+    label: (
+      <span className="flex items-center gap-2">
+        Errors
+        {errorCount > 0 && (
+          <Badge variant="destructive" size="sm">
+            {errorCount}
+          </Badge>
+        )}
+      </span>
+    ),
+    icon: <AlertCircle size={12} />,
+    content: <ErrorList />,
+  },
+];
+```
+
+---
+
+### Nested Tabs
+
+```tsx
+function NestedTabs() {
+  const mainTabs: PanelTabDef[] = [
+    {
+      id: 'design',
+      label: 'Design',
+      icon: <Palette size={12} />,
+      content: (
+        <PanelTabs
+          tabs={[
+            {
+              id: 'colors',
+              label: 'Colors',
+              content: <ColorPicker />,
+            },
+            {
+              id: 'fonts',
+              label: 'Fonts',
+              content: <FontSelector />,
+            },
+          ]}
+        />
+      ),
+    },
+    {
+      id: 'code',
+      label: 'Code',
+      icon: <Code size={12} />,
+      content: <CodeEditor />,
+    },
+  ];
+
+  return <PanelTabs tabs={mainTabs} />;
+}
+```
+
+---
+
+### Persistence
+
+```tsx
+function PersistentTabs() {
+  const [activeTab, setActiveTab] = useState(() => {
+    // Load from localStorage
+    return localStorage.getItem('activeTab') || 'graphs';
+  });
+
+  const handleTabChange = (id: string) => {
+    setActiveTab(id);
+    // Save to localStorage
+    localStorage.setItem('activeTab', id);
+  };
+
+  return (
+    <PanelTabs
+      tabs={tabs}
+      activeTabId={activeTab}
+      onTabChange={handleTabChange}
+    />
+  );
+}
+```
+
+---
+
+### Keyboard Shortcuts
+
+```tsx
+function TabsWithShortcuts() {
+  const [activeTab, setActiveTab] = useState('graphs');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '1') {
+          setActiveTab('graphs');
+          e.preventDefault();
+        } else if (e.key === '2') {
+          setActiveTab('nodes');
+          e.preventDefault();
+        } else if (e.key === '3') {
+          setActiveTab('settings');
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  return (
+    <PanelTabs
+      tabs={tabs}
+      activeTabId={activeTab}
+      onTabChange={setActiveTab}
+    />
+  );
+}
+```
+
+---
+
+### Programmatic Navigation
+
+```tsx
+function ProgrammaticTabs() {
+  const [activeTab, setActiveTab] = useState('graphs');
+
+  const navigateToErrors = () => {
+    setActiveTab('errors');
+  };
+
+  useEffect(() => {
+    // Navigate to errors tab when errors occur
+    if (errorCount > 0) {
+      navigateToErrors();
+    }
+  }, [errorCount]);
+
+  return (
+    <PanelTabs
+      tabs={tabs}
+      activeTabId={activeTab}
+      onTabChange={setActiveTab}
+    />
+  );
+}
+```
+
+---
+
+## Summary
+
+The **PanelTabs** component provides:
+
+✅ **Unified tab system** - Consistent across all panels
+✅ **Icon support** - Optional icons per tab
+✅ **Accent colors** - Per-tab active indicators
+✅ **Controlled/uncontrolled** - Flexible state management
+✅ **Theme-aware** - Respects light/dark mode
+✅ **Accessible** - Built on Radix UI
+✅ **Keyboard navigation** - Arrow keys, Home, End
+✅ **Common patterns** - Dynamic tabs, lazy loading, persistence
+
+**Next Steps:**
+- [Tutorial: Adding Panels](../tutorials/adding-panels.mdx)
+- [Component Patterns](../guides/patterns.mdx)
+- [WorkspaceInspector Guide](./editor-inspector-complete.mdx)

@@ -1,0 +1,337 @@
+---
+title: Developer Guide
+created: 2026-02-11
+updated: 2026-02-11
+icon: "🎓"
+---
+
+# 🎓 Developer Guide
+
+**Learn how to build professional editors with Forge**
+
+This guide will teach you everything you need to know to build production-quality editors using the Forge platform.
+
+---
+
+## 📚 Learning Path
+
+### 🌱 Beginner
+
+Start here if you're new to Forge or building editors.
+
+<div className="grid grid-cols-1 gap-4 my-6">
+  <a href="./quick-start" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">🚀</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Quick Start</h3>
+        <p className="text-xs text-muted-foreground">Build your first editor in 10 minutes</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./core-concepts" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">💡</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Core Concepts</h3>
+        <p className="text-xs text-muted-foreground">Understanding editors, panels, and settings</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./component-patterns" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">🧩</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Component Patterns</h3>
+        <p className="text-xs text-muted-foreground">Common patterns and best practices</p>
+      </div>
+    </div>
+  </a>
+</div>
+
+### 🌿 Intermediate
+
+Build more complex features and integrate with the platform.
+
+<div className="grid grid-cols-1 gap-4 my-6">
+  <a href="./building-layouts" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">📐</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Building Layouts</h3>
+        <p className="text-xs text-muted-foreground">Master the DockLayout system</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./settings-integration" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">⚙️</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Settings Integration</h3>
+        <p className="text-xs text-muted-foreground">Add configuration to your editor</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./selection-and-inspector" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">🔍</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Selection & Inspector</h3>
+        <p className="text-xs text-muted-foreground">Properties panels and context</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./menubar-and-toolbar" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">🛠️</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Menubar & Toolbar</h3>
+        <p className="text-xs text-muted-foreground">Build extensible command interfaces</p>
+      </div>
+    </div>
+  </a>
+</div>
+
+### 🌳 Advanced
+
+Deep dives into advanced features and AI integration.
+
+<div className="grid grid-cols-1 gap-4 my-6">
+  <a href="./ai-integration" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">🤖</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">AI Integration</h3>
+        <p className="text-xs text-muted-foreground">Add AI assistants to your editor</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./domain-contracts" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">📜</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Domain Contracts</h3>
+        <p className="text-xs text-muted-foreground">Structure AI agents for your domain</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./custom-workflows" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">🔄</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Custom Workflows</h3>
+        <p className="text-xs text-muted-foreground">Build multi-step AI workflows</p>
+      </div>
+    </div>
+  </a>
+
+  <a href="./performance-optimization" className="block group rounded-lg border p-4 hover:border-primary transition-colors">
+    <div className="flex items-start gap-3">
+      <span className="text-2xl">⚡</span>
+      <div className="flex-1">
+        <h3 className="font-semibold text-sm mb-1">Performance Optimization</h3>
+        <p className="text-xs text-muted-foreground">Optimize rendering and data flow</p>
+      </div>
+    </div>
+  </a>
+</div>
+
+---
+
+## 🎯 Quick References
+
+### Common Tasks
+
+| Task | Guide | Components |
+|------|-------|------------|
+| Create a simple editor | [Quick Start](./quick-start) | WorkspaceShell, DockLayout |
+| Add resizable panels | [Building Layouts](./building-layouts) | DockLayout, DockPanel |
+| Show properties panel | [Selection & Inspector](./selection-and-inspector) | WorkspaceInspector |
+| Add toolbar buttons | [Menubar & Toolbar](./menubar-and-toolbar) | WorkspaceToolbar |
+| Configure settings | [Settings Integration](./settings-integration) | SettingsPanel, SettingsField |
+| Add AI assistant | [AI Integration](./ai-integration) | Domain contracts, Tools |
+
+### Code Examples
+
+Browse real-world examples from the platform:
+
+| Example | Description | Source |
+|---------|-------------|--------|
+| Character Editor | Relationship graph with AI | `apps/studio/components/editors/CharacterEditor.tsx` |
+| Dialogue Editor | Dual-pane graph editor | `apps/studio/components/editors/DialogueEditor.tsx` |
+| Settings UI | Complete settings system | `apps/studio/components/settings/` |
+| Graph Viewport | React Flow integration | `packages/domain-forge/` |
+
+---
+
+## 🏗️ Editor Anatomy
+
+Every Forge editor follows this structure:
+
+```
+WorkspaceShell (root container)
+├── WorkspaceToolbar (commands and actions)
+│   ├── Menubar (File, Edit, View, etc.)
+│   ├── Toolbar buttons
+│   └── Right-side controls
+├── DockLayout (resizable panels)
+│   ├── Left rail (navigator, library)
+│   ├── Main viewport (content area)
+│   ├── Right rail (inspector, settings)
+│   └── Bottom rail (console, output)
+├── WorkspaceStatusBar (status and info)
+└── WorkspaceOverlaySurface (modals and dialogs)
+```
+
+### Data Flow
+
+```
+User Action
+    ↓
+Toolbar/Menubar Command
+    ↓
+State Update (Zustand/TanStack Query)
+    ↓
+Viewport Re-render
+    ↓
+Inspector Update (if selection changed)
+    ↓
+StatusBar Update
+```
+
+---
+
+## 🎨 Design Principles
+
+### 1. Composition Over Configuration
+
+Build editors by composing small, focused components:
+
+```typescript
+// ✅ Good - Composable
+<WorkspaceShell>
+  <WorkspaceToolbar>
+    <Button>New</Button>
+  </WorkspaceToolbar>
+  <DockLayout>
+    <DockPanel>Content</DockPanel>
+  </DockLayout>
+</WorkspaceShell>
+
+// ❌ Bad - Monolithic configuration
+<Editor
+  config={{
+    toolbar: { buttons: [...] },
+    panels: [...],
+    ...
+  }}
+/>
+```
+
+### 2. Scoped Settings
+
+Settings inherit from app → project → editor → viewport:
+
+```typescript
+// App-level default
+setSetting('app', 'ui.theme', 'dark');
+
+// Editor-specific override
+setSetting('editor', 'ui.theme', 'light', { editorId: 'dialogue' });
+
+// Viewport-specific override
+setSetting('viewport', 'ui.theme', 'auto', {
+  editorId: 'dialogue',
+  viewportId: 'narrative'
+});
+```
+
+### 3. Selection-Driven UI
+
+The inspector shows properties based on what's selected:
+
+```typescript
+const [selection, setSelection] = useState<Selection | null>(null);
+
+// User clicks a node in the graph
+setSelection({
+  type: 'entity',
+  entityType: 'forge.node',
+  id: 'node_123'
+});
+
+// Inspector automatically shows node properties
+<WorkspaceInspector
+  selection={selection}
+  sections={inspectorSections}  // Filtered by selection.entityType
+/>
+```
+
+### 4. AI-Augmented Workflows
+
+AI is integrated at the workflow level, not just as a chatbot:
+
+```typescript
+// Domain contract defines AI capabilities
+const forgeContract = useForgeAssistantContract({
+  getInstructions: () => "You help edit dialogue graphs...",
+  createTools: () => [
+    forge_createNode,
+    forge_createEdge,
+    forge_createPlan,
+  ],
+  onHighlight: (entities) => {
+    // Highlight nodes created by AI
+  },
+});
+```
+
+---
+
+## 🚀 Getting Started Checklist
+
+Before building your first editor, make sure you have:
+
+- [ ] Node.js 18+ and Yarn installed
+- [ ] Cloned the forge-agent repository
+- [ ] Run `yarn install` successfully
+- [ ] Understand React and TypeScript basics
+- [ ] Familiar with shadcn/ui components
+- [ ] Read [Core Concepts](./core-concepts)
+
+Ready? Start with the [Quick Start Guide](./quick-start) →
+
+---
+
+## 💬 Need Help?
+
+- **📖 API Reference** - See [Component Showcase](../components/00-index.mdx)
+- **💡 Examples** - Browse `apps/studio/components/editors/`
+- **🐛 Issues** - Report bugs on GitHub
+- **💬 Community** - Join our Discord
+
+---
+
+## 📋 What's Next?
+
+### This Week
+- Review [Core Concepts](./core-concepts)
+- Build a simple editor with [Quick Start](./quick-start)
+- Explore [Component Patterns](./component-patterns)
+
+### This Month
+- Build a custom layout with [Building Layouts](./building-layouts)
+- Add settings with [Settings Integration](./settings-integration)
+- Implement selection with [Selection & Inspector](./selection-and-inspector)
+
+### This Quarter
+- Add AI features with [AI Integration](./ai-integration)
+- Create custom workflows with [Custom Workflows](./custom-workflows)
+- Optimize performance with [Performance Guide](./performance-optimization)

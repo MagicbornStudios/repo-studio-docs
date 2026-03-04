@@ -1,0 +1,634 @@
+---
+title: SettingsPanel
+created: 2026-02-11
+updated: 2026-02-11
+icon: "⚙️"
+---
+
+# ⚙️ SettingsPanel
+
+**Settings UI with scope inheritance, override badges, and reset functionality**
+
+SettingsPanel is a data-driven settings interface that supports hierarchical scopes (app, project, editor, viewport) with inheritance, override visualization, and reset capabilities.
+
+---
+
+## Usage
+
+```typescript
+import { SettingsPanel } from '@/components/settings/SettingsPanel';
+import type { SettingsSection } from '@/components/settings/types';
+
+const sections: SettingsSection[] = [
+  {
+    id: 'ai-core',
+    title: 'AI Core',
+    description: 'Configure AI agent behavior',
+    fields: [
+      {
+        key: 'ai.agentName',
+        label: 'Agent Name',
+        type: 'text',
+        placeholder: 'Enter agent name',
+      },
+      {
+        key: 'ai.autoSuggest',
+        label: 'Auto Suggestions',
+        type: 'toggle',
+        description: 'Enable automatic dialogue suggestions',
+      },
+    ],
+  },
+];
+
+export function EditorSettings() {
+  return (
+    <SettingsPanel
+      scope="editor"
+      sections={sections}
+      editorId="dialogue-editor"
+    />
+  );
+}
+```
+
+---
+
+## Props
+
+<div className="overflow-x-auto">
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="border-b">
+        <th className="text-left p-2">Prop</th>
+        <th className="text-left p-2">Type</th>
+        <th className="text-left p-2">Default</th>
+        <th className="text-left p-2">Description</th>
+      </tr>
+    </thead>
+    <tbody className="text-muted-foreground">
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">scope</td>
+        <td className="p-2 font-mono text-xs">'app' | 'project' | 'editor' | 'viewport'</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Settings scope for inheritance hierarchy</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">sections</td>
+        <td className="p-2 font-mono text-xs">SettingsSection[]</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Section definitions with fields</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">editorId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Editor ID (required when scope is 'editor' or 'viewport')</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">viewportId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Viewport ID (required when scope is 'viewport')</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">projectId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Project ID (required when scope is 'project')</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">sectionIcons</td>
+        <td className="p-2 font-mono text-xs">Record&lt;string, ReactNode&gt;?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Icons per section ID (e.g. ai-core → Bot)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">fieldIcons</td>
+        <td className="p-2 font-mono text-xs">Record&lt;string, ReactNode&gt;?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Icons per field key (e.g. ui.theme → Palette)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">className</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Additional CSS classes</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+---
+
+## TypeScript Definitions
+
+```typescript
+export type SettingsFieldType = 'text' | 'textarea' | 'select' | 'number' | 'toggle';
+
+export interface SettingsOption {
+  value: string;
+  label: string;
+}
+
+export interface SettingsField {
+  key: string;
+  label: string;
+  type: SettingsFieldType;
+  description?: string;
+  placeholder?: string;
+  options?: SettingsOption[]; // Required for 'select' type
+  default?: unknown;
+}
+
+export interface SettingsSection {
+  id: string;
+  title: string;
+  description?: string;
+  fields: SettingsField[];
+}
+
+export type SettingsScope = 'app' | 'project' | 'editor' | 'viewport';
+```
+
+---
+
+## Scope Hierarchy
+
+Settings inherit from parent scopes:
+
+```
+app (global defaults)
+ └─ project (per-project overrides)
+     └─ editor (per-editor overrides)
+         └─ viewport (per-viewport overrides)
+```
+
+**Inheritance Rules:**
+- Viewport inherits from: editor → project → app
+- Editor inherits from: project → app
+- Project inherits from: app
+- App has no parent (global defaults)
+
+**Override Badges:**
+- "Inherited from app" - value comes from app scope
+- "Inherited from editor" - value comes from editor scope
+- "Override" (accent) - value set at current scope
+
+---
+
+## Examples
+
+### App-Level Settings
+
+```typescript
+const appSections: SettingsSection[] = [
+  {
+    id: 'ui',
+    title: 'User Interface',
+    fields: [
+      {
+        key: 'ui.theme',
+        label: 'Theme',
+        type: 'select',
+        options: [
+          { value: 'light', label: 'Light' },
+          { value: 'dark', label: 'Dark' },
+          { value: 'system', label: 'System' },
+        ],
+        default: 'dark',
+      },
+      {
+        key: 'ui.density',
+        label: 'UI Density',
+        type: 'select',
+        options: [
+          { value: 'compact', label: 'Compact' },
+          { value: 'comfortable', label: 'Comfortable' },
+        ],
+        default: 'comfortable',
+      },
+    ],
+  },
+];
+
+export function AppSettings() {
+  return <SettingsPanel scope="app" sections={appSections} />;
+}
+```
+
+### Editor Settings with Icons
+
+```typescript
+import { Bot, Palette, Zap } from 'lucide-react';
+
+const editorSections: SettingsSection[] = [
+  {
+    id: 'ai-core',
+    title: 'AI Core',
+    fields: [
+      {
+        key: 'ai.agentName',
+        label: 'Agent Name',
+        type: 'text',
+        placeholder: 'MyAgent',
+        default: 'DialogueAgent',
+      },
+      {
+        key: 'ai.temperature',
+        label: 'Temperature',
+        type: 'number',
+        description: 'Controls creativity (0-1)',
+        placeholder: '0.7',
+        default: 0.7,
+      },
+    ],
+  },
+  {
+    id: 'ui',
+    title: 'UI',
+    fields: [
+      {
+        key: 'ui.theme',
+        label: 'Theme',
+        type: 'select',
+        options: [
+          { value: 'light', label: 'Light' },
+          { value: 'dark', label: 'Dark' },
+        ],
+      },
+    ],
+  },
+];
+
+export function EditorSettings() {
+  return (
+    <SettingsPanel
+      scope="editor"
+      sections={editorSections}
+      editorId="dialogue-editor"
+      sectionIcons={{
+        'ai-core': <Bot size={14} />,
+        'ui': <Palette size={14} />,
+      }}
+      fieldIcons={{
+        'ai.agentName': <Bot size={14} />,
+        'ai.temperature': <Zap size={14} />,
+        'ui.theme': <Palette size={14} />,
+      }}
+    />
+  );
+}
+```
+
+### Viewport Settings with Overrides
+
+```typescript
+const viewportSections: SettingsSection[] = [
+  {
+    id: 'viewport',
+    title: 'Viewport Settings',
+    description: 'Override editor defaults for this viewport',
+    fields: [
+      {
+        key: 'viewport.zoom',
+        label: 'Default Zoom',
+        type: 'number',
+        placeholder: '100',
+        description: 'Zoom percentage (25-200)',
+        default: 100,
+      },
+      {
+        key: 'viewport.gridEnabled',
+        label: 'Show Grid',
+        type: 'toggle',
+        description: 'Display background grid',
+        default: true,
+      },
+      {
+        key: 'viewport.snapToGrid',
+        label: 'Snap to Grid',
+        type: 'toggle',
+        description: 'Align nodes to grid',
+        default: false,
+      },
+    ],
+  },
+];
+
+export function ViewportSettings({ viewportId }: { viewportId: string }) {
+  return (
+    <SettingsPanel
+      scope="viewport"
+      sections={viewportSections}
+      editorId="dialogue-editor"
+      viewportId={viewportId}
+    />
+  );
+}
+```
+
+### Project Settings
+
+```typescript
+const projectSections: SettingsSection[] = [
+  {
+    id: 'project',
+    title: 'Project Defaults',
+    fields: [
+      {
+        key: 'project.language',
+        label: 'Language',
+        type: 'select',
+        options: [
+          { value: 'en', label: 'English' },
+          { value: 'es', label: 'Spanish' },
+          { value: 'fr', label: 'French' },
+        ],
+        default: 'en',
+      },
+      {
+        key: 'project.autoSave',
+        label: 'Auto Save',
+        type: 'toggle',
+        description: 'Save changes automatically',
+        default: true,
+      },
+      {
+        key: 'project.autoSaveInterval',
+        label: 'Auto Save Interval (seconds)',
+        type: 'number',
+        placeholder: '30',
+        default: 30,
+      },
+    ],
+  },
+];
+
+export function ProjectSettings({ projectId }: { projectId: string }) {
+  return (
+    <SettingsPanel
+      scope="project"
+      sections={projectSections}
+      projectId={projectId}
+    />
+  );
+}
+```
+
+### Multi-Section Settings
+
+```typescript
+const sections: SettingsSection[] = [
+  {
+    id: 'ai-core',
+    title: 'AI Core',
+    description: 'Configure AI agent behavior and model settings',
+    fields: [
+      {
+        key: 'ai.model',
+        label: 'Model',
+        type: 'select',
+        options: [
+          { value: 'gpt-4', label: 'GPT-4' },
+          { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+          { value: 'claude-3', label: 'Claude 3' },
+        ],
+        default: 'gpt-4',
+      },
+      {
+        key: 'ai.temperature',
+        label: 'Temperature',
+        type: 'number',
+        description: 'Controls randomness (0-1)',
+        default: 0.7,
+      },
+    ],
+  },
+  {
+    id: 'ui',
+    title: 'User Interface',
+    fields: [
+      {
+        key: 'ui.showLineNumbers',
+        label: 'Show Line Numbers',
+        type: 'toggle',
+        default: true,
+      },
+      {
+        key: 'ui.fontSize',
+        label: 'Font Size',
+        type: 'number',
+        placeholder: '14',
+        default: 14,
+      },
+    ],
+  },
+  {
+    id: 'advanced',
+    title: 'Advanced',
+    description: 'Expert settings (use with caution)',
+    fields: [
+      {
+        key: 'advanced.debugMode',
+        label: 'Debug Mode',
+        type: 'toggle',
+        description: 'Show debug information',
+        default: false,
+      },
+      {
+        key: 'advanced.logLevel',
+        label: 'Log Level',
+        type: 'select',
+        options: [
+          { value: 'error', label: 'Error' },
+          { value: 'warn', label: 'Warning' },
+          { value: 'info', label: 'Info' },
+          { value: 'debug', label: 'Debug' },
+        ],
+        default: 'info',
+      },
+    ],
+  },
+];
+
+export function ComprehensiveSettings() {
+  return (
+    <SettingsPanel
+      scope="editor"
+      sections={sections}
+      editorId="dialogue-editor"
+    />
+  );
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+- Always provide correct scope IDs (editorId, viewportId, projectId)
+- Use descriptive field keys with namespacing (e.g. `ai.agentName`, `ui.theme`)
+- Provide `default` values for all fields (enables reset functionality)
+- Group related fields into logical sections
+- Add `description` for complex or non-obvious settings
+- Use `toggle` type for boolean flags
+- Use `select` type for enumerated options
+- Provide `sectionIcons` and `fieldIcons` for visual hierarchy
+
+### ❌ Don't
+
+- Don't forget scope IDs when using scoped settings
+- Don't use generic field keys (use `ui.theme` not `theme`)
+- Don't omit `default` values (breaks reset functionality)
+- Don't create too many sections (group related settings)
+- Don't use `text` type for booleans (use `toggle`)
+- Don't forget to provide `options` for `select` fields
+- Don't use overly long section titles (keep under 30 chars)
+
+---
+
+## Field Types
+
+### Text Input
+
+```typescript
+{
+  key: 'user.name',
+  label: 'Name',
+  type: 'text',
+  placeholder: 'Enter your name',
+  default: '',
+}
+```
+
+### Textarea
+
+```typescript
+{
+  key: 'project.description',
+  label: 'Description',
+  type: 'textarea',
+  placeholder: 'Project description...',
+  default: '',
+}
+```
+
+### Number Input
+
+```typescript
+{
+  key: 'ui.fontSize',
+  label: 'Font Size',
+  type: 'number',
+  placeholder: '14',
+  description: 'Font size in pixels',
+  default: 14,
+}
+```
+
+### Select Dropdown
+
+```typescript
+{
+  key: 'ui.theme',
+  label: 'Theme',
+  type: 'select',
+  options: [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
+  ],
+  default: 'dark',
+}
+```
+
+### Toggle Switch
+
+```typescript
+{
+  key: 'ai.autoSuggest',
+  label: 'Auto Suggestions',
+  type: 'toggle',
+  description: 'Enable automatic suggestions',
+  default: true,
+}
+```
+
+---
+
+## Reset Functionality
+
+Settings can be reset to their parent scope value:
+
+```
+┌──────────────────────────────────────┐
+│ Theme              [Inherited] [Reset]│
+│ ├─ Select: Dark                       │
+└──────────────────────────────────────┘
+```
+
+**Reset Button Behavior:**
+- Appears when setting is overridden at current scope
+- Not shown for app-level settings (no parent)
+- Clicking reset removes override and inherits from parent
+- Reset button shows `Undo2` icon + "Reset" label
+
+**Source Badges:**
+- "Inherited from app" - muted tone
+- "Inherited from editor" - muted tone
+- "Override" - accent tone (when value set at current scope)
+
+---
+
+## Integration with Settings Store
+
+SettingsPanel integrates with `useSettingsStore`:
+
+```typescript
+import { useSettingsStore } from '@/lib/settings/store';
+
+// Get setting value
+const theme = useSettingsStore((s) =>
+  s.getSettingValue('ui.theme', { editorId: 'dialogue-editor' })
+);
+
+// Get setting source
+const source = useSettingsStore((s) =>
+  s.getSettingSource('ui.theme', { editorId: 'dialogue-editor' })
+);
+
+// Set setting
+const setSetting = useSettingsStore((s) => s.setSetting);
+setSetting('editor', 'ui.theme', 'dark', { editorId: 'dialogue-editor' });
+
+// Clear override
+const clearSetting = useSettingsStore((s) => s.clearSetting);
+clearSetting('editor', 'ui.theme', { editorId: 'dialogue-editor' });
+```
+
+---
+
+## Related Components
+
+- [SettingsField](./settings-field) - Individual field component
+- [DockPanel](./dock-panel) - Panel container for settings
+- [WorkspaceShell](./editor-shell) - Editor with settings integration
+
+---
+
+## Source Code
+
+**Location:** `apps/studio/components/settings/SettingsPanel.tsx`
+
+**External Dependencies:**
+- `@forge/ui/card` - Card container for sections
+- `@forge/ui/field` - Field components (FieldSet, FieldLegend, etc.)
+- `@forge/ui/item` - Item components for field layout
+- `@forge/ui/input` - Text/number input
+- `@forge/ui/textarea` - Textarea input
+- `@forge/ui/select` - Dropdown select
+- `@forge/ui/switch` - Toggle switch
+- `@forge/ui/button` - Reset button

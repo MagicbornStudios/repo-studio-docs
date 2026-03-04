@@ -1,0 +1,113 @@
+---
+title: AI generation components
+created: 2026-02-07
+updated: 2026-02-10
+---
+
+# AI generation components
+
+This guide covers shared AI generation UI and hooks. Prefer these primitives over raw `fetch` in components.
+
+## Hooks (Studio)
+
+Use TanStack Query mutations from `apps/studio/lib/data/hooks`.
+
+- `useGenerateImage` -> wraps `AiService.postApiImageGenerate`.
+- `useStructuredOutput` -> wraps `AiService.postApiStructuredOutput`.
+- `useCreateForgePlan` -> wraps `AiService.postApiForgePlan`.
+- `useGenerateVideo` -> stub for future video generation.
+
+Example:
+
+```tsx
+const generateImage = useGenerateImage();
+const result = await generateImage.mutateAsync({ prompt: 'A neon city at dusk' });
+```
+
+## GenerateMediaModal
+
+File: `packages/shared/src/shared/components/media/GenerateMediaModal.tsx`
+
+Supports text-to-image, image-to-video, upload, and text-to-speech. (Text-to-video is a placeholder tab for a future slice.) To enable text-to-speech, provide the `generateSpeech` callback and a list of `voices`.
+
+```tsx
+<GenerateMediaModal
+  open={open}
+  onOpenChange={setOpen}
+  context={{ name: characterName, description: characterBio, existingImageUrl: characterImageUrl }}
+  enabledTabs={['text-to-image', 'text-to-speech']}
+  generateImage={(prompt) => generateImage.mutateAsync({ prompt })}
+  generateSpeech={(voiceId, text) => generateSpeech.mutateAsync({ voiceId, text })}
+  voices={voices}
+  onGenerated={(result) => {
+    if (result.type === 'image') {
+      // use result.url
+    }
+    if (result.type === 'audio') {
+      // use result.url
+    }
+  }}
+/>
+```
+
+## ConnectedGenerateMediaModal
+
+File: `apps/studio/components/media/ConnectedGenerateMediaModal.tsx`
+
+Use this in Studio when you want the modal wired automatically. It provides `useGenerateImage`, `useGenerateSpeech`, and `useElevenLabsVoices` internally. Consumers only pass `open`, `onOpenChange`, `onGenerated`, and `enabledTabs`.
+
+## Entity media in upsert flows (interim model)
+
+Current Studio pattern (Character upsert) keeps media generation/upload in the upsert dialog and persists metadata in `character.meta`.
+
+Interim shape:
+
+- `meta.prompts.characterBehavior`
+- `meta.media.images[]`
+- `meta.media.audioTracks[]`
+- `meta.media.videos[]`
+
+Helpers:
+
+- `apps/studio/lib/domains/character/media-meta.ts`
+
+Rules:
+
+- No media generation without a persisted entity id.
+- In create mode, validate required fields, auto-create draft entity, then open media generation modal.
+- On image generate/upload, append to `meta.media.images`; set primary portrait if `imageUrl` is empty.
+- On audio/video generate/upload, append to `meta.media.audioTracks` or `meta.media.videos`.
+- Preserve unrelated metadata keys when writing media/prompt data.
+
+Character references:
+
+- Upsert dialog: `apps/studio/components/character/CreateCharacterModal.tsx`
+- Panel integration: `apps/studio/components/character/ActiveCharacterPanel.tsx`
+
+## GenerationStatus
+
+File: `packages/shared/src/shared/components/media/GenerationStatus.tsx`
+
+Reusable status card for generation jobs with progress, preview, retry, and dismiss actions.
+
+## Strategy editor (assistant-ui)
+
+The Codebase strategy chat uses assistant-ui and tool-ui primitives.
+
+- Shared component: `packages/shared/src/shared/components/assistant-ui/CodebaseAgentStrategyEditor.tsx`
+- API endpoint: `/api/assistant-chat`
+
+Example:
+
+```tsx
+<CodebaseAgentStrategyEditor
+  apiUrl="/api/assistant-chat"
+  showThreadList
+  showToolsPanel
+/>
+```
+
+## Rules
+
+- Do not call `fetch('/api/*')` directly in components. Add a hook under `apps/studio/lib/data/hooks` or use an existing API client module.
+- Use `FeatureGate` for gated generation UI and `CAPABILITIES` from shared entitlements.

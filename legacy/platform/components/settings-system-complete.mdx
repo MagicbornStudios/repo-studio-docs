@@ -1,0 +1,1466 @@
+---
+title: Settings System - Complete Guide
+description: Comprehensive guide to the data-driven settings system with inheritance, scopes, and code generation
+---
+
+# Settings System - Complete Guide
+
+The Settings System is a **declarative, data-driven** configuration framework that powers all editor and application settings in Forge. It provides a **four-tier inheritance chain** (App → Project → Editor → Viewport) with visual override indicators, automatic persistence, and code generation capabilities.
+
+## Table of Contents
+
+1. [Core Architecture](#core-architecture)
+2. [Settings Components](#settings-components)
+3. [Settings Store API](#settings-store-api)
+4. [Inheritance Chain](#inheritance-chain)
+5. [Field Types](#field-types)
+6. [Real Examples](#real-examples)
+7. [Code Generation](#code-generation)
+8. [Advanced Patterns](#advanced-patterns)
+
+---
+
+## Core Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Settings System                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   │
+│  │SettingsPanel │   │SettingsField │   │SettingsStore │   │
+│  │              │   │              │   │              │   │
+│  │ Data-driven  │───│ Type-safe    │───│ Zustand +    │   │
+│  │ renderer     │   │ controls     │   │ Inheritance  │   │
+│  └──────────────┘   └──────────────┘   └──────────────┘   │
+│         │                   │                   │           │
+│         └───────────────────┴───────────────────┘           │
+│                             │                               │
+│                    ┌────────▼────────┐                      │
+│                    │SettingsSection  │                      │
+│                    │                 │                      │
+│                    │ Declarative     │                      │
+│                    │ layout + codegen│                      │
+│                    └─────────────────┘                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Four-Tier Inheritance
+
+```
+App Settings (Global)
+  │
+  ├─► Project Settings (Per project)
+  │     │
+  │     └─► Editor Settings (Per editor type)
+  │           │
+  │           └─► Viewport Settings (Per graph/viewport)
+  │
+  └─► Merged Result (with override tracking)
+```
+
+**Resolution Order:**
+1. Check **Viewport** scope for override
+2. Check **Editor** scope for override
+3. Check **Project** scope for override
+4. Check **App** scope for override
+5. Fall back to **default** value
+
+---
+
+## Settings Components
+
+### SettingsPanel
+
+**Data-driven renderer** that displays settings organized into sections. Handles value binding, source badges, and reset functionality.
+
+#### Interface
+
+```typescript
+export interface SettingsPanelProps {
+  /** Scope determines inheritance level */
+  scope: SettingsScope; // 'app' | 'project' | 'editor' | 'viewport'
+
+  /** Declarative sections with fields */
+  sections: SettingsSection[];
+
+  /** Context identifiers for scoped settings */
+  editorId?: string;
+  viewportId?: string;
+  projectId?: string;
+
+  /** Optional icons per section id */
+  sectionIcons?: Record<string, React.ReactNode>;
+
+  /** Optional icons per field key */
+  fieldIcons?: Record<string, React.ReactNode>;
+
+  className?: string;
+}
+
+export interface SettingsSection {
+  id: string;
+  title: string;
+  description?: string;
+  fields: SettingsField[];
+}
+
+export interface SettingsField {
+  key: string;           // Dot-separated key (e.g. 'graph.showMiniMap')
+  label: string;
+  type: SettingsFieldType;
+  description?: string;
+  placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
+  default?: unknown;     // Required for code generation
+}
+
+export type SettingsFieldType =
+  | 'text'
+  | 'textarea'
+  | 'select'
+  | 'number'
+  | 'toggle';
+```
+
+#### Basic Usage
+
+```tsx
+import { SettingsPanel } from '@/components/settings';
+import { Bot, Palette, Code } from 'lucide-react';
+
+function AppSettingsPage() {
+  const sections: SettingsSection[] = [
+    {
+      id: 'appearance',
+      title: 'Appearance',
+      description: 'Customize the look and feel',
+      fields: [
+        {
+          key: 'ui.theme',
+          label: 'Theme',
+          type: 'select',
+          options: [
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'system', label: 'System' },
+          ],
+          default: 'system',
+        },
+        {
+          key: 'ui.density',
+          label: 'Density',
+          type: 'select',
+          options: [
+            { value: 'compact', label: 'Compact' },
+            { value: 'comfortable', label: 'Comfortable' },
+          ],
+          default: 'comfortable',
+        },
+      ],
+    },
+    {
+      id: 'ai-core',
+      title: 'AI Assistant',
+      description: 'Configure AI behavior',
+      fields: [
+        {
+          key: 'ai.agentName',
+          label: 'Agent Name',
+          type: 'text',
+          placeholder: 'Forge Assistant',
+          default: 'Forge',
+        },
+        {
+          key: 'ai.temperature',
+          label: 'Temperature',
+          type: 'number',
+          description: 'Controls randomness (0.0 - 2.0)',
+          default: 0.7,
+        },
+      ],
+    },
+  ];
+
+  const sectionIcons = {
+    'appearance': <Palette size={16} />,
+    'ai-core': <Bot size={16} />,
+  };
+
+  const fieldIcons = {
+    'ui.theme': <Palette size={14} />,
+    'ai.agentName': <Bot size={14} />,
+  };
+
+  return (
+    <SettingsPanel
+      scope="app"
+      sections={sections}
+      sectionIcons={sectionIcons}
+      fieldIcons={fieldIcons}
+    />
+  );
+}
+```
+
+#### Scoped Usage (Editor)
+
+```tsx
+function EditorSettingsTab({ editorId }: { editorId: string }) {
+  const sections: SettingsSection[] = [
+    {
+      id: 'graph-display',
+      title: 'Graph Display',
+      fields: [
+        {
+          key: 'graph.showMiniMap',
+          label: 'Show Mini Map',
+          type: 'toggle',
+          description: 'Display mini map in corner',
+          default: true,
+        },
+        {
+          key: 'graph.gridSize',
+          label: 'Grid Size',
+          type: 'number',
+          default: 20,
+        },
+      ],
+    },
+  ];
+
+  return (
+    <SettingsPanel
+      scope="editor"
+      sections={sections}
+      editorId={editorId}
+    />
+  );
+}
+```
+
+#### Viewport Scope
+
+```tsx
+function ViewportSettingsDrawer({
+  editorId,
+  viewportId
+}: {
+  editorId: string;
+  viewportId: string;
+}) {
+  const sections: SettingsSection[] = [
+    {
+      id: 'viewport-display',
+      title: 'Viewport Display',
+      fields: [
+        {
+          key: 'graph.nodesDraggable',
+          label: 'Nodes Draggable',
+          type: 'toggle',
+          default: true,
+        },
+        {
+          key: 'graph.showMiniMap',
+          label: 'Show Mini Map',
+          type: 'toggle',
+          default: true,
+        },
+      ],
+    },
+  ];
+
+  return (
+    <SettingsPanel
+      scope="viewport"
+      sections={sections}
+      editorId={editorId}
+      viewportId={viewportId}
+    />
+  );
+}
+```
+
+---
+
+### SettingsSection
+
+**Declarative section component** that wraps `SettingsField` children and registers metadata for code generation.
+
+#### Interface
+
+```typescript
+export interface SettingsSectionProps {
+  sectionId: string;
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  accentBorderColor?: string;  // For viewport context accents
+  children?: React.ReactNode;  // SettingsField components
+}
+```
+
+#### Usage
+
+```tsx
+import { SettingsSection, SettingsField } from '@/components/settings';
+import { Input } from '@forge/ui/input';
+import { Switch } from '@forge/ui/switch';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@forge/ui/select';
+import { Bot } from 'lucide-react';
+
+function AISettingsView() {
+  return (
+    <div className="space-y-4">
+      <SettingsSection
+        sectionId="ai-core"
+        title="AI Assistant"
+        description="Configure AI behavior and appearance"
+        icon={<Bot size={16} />}
+      >
+        <SettingsField
+          fieldKey="ai.agentName"
+          label="Agent Name"
+          type="text"
+          description="Display name for the AI assistant"
+          default="Forge"
+        >
+          <Input />
+        </SettingsField>
+
+        <SettingsField
+          fieldKey="ai.temperature"
+          label="Temperature"
+          type="number"
+          description="Controls randomness (0.0 - 2.0)"
+          default={0.7}
+        >
+          <Input type="number" />
+        </SettingsField>
+
+        <SettingsField
+          fieldKey="ai.enableStreaming"
+          label="Enable Streaming"
+          type="toggle"
+          description="Stream responses in real-time"
+          default={true}
+        >
+          <Switch />
+        </SettingsField>
+
+        <SettingsField
+          fieldKey="ai.model"
+          label="Model"
+          type="select"
+          description="AI model to use"
+          options={[
+            { value: 'gpt-4', label: 'GPT-4' },
+            { value: 'claude-3', label: 'Claude 3' },
+          ]}
+          default="gpt-4"
+        >
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gpt-4">GPT-4</SelectItem>
+              <SelectItem value="claude-3">Claude 3</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingsField>
+      </SettingsSection>
+
+      <SettingsSection
+        sectionId="graph-display"
+        title="Graph Display"
+        icon={<Code size={16} />}
+        accentBorderColor="var(--status-info)"
+      >
+        <SettingsField
+          fieldKey="graph.showMiniMap"
+          label="Show Mini Map"
+          type="toggle"
+          default={true}
+        >
+          <Switch />
+        </SettingsField>
+      </SettingsSection>
+    </div>
+  );
+}
+```
+
+#### Context Provider Pattern
+
+```tsx
+import { SettingsRegistrationProvider } from '@/lib/editor-registry/SettingsRegistrationContext';
+
+function EditorWithSettings({ editorId }: { editorId: string }) {
+  return (
+    <SettingsRegistrationProvider scope="editor" scopeId={editorId}>
+      <div>
+        <h2>Editor Settings</h2>
+        <AISettingsView />
+      </div>
+    </SettingsRegistrationProvider>
+  );
+}
+```
+
+---
+
+### SettingsField
+
+**Type-safe field component** that binds to the settings store and renders appropriate controls.
+
+#### Interface
+
+```typescript
+export interface SettingsFieldProps {
+  fieldKey: string;           // Use fieldKey to avoid React's reserved 'key' prop
+  label: string;
+  type: SettingsFieldType;
+  description?: string;
+  placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
+  default?: unknown;
+  icon?: React.ReactNode;
+
+  /**
+   * Control: either a single element or render function
+   * - Single element: Will receive value/onChange/id props
+   * - Render function: Full control over rendering
+   */
+  children?:
+    | React.ReactNode
+    | ((field: { value: unknown; onChange: (next: unknown) => void }) => React.ReactNode);
+}
+```
+
+#### With Built-in Control
+
+```tsx
+<SettingsField
+  fieldKey="ai.temperature"
+  label="Temperature"
+  type="number"
+  description="Controls randomness"
+  default={0.7}
+>
+  <Input type="number" step={0.1} min={0} max={2} />
+</SettingsField>
+```
+
+#### With Render Function
+
+```tsx
+<SettingsField
+  fieldKey="ai.model"
+  label="AI Model"
+  type="select"
+  default="gpt-4"
+>
+  {({ value, onChange }) => (
+    <ModelSwitcher
+      value={value as string}
+      onChange={onChange}
+      showAdvanced
+    />
+  )}
+</SettingsField>
+```
+
+#### Toggle Layout
+
+Toggle fields get special horizontal layout:
+
+```tsx
+<SettingsField
+  fieldKey="graph.showMiniMap"
+  label="Show Mini Map"
+  type="toggle"
+  description="Display mini map in graph corner"
+  default={true}
+>
+  <Switch />
+</SettingsField>
+```
+
+Renders as:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Show Mini Map                    [Override]  [ON] │
+│  Display mini map in graph corner                   │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Settings Store API
+
+The settings store is a Zustand store with Immer middleware for immutable updates.
+
+### Store Interface
+
+```typescript
+export type SettingsScope = 'app' | 'project' | 'editor' | 'viewport';
+
+export interface SettingsState {
+  // State
+  appSettings: Record<string, unknown>;
+  projectSettings: Record<string, Record<string, unknown>>;
+  editorSettings: Record<string, Record<string, unknown>>;
+  viewportSettings: Record<string, Record<string, unknown>>;
+
+  // Write operations
+  setSetting: (
+    scope: SettingsScope,
+    key: string,
+    value: unknown,
+    ids?: { editorId?: string; viewportId?: string; projectId?: string }
+  ) => void;
+
+  clearSetting: (
+    scope: SettingsScope,
+    key: string,
+    ids?: { editorId?: string; viewportId?: string; projectId?: string }
+  ) => void;
+
+  // Read operations
+  getMergedSettings: (
+    ids?: { editorId?: string; viewportId?: string; projectId?: string }
+  ) => Record<string, unknown>;
+
+  getSettingValue: (
+    key: string,
+    ids?: { editorId?: string; viewportId?: string; projectId?: string }
+  ) => unknown;
+
+  getSettingSource: (
+    key: string,
+    ids?: { editorId?: string; viewportId?: string; projectId?: string }
+  ) => SettingsScope | 'unset';
+
+  // Persistence
+  hydrateFromOverrides: (overrides: SettingsOverrideRecord[]) => void;
+  getOverridesForScope: (
+    scope: SettingsScope,
+    ids?: { editorId?: string; viewportId?: string; projectId?: string }
+  ) => Record<string, unknown>;
+
+  resetToDefaults: () => void;
+}
+```
+
+### Usage Examples
+
+#### Reading Settings
+
+```tsx
+import { useSettingsStore } from '@/lib/settings/store';
+
+function GraphViewport({ editorId, viewportId }: Props) {
+  // Direct store access
+  const showMiniMap = useSettingsStore(
+    (s) => s.getSettingValue('graph.showMiniMap', {
+      editorId,
+      viewportId
+    }) as boolean
+  );
+
+  // With fallback
+  const gridSize = useSettingsStore(
+    (s) => (s.getSettingValue('graph.gridSize', { editorId, viewportId }) as number) ?? 20
+  );
+
+  return (
+    <div>
+      {showMiniMap && <MiniMap />}
+      <Grid size={gridSize} />
+    </div>
+  );
+}
+```
+
+#### Writing Settings
+
+```tsx
+function SettingsToggle() {
+  const setSetting = useSettingsStore((s) => s.setSetting);
+  const showMiniMap = useSettingsStore((s) =>
+    s.getSettingValue('graph.showMiniMap', {
+      editorId: 'dialogue',
+      viewportId: 'narrative'
+    }) as boolean
+  );
+
+  const handleToggle = () => {
+    setSetting(
+      'viewport',
+      'graph.showMiniMap',
+      !showMiniMap,
+      { editorId: 'dialogue', viewportId: 'narrative' }
+    );
+  };
+
+  return (
+    <Switch checked={showMiniMap} onCheckedChange={handleToggle} />
+  );
+}
+```
+
+#### Checking Source
+
+```tsx
+function SettingWithSource() {
+  const { getSettingValue, getSettingSource } = useSettingsStore();
+
+  const value = getSettingValue('graph.showMiniMap', {
+    editorId: 'dialogue',
+    viewportId: 'narrative'
+  });
+
+  const source = getSettingSource('graph.showMiniMap', {
+    editorId: 'dialogue',
+    viewportId: 'narrative'
+  });
+
+  return (
+    <div>
+      Value: {String(value)}
+      {source === 'viewport' && <Badge>Override</Badge>}
+      {source === 'editor' && <Badge>Inherited from editor</Badge>}
+      {source === 'app' && <Badge>Inherited from app</Badge>}
+    </div>
+  );
+}
+```
+
+#### Clearing Overrides
+
+```tsx
+function ResetButton({ editorId, viewportId }: Props) {
+  const clearSetting = useSettingsStore((s) => s.clearSetting);
+
+  const handleReset = () => {
+    clearSetting('viewport', 'graph.showMiniMap', { editorId, viewportId });
+    toast.success('Reset to inherited value');
+  };
+
+  return (
+    <Button onClick={handleReset} variant="ghost">
+      <Undo2 size={14} />
+      Reset
+    </Button>
+  );
+}
+```
+
+---
+
+## Inheritance Chain
+
+### Visual Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    APP SETTINGS (Global)                 │
+│  • ui.theme = "dark"                                     │
+│  • ai.agentName = "Forge"                                │
+│  • graph.gridSize = 20                                   │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+┌─────────▼──────────┐   ┌─────────▼──────────┐
+│ PROJECT SETTINGS   │   │ PROJECT SETTINGS   │
+│ (Story A)          │   │ (Story B)          │
+│ • ai.agentName =   │   │ • ai.temperature = │
+│   "Story Assistant"│   │   0.5              │
+└─────────┬──────────┘   └────────────────────┘
+          │
+┌─────────▼──────────┐
+│ EDITOR SETTINGS    │
+│ (Dialogue)         │
+│ • graph.showMiniMap│
+│   = true           │
+└─────────┬──────────┘
+          │
+          ├─────────────────┬─────────────────┐
+          │                 │                 │
+┌─────────▼─────┐ ┌─────────▼─────┐ ┌─────────▼─────┐
+│VIEWPORT: narra│ │VIEWPORT: story│ │VIEWPORT: other│
+│• graph.show   │ │• graph.nodes  │ │               │
+│  MiniMap=false│ │  Draggable=   │ │               │
+│  (OVERRIDE)   │ │  false        │ │               │
+└───────────────┘ └───────────────┘ └───────────────┘
+```
+
+### Resolution Examples
+
+#### Example 1: Full Override Chain
+
+```
+Setting: graph.showMiniMap
+Context: editorId="dialogue", viewportId="narrative"
+
+Lookup order:
+1. viewportSettings["dialogue:narrative"]["graph.showMiniMap"] → false ✓
+   Source: "viewport", Value: false
+```
+
+#### Example 2: Editor Inheritance
+
+```
+Setting: graph.showMiniMap
+Context: editorId="dialogue", viewportId="storylet"
+
+Lookup order:
+1. viewportSettings["dialogue:storylet"]["graph.showMiniMap"] → undefined
+2. editorSettings["dialogue"]["graph.showMiniMap"] → true ✓
+   Source: "editor", Value: true
+```
+
+#### Example 3: App Fallback
+
+```
+Setting: ai.agentName
+Context: editorId="dialogue", viewportId="narrative"
+
+Lookup order:
+1. viewportSettings["dialogue:narrative"]["ai.agentName"] → undefined
+2. editorSettings["dialogue"]["ai.agentName"] → undefined
+3. appSettings["ai.agentName"] → "Forge" ✓
+   Source: "app", Value: "Forge"
+```
+
+#### Example 4: Default Fallback
+
+```
+Setting: graph.gridSize
+Context: editorId="dialogue", viewportId="narrative"
+
+Lookup order:
+1. viewportSettings["dialogue:narrative"]["graph.gridSize"] → undefined
+2. editorSettings["dialogue"]["graph.gridSize"] → undefined
+3. appSettings["graph.gridSize"] → undefined
+4. SETTINGS_CONFIG.viewportDefaults["graph.gridSize"] → 20 ✓
+   Source: "unset", Value: 20 (from config)
+```
+
+---
+
+## Field Types
+
+### Text Input
+
+```tsx
+<SettingsField
+  fieldKey="ai.agentName"
+  label="Agent Name"
+  type="text"
+  placeholder="Enter name..."
+  default="Forge"
+>
+  <Input />
+</SettingsField>
+```
+
+**Rendered:**
+
+```
+┌─────────────────────────────────────────┐
+│ Agent Name                   [Reset]   │
+│ ┌─────────────────────────────────────┐ │
+│ │ Enter name...                       │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### Textarea
+
+```tsx
+<SettingsField
+  fieldKey="ai.systemPrompt"
+  label="System Prompt"
+  type="textarea"
+  description="Instructions for the AI assistant"
+  placeholder="You are a helpful assistant..."
+  default=""
+>
+  <Textarea rows={4} />
+</SettingsField>
+```
+
+**Rendered:**
+
+```
+┌─────────────────────────────────────────┐
+│ System Prompt                [Reset]   │
+│ Instructions for the AI assistant       │
+│ ┌─────────────────────────────────────┐ │
+│ │ You are a helpful assistant...      │ │
+│ │                                     │ │
+│ │                                     │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### Number Input
+
+```tsx
+<SettingsField
+  fieldKey="ai.temperature"
+  label="Temperature"
+  type="number"
+  description="Controls randomness (0.0 - 2.0)"
+  default={0.7}
+>
+  <Input type="number" step={0.1} min={0} max={2} />
+</SettingsField>
+```
+
+**Rendered:**
+
+```
+┌─────────────────────────────────────────┐
+│ Temperature                  [Reset]   │
+│ Controls randomness (0.0 - 2.0)         │
+│ ┌─────────────────────────────────────┐ │
+│ │ 0.7                          ▲  ▼  │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### Select Dropdown
+
+```tsx
+<SettingsField
+  fieldKey="ui.theme"
+  label="Theme"
+  type="select"
+  description="Application color theme"
+  options={[
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
+  ]}
+  default="system"
+>
+  <Select>
+    <SelectTrigger>
+      <SelectValue placeholder="Select theme" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="light">Light</SelectItem>
+      <SelectItem value="dark">Dark</SelectItem>
+      <SelectItem value="system">System</SelectItem>
+    </SelectContent>
+  </Select>
+</SettingsField>
+```
+
+**Rendered:**
+
+```
+┌─────────────────────────────────────────┐
+│ Theme                        [Reset]   │
+│ Application color theme                 │
+│ ┌─────────────────────────────────────┐ │
+│ │ System                          ▼  │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### Toggle Switch
+
+```tsx
+<SettingsField
+  fieldKey="graph.showMiniMap"
+  label="Show Mini Map"
+  type="toggle"
+  description="Display mini map in graph corner"
+  default={true}
+>
+  <Switch />
+</SettingsField>
+```
+
+**Rendered (horizontal layout):**
+
+```
+┌──────────────────────────────────────────────────┐
+│ Show Mini Map        [Inherited] [Reset]  [ON]  │
+│ Display mini map in graph corner                 │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+### Custom Render Prop
+
+```tsx
+<SettingsField
+  fieldKey="ai.model"
+  label="AI Model"
+  type="select"
+  description="Language model to use"
+  default="gpt-4"
+>
+  {({ value, onChange }) => (
+    <div className="space-y-2">
+      <ModelSwitcher
+        value={value as string}
+        onChange={onChange}
+        showMetadata
+      />
+      <p className="text-xs text-muted-foreground">
+        Current tokens: {getModelTokens(value as string)}
+      </p>
+    </div>
+  )}
+</SettingsField>
+```
+
+---
+
+## Source Badges
+
+### Badge Types
+
+Settings automatically display **source badges** based on the inheritance chain:
+
+#### Override Badge (Accent)
+
+```tsx
+// Rendered when setting is overridden at current scope
+<SourceBadge label="Override" tone="accent" />
+```
+
+Appears when:
+- Viewport setting overrides editor/app
+- Editor setting overrides app
+- Value differs from inherited value
+
+#### Inherited Badge (Muted)
+
+```tsx
+// Rendered when value comes from parent scope
+<SourceBadge label="Inherited from editor" tone="muted" />
+<SourceBadge label="Inherited from app" tone="muted" />
+<SourceBadge label="Inherited from project" tone="muted" />
+```
+
+Appears when:
+- No override exists at current scope
+- Value resolved from parent scope
+
+### Badge Logic
+
+```typescript
+const source = getSettingSource(field.key, ids);
+const isOverride = source === scope;
+const canReset = scope !== 'app' && isOverride;
+
+const inheritedLabel =
+  scope === 'viewport'
+    ? source === 'editor'
+      ? 'Inherited from editor'
+      : source === 'app'
+        ? 'Inherited from app'
+        : source === 'project'
+          ? 'Inherited from project'
+          : null
+    : scope === 'editor'
+      ? source === 'app'
+        ? 'Inherited from app'
+        : source === 'project'
+          ? 'Inherited from project'
+          : null
+      : scope === 'project'
+        ? source === 'app'
+          ? 'Inherited from app'
+          : null
+        : null;
+```
+
+---
+
+## Reset Functionality
+
+### How Resets Work
+
+**Reset removes the override** at the current scope, allowing the value to fall back to the inherited or default value.
+
+#### Reset Button Conditions
+
+```typescript
+const canReset = scope !== 'app' && isOverride;
+```
+
+- **App scope**: No reset button (top of hierarchy)
+- **Other scopes**: Reset button appears when override exists
+
+#### Reset Implementation
+
+```tsx
+<Button
+  variant="ghost"
+  size="sm"
+  onClick={() => clearSetting(scope, field.key, ids)}
+>
+  <Undo2 size={14} />
+  Reset
+</Button>
+```
+
+#### Reset Behavior by Scope
+
+**Viewport Scope:**
+```
+Before: viewport["graph.showMiniMap"] = false (override)
+After:  viewport["graph.showMiniMap"] = undefined → inherits from editor
+```
+
+**Editor Scope:**
+```
+Before: editor["graph.showMiniMap"] = false (override)
+After:  editor["graph.showMiniMap"] = undefined → inherits from app
+```
+
+**Project Scope:**
+```
+Before: project["ai.agentName"] = "Custom" (override)
+After:  project["ai.agentName"] = undefined → inherits from app
+```
+
+---
+
+## Real Examples
+
+### DialogueEditor Settings
+
+From `C:\Users\benja\Documents\forge-agent\apps\studio\components\editors\DialogueEditor.tsx`:
+
+#### Reading Viewport Settings
+
+```tsx
+function ForgeGraphPanel({ scope, editorId }: Props) {
+  // Read viewport-scoped setting with fallback
+  const showMiniMap = useSettingsStore(
+    (s) => (s.getSettingValue('graph.showMiniMap', {
+      editorId: 'dialogue',
+      viewportId: scope
+    }) as boolean | undefined) ?? true
+  );
+
+  const nodesDraggable = useSettingsStore(
+    (s) => (s.getSettingValue('graph.nodesDraggable', {
+      editorId: 'dialogue',
+      viewportId: scope
+    }) as boolean | undefined) ?? true
+  );
+
+  return (
+    <GraphEditor
+      showMiniMap={showMiniMap}
+      nodesDraggable={nodesDraggable}
+      // ...
+    />
+  );
+}
+```
+
+#### Writing Viewport Settings
+
+```tsx
+const setSetting = useSettingsStore((s) => s.setSetting);
+
+const handleToggleMiniMap = useCallback(() => {
+  setSetting(
+    'viewport',
+    'graph.showMiniMap',
+    !showMiniMap,
+    { editorId: 'dialogue', viewportId: scope }
+  );
+}, [setSetting, showMiniMap, scope]);
+```
+
+#### Settings Panel for Viewport
+
+```tsx
+const viewportSettingsSections: SettingsSection[] = [
+  {
+    id: 'viewport-display',
+    title: 'Viewport Display',
+    description: `Settings for ${scope} viewport`,
+    fields: [
+      {
+        key: 'graph.showMiniMap',
+        label: 'Show Mini Map',
+        type: 'toggle',
+        description: 'Display navigation mini map',
+        default: true,
+      },
+      {
+        key: 'graph.nodesDraggable',
+        label: 'Nodes Draggable',
+        type: 'toggle',
+        description: 'Allow dragging nodes',
+        default: true,
+      },
+      {
+        key: 'graph.gridSize',
+        label: 'Grid Size',
+        type: 'number',
+        description: 'Grid snap size in pixels',
+        default: 20,
+      },
+    ],
+  },
+];
+
+return (
+  <SettingsPanel
+    scope="viewport"
+    sections={viewportSettingsSections}
+    editorId="dialogue"
+    viewportId={scope}
+  />
+);
+```
+
+---
+
+## Code Generation
+
+### Settings as Source of Truth
+
+The declarative settings structure **enables code generation** for:
+
+1. **TypeScript types** from field definitions
+2. **Default values** from field defaults
+3. **Validation schemas** from field constraints
+4. **Documentation** from field descriptions
+
+### Codegen Pipeline
+
+```
+SettingsSection JSX
+       │
+       ├─► Runtime Registration (settings-registry)
+       │
+       ├─► Extract Metadata
+       │     • Section IDs
+       │     • Field keys
+       │     • Field types
+       │     • Default values
+       │
+       ├─► Generate Types
+       │     export interface AppSettings {
+       │       "ai.agentName": string;
+       │       "ai.temperature": number;
+       │       "ui.theme": "light" | "dark" | "system";
+       │     }
+       │
+       └─► Generate Defaults
+             export const APP_DEFAULTS = {
+               "ai.agentName": "Forge",
+               "ai.temperature": 0.7,
+               "ui.theme": "system",
+             };
+```
+
+### Registration System
+
+```typescript
+// SettingsSection automatically registers metadata
+export function SettingsSection({ sectionId, title, children }: Props) {
+  const { scope, scopeId } = useSettingsRegistration();
+  const registerSection = useSettingsRegistryStore((s) => s.registerSection);
+
+  const section = useMemo(
+    () => ({
+      id: sectionId,
+      title,
+      fields: collectFields(children), // Extract from children
+    }),
+    [sectionId, title, children]
+  );
+
+  useEffect(() => {
+    registerSection(scope, scopeId, section);
+    return () => unregisterSection(scope, scopeId, sectionId);
+  }, [scope, scopeId, section, sectionId]);
+
+  // Render...
+}
+```
+
+### Type Generation Example
+
+**Input (JSX):**
+
+```tsx
+<SettingsSection sectionId="ai-core" title="AI">
+  <SettingsField
+    fieldKey="ai.agentName"
+    label="Agent Name"
+    type="text"
+    default="Forge"
+  />
+  <SettingsField
+    fieldKey="ai.temperature"
+    label="Temperature"
+    type="number"
+    default={0.7}
+  />
+</SettingsSection>
+```
+
+**Generated (TypeScript):**
+
+```typescript
+export interface AISettings {
+  "ai.agentName": string;
+  "ai.temperature": number;
+}
+
+export const AI_DEFAULTS: AISettings = {
+  "ai.agentName": "Forge",
+  "ai.temperature": 0.7,
+};
+```
+
+---
+
+## Advanced Patterns
+
+### Dynamic Sections
+
+```tsx
+function DynamicSettings({ features }: { features: string[] }) {
+  const sections = useMemo(() => {
+    const result: SettingsSection[] = [
+      {
+        id: 'core',
+        title: 'Core Settings',
+        fields: [
+          { key: 'app.name', label: 'App Name', type: 'text', default: '' },
+        ],
+      },
+    ];
+
+    if (features.includes('ai')) {
+      result.push({
+        id: 'ai',
+        title: 'AI Settings',
+        fields: [
+          { key: 'ai.enabled', label: 'Enable AI', type: 'toggle', default: false },
+        ],
+      });
+    }
+
+    return result;
+  }, [features]);
+
+  return <SettingsPanel scope="app" sections={sections} />;
+}
+```
+
+---
+
+### Conditional Fields
+
+```tsx
+function ConditionalSettings() {
+  const aiEnabled = useSettingsStore((s) =>
+    s.getSettingValue('ai.enabled') as boolean
+  );
+
+  return (
+    <SettingsSection sectionId="ai" title="AI">
+      <SettingsField
+        fieldKey="ai.enabled"
+        label="Enable AI"
+        type="toggle"
+        default={false}
+      >
+        <Switch />
+      </SettingsField>
+
+      {aiEnabled && (
+        <>
+          <SettingsField
+            fieldKey="ai.model"
+            label="Model"
+            type="select"
+            options={[
+              { value: 'gpt-4', label: 'GPT-4' },
+              { value: 'claude-3', label: 'Claude 3' },
+            ]}
+            default="gpt-4"
+          >
+            <Select>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gpt-4">GPT-4</SelectItem>
+                <SelectItem value="claude-3">Claude 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingsField>
+
+          <SettingsField
+            fieldKey="ai.temperature"
+            label="Temperature"
+            type="number"
+            default={0.7}
+          >
+            <Input type="number" step={0.1} />
+          </SettingsField>
+        </>
+      )}
+    </SettingsSection>
+  );
+}
+```
+
+---
+
+### Settings with Validation
+
+```tsx
+function ValidatedSettings() {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleChange = (key: string, value: unknown) => {
+    // Validation logic
+    if (key === 'ai.temperature') {
+      const num = Number(value);
+      if (num < 0 || num > 2) {
+        setErrors((prev) => ({ ...prev, [key]: 'Must be between 0 and 2' }));
+        return;
+      }
+    }
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    setSetting('app', key, value);
+  };
+
+  return (
+    <SettingsField
+      fieldKey="ai.temperature"
+      label="Temperature"
+      type="number"
+      default={0.7}
+    >
+      {({ value, onChange }) => (
+        <div>
+          <Input
+            type="number"
+            value={value as number}
+            onChange={(e) => handleChange('ai.temperature', Number(e.target.value))}
+          />
+          {errors['ai.temperature'] && (
+            <p className="text-xs text-destructive mt-1">
+              {errors['ai.temperature']}
+            </p>
+          )}
+        </div>
+      )}
+    </SettingsField>
+  );
+}
+```
+
+---
+
+### Multi-Viewport Settings
+
+```tsx
+function MultiViewportSettings({ editorId, viewports }: Props) {
+  return (
+    <Tabs>
+      {viewports.map((viewport) => (
+        <TabsContent key={viewport.id} value={viewport.id}>
+          <SettingsPanel
+            scope="viewport"
+            sections={viewportSections}
+            editorId={editorId}
+            viewportId={viewport.id}
+          />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+```
+
+---
+
+### Settings Sync with Backend
+
+```tsx
+function SyncedSettings({ projectId }: { projectId: string }) {
+  const { data: savedSettings } = useProjectSettings(projectId);
+  const { mutate: saveSettings } = useSaveProjectSettings();
+  const getOverrides = useSettingsStore((s) => s.getOverridesForScope);
+
+  // Hydrate on mount
+  useEffect(() => {
+    if (savedSettings) {
+      hydrateFromOverrides(savedSettings);
+    }
+  }, [savedSettings]);
+
+  // Auto-save on change
+  const handleSave = useCallback(() => {
+    const overrides = getOverrides('project', { projectId });
+    saveSettings({ projectId, settings: overrides });
+  }, [projectId, getOverrides, saveSettings]);
+
+  return (
+    <div>
+      <SettingsPanel scope="project" sections={sections} projectId={projectId} />
+      <Button onClick={handleSave}>Save Settings</Button>
+    </div>
+  );
+}
+```
+
+---
+
+## Summary
+
+The Settings System provides:
+
+✅ **Declarative API** - Define settings in JSX with full type safety
+✅ **Four-tier inheritance** - App → Project → Editor → Viewport
+✅ **Visual feedback** - Source badges and override indicators
+✅ **Automatic persistence** - Built-in Zustand store with Payload sync
+✅ **Code generation** - Types and defaults from declarations
+✅ **Type-safe controls** - All field types with proper validation
+✅ **Reset functionality** - Clear overrides at any scope
+✅ **Flexible composition** - Custom controls and render props
+
+**Next Steps:**
+- [WorkspaceInspector Guide](./editor-inspector-complete.mdx)
+- [Component Patterns](../guides/patterns.mdx)
+- [Theming System](../guides/theming.mdx)

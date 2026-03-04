@@ -1,0 +1,54 @@
+---
+title: 26 - Styling debugging with Cursor
+---
+
+# 26 - Styling debugging with Cursor
+
+Fix styling issues using Cursor, browser selectors, and plans. Keeps humans and agents consistent.
+
+## Context
+
+Editor UI: DockLayout, toolbars, panel tabs, inspector cards. Driven by:
+
+- **Design tokens** — [design/01-styling-and-theming](../design/01-styling-and-theming)
+- **Theme/density** — `data-theme`, `data-density`, `--panel-padding`, `--control-gap`, `--tab-height`
+
+Before changing styles, read design docs and [styling-and-ui-consistency.md](../agent-artifacts/core/styling-and-ui-consistency.md).
+
+## Workflow
+
+### Preflight
+
+1. Run `pnpm css:doctor` from repo root.
+2. Fix any reported issues; re-run until it passes.
+
+### Before: capture the problem
+
+1. Use Cursor browser or element picker.
+2. Copy DOM path, React component, HTML element.
+3. Attach a screenshot; save under `docs/images/` with a descriptive name.
+
+### Plans
+
+- Create or use a plan; implement in slices.
+- Update STATUS and docs after each slice.
+
+### After (humans)
+
+- Optional "after" screenshot. **Do not use automated browser screenshot tools**—they error often.
+- If needed: human captures, saves to `docs/images/<name>.png`, adds reference.
+
+## Agent instructions
+
+1. **Before:** Don't overwrite existing "before" screenshots.
+2. **Implement:** Use design tokens; follow styling-and-ui-consistency.md.
+3. **After:** Do not run screenshot automation. Update design docs and STATUS.
+4. **Docs:** Update errors-and-attempts when new patterns/fixes are introduced.
+
+**Next:** [27 - PostHog LLM analytics](27-posthog-llm-analytics)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/`, `apps/studio/`, design tokens, `agent-artifacts/core/styling-and-ui-consistency.md`
+Related: design/01-styling-and-theming, design/02-components, errors-and-attempts
+Do not: Run browser screenshot automation; use ad-hoc px/py instead of tokens
+</Callout>

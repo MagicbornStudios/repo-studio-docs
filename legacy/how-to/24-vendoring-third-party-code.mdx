@@ -1,0 +1,228 @@
+---
+title: 24 - Vendoring third-party code
+created: 2026-02-07
+updated: 2026-02-07
+---
+
+# 24 - Vendoring third-party code
+
+This guide explains how we vendor third-party code in this repo, make local fixes, and contribute them upstream. The canonical example is **Twick**, vendored from MagicbornStudios.
+
+## Why we vendor
+
+- We need to consume upstream packages as first-class dependencies.
+- We sometimes patch internals to fit our editor needs.
+- We want a clean path to submit those fixes upstream.
+
+Vendor rules:
+
+- Vendor code lives under `vendor/` (not `.tmp/`).
+- We never edit upstream packages inside `node_modules`.
+- We keep our app dependencies unchanged and use workspace overrides to point to vendored packages.
+
+---
+
+## Install (first time)
+
+Add the submodule and initialize it:
+
+```bash
+git submodule add https://github.com/MagicbornStudios/twick.git vendor/twick
+git submodule update --init --recursive
+```
+
+If you cloned the repo without submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+---
+
+## Workspace wiring
+
+We treat vendored packages as part of the monorepo workspace:
+
+- `pnpm-workspace.yaml` includes `vendor/twick/packages/*`.
+- Root `package.json` sets:
+
+```json
+"pnpm": {
+  "overrides": {
+    "@twick/*": "workspace:*"
+  }
+}
+```
+
+This means Studio continues to declare `@twick/*` dependencies, but resolution comes from the vendored workspace.
+
+**Install dependencies from the repo root only:**
+
+```bash
+pnpm install
+```
+
+Do not run `pnpm install` inside `vendor/twick`.
+
+---
+
+## Version alignment (local fork)
+
+We keep vendored package versions aligned with the versions declared in Studio (currently `0.15.12`) so Verdaccio can serve our fork without dependency mismatches.
+
+Update these package versions when we change Twick in Studio:
+
+- `vendor/twick/package.json`
+- `vendor/twick/packages/studio/package.json`
+- `vendor/twick/packages/timeline/package.json`
+- `vendor/twick/packages/live-player/package.json`
+- `vendor/twick/packages/video-editor/package.json`
+- `vendor/twick/packages/canvas/package.json`
+- `vendor/twick/packages/media-utils/package.json`
+- `vendor/twick/packages/visualizer/package.json`
+
+Leave external deps (e.g. `@twick/core`, `@twick/ui`) unchanged so Verdaccio can proxy them from npm.
+
+---
+
+## Using Twick in Studio
+
+- `apps/studio/next.config.ts` includes Twick packages in `transpilePackages` so local source compiles.
+- `apps/studio/app/globals.css` imports `@twick/studio/dist/studio.css`.
+- If CSS is missing, build the package:
+
+```bash
+pnpm --filter @twick/studio build
+```
+
+If you hit CSS import hoist issues, see `apps/studio/scripts/postcss-hoist-import-url.cjs` and the troubleshooting notes in `docs/agent-artifacts/core/errors-and-attempts.md`.
+
+---
+
+## Publish to Verdaccio (for local consumer repos)
+
+When consumer repos need our forked Twick packages, publish to the local registry.
+
+> Forge packages use the **same workflow conventions** as vendors. For `@forge/*` publishing, use `registry:forge:build` and `registry:forge:publish:local` (see [25 - Verdaccio and local registry](25-verdaccio-local-registry.mdx)).
+
+**Build from repo root:**
+
+```bash
+pnpm install
+pnpm vendor:twick:build
+```
+
+Or run the individual builds:
+
+```bash
+pnpm --filter @twick/media-utils build
+pnpm --filter @twick/canvas build
+pnpm --filter @twick/timeline build
+pnpm --filter @twick/visualizer build
+pnpm --filter @twick/live-player build
+pnpm --filter @twick/video-editor build
+pnpm --filter @twick/studio build
+```
+
+**Publish to Verdaccio:**
+
+```bash
+pnpm vendor:twick:publish:local
+```
+
+Or run the per-package publishes:
+
+```bash
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/media-utils
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/canvas
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/timeline
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/visualizer
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/live-player
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/video-editor
+npm publish --registry http://localhost:4873 ./vendor/twick/packages/studio
+```
+
+**Consumer `.npmrc`:**
+
+```ini
+@forge:registry=http://localhost:4873
+@twick:registry=http://localhost:4873
+```
+
+See [25 - Verdaccio and local registry](25-verdaccio-local-registry.mdx) for the full registry flow.
+
+---
+
+## Making changes
+
+1. Create a branch inside the submodule:
+
+   ```bash
+   git -C vendor/twick checkout -b fix/your-branch
+   ```
+
+2. Edit the vendored code under `vendor/twick`.
+3. Run tests/build as needed from the repo root:
+
+   ```bash
+   pnpm --filter @twick/studio build
+   ```
+
+4. Commit inside the submodule:
+
+   ```bash
+   git -C vendor/twick status
+   git -C vendor/twick add -A
+   git -C vendor/twick commit -m "Fix: ..."
+   ```
+
+---
+
+## Contribute upstream (MagicbornStudios)
+
+1. Push the submodule branch to the upstream fork:
+
+   ```bash
+   git -C vendor/twick push -u origin fix/your-branch
+   ```
+
+2. Open a PR on **MagicbornStudios/twick**.
+
+If you lack push access, add your fork as a remote and open a PR from your fork to MagicbornStudios.
+
+---
+
+## Update the vendor pointer
+
+When upstream changes are ready (or after merging your PR):
+
+```bash
+git -C vendor/twick fetch
+git -C vendor/twick checkout main
+git -C vendor/twick pull
+```
+
+Then commit the submodule pointer in this repo:
+
+```bash
+git add vendor/twick
+
+git commit -m "chore: update twick submodule"
+```
+
+---
+
+## Troubleshooting
+
+- **Missing CSS / dist output**: `pnpm --filter @twick/studio build`.
+- **ESM/TS build errors in Next**: ensure `transpilePackages` includes the Twick packages you use.
+- **Dependency mismatch**: root `pnpm.overrides` should point `@twick/*` to `workspace:*`.
+
+---
+
+## Related guides
+
+- [09 - Video Editor walkthrough](09-twick-workspace.mdx)
+- [25 - Verdaccio and local registry](25-verdaccio-local-registry.mdx)
+- [Architecture: Component library and registry](../architecture/04-component-library-and-registry.mdx)
+- [STATUS](../agent-artifacts/core/STATUS.md)

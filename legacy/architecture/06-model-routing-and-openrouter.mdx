@@ -1,0 +1,60 @@
+---
+title: Model routing and OpenRouter
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Model routing and OpenRouter
+
+We use **OpenRouter** for chat, structured output, plan generation, and image generation. Model IDs are selected per user and resolved on the server.
+
+## SDK and API
+
+- **OpenAI SDK + @ai-sdk/openai**: OpenRouter is called through OpenAI-compatible APIs (`baseURL`), not an OpenRouter-specific SDK.
+- **Model list**: `GET /api/v1/models` from OpenRouter is mapped in `apps/studio/lib/openrouter-models.ts` and returned by `GET /api/model-settings`.
+- **Responses compatibility**: CopilotKit BuiltInAgent requires responses v2 compatibility; `supportsResponsesV2` is computed and used for filtering/fallback.
+- **Static defaults** (`apps/studio/lib/model-router/defaults.ts`):
+  - `getDefaultChatModelId()`: default for both slots.
+  - `DEFAULT_FREE_CHAT_MODEL_IDS`: probe subset.
+  - `DEFAULT_IMAGE_MODEL`: default image model.
+  - `DEFAULT_TASK_MODEL`: default for plan/structured-output routes.
+
+## Two provider slots
+
+- **Slots**: `copilot` and `assistantUi` (`ModelProviderId`).
+- **Persistence**: Stored per user in `settings-overrides` (scope `app`) under keys:
+  - `ai.model.copilot`
+  - `ai.model.assistantUi`
+- **No request model IDs**: Model IDs are not accepted from client headers/body for runtime routes. Runtimes resolve model ID server-side from persisted settings.
+
+## ModelSwitcher
+
+- **Location**: `apps/studio/components/model-switcher/ModelSwitcher.tsx`.
+- **Props**:
+  - `provider: 'copilot' | 'assistantUi'`
+  - `variant: 'toolbar' | 'composer'`
+- **Placement**: Composer only.
+  - CopilotKit custom input uses `<ModelSwitcher provider="copilot" variant="composer" />`.
+  - Strategy assistant thread uses `<ModelSwitcher provider="assistantUi" variant="composer" />`.
+- **Copilot filter**: `ai.responsesCompatOnly` toggles responses-v2-only filtering for Copilot.
+
+## Runtime matrix
+
+| Use case | Route | API | Model source | Override |
+|----------|--------|-----|--------------|----------|
+| CopilotKit | `POST /api/copilotkit` | Responses (BuiltInAgent) | `getPersistedModelIdForProvider(req, 'copilot')` | None |
+| assistant-ui | `POST /api/assistant-chat` | `streamText` chat | `getPersistedModelIdForProvider(req, 'assistantUi')` | None |
+| forge/plan | `POST /api/forge/plan` | Chat + schema | `DEFAULT_TASK_MODEL` | None |
+| structured-output | `POST /api/structured-output` | Chat + schema | `DEFAULT_TASK_MODEL` | None |
+| image-generate | `POST /api/image-generate` | OpenRouter image | `DEFAULT_IMAGE_MODEL` | None |
+
+## Notes
+
+- **Manual API client**: Model settings client calls live in `apps/studio/lib/api-client/model-settings.ts`.
+- **Server cache**: Persisted model IDs are cached per user briefly to reduce repeated reads.
+- **Naming contract**: Use `copilot` and `assistantUi` across API, store, and UI.
+
+## References
+
+- [03-copilotkit-and-agents.mdx](./03-copilotkit-and-agents.mdx)
+- [01-unified-workspace.mdx](./01-unified-workspace.mdx)

@@ -1,0 +1,32 @@
+---
+title: 03 - Domains (Forge, Character)
+---
+
+# 03 - Domains (Forge, Character)
+
+Forge and Character implement `DomainAssistantContract` and provide tools.
+
+## Forge
+
+**Contract:** `packages/domain-forge/src/assistant/index.ts` — `useForgeAssistantContract(deps)`  
+**Tools:** `packages/domain-forge/src/assistant/tools.ts`
+
+| Tool | Purpose |
+|------|---------|
+| forge_getGraph | Read graph state |
+| forge_createNode | Create node (CHARACTER, PLAYER, CONDITIONAL) |
+| forge_createPlan | Plan complex changes (preview, approve) |
+| forge_executePlan | Execute approved plan |
+
+## Character
+
+**Contract:** `packages/domain-character/src/assistant/`  
+**Tools:** character_create, character_update, relationship tools, portrait tools
+
+**Next:** [04 - Runtime and components](04-runtime-and-components)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/domain-forge/src/assistant/`, `packages/domain-character/src/assistant/`
+Related: ai/02-domain-integration, how-to/06-dialogue-walkthrough
+Do not: Use domain-forge copilot/actions; use assistant/tools
+</Callout>

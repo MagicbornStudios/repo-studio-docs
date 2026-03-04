@@ -1,0 +1,71 @@
+---
+title: Documentation index
+
+created: 2026-02-04
+updated: 2026-02-10
+---
+
+# Documentation index
+
+Start here. Pick your path: **human / contributor** or **coding agent**.
+
+---
+
+## I'm human / contributing
+
+### 1. How-to guides (read in order)
+
+The numbered guides build an editor from the ground up. In the app, open **[Docs](/docs)** in the sidebar, or read in the repo:
+
+| # | Guide | Summary |
+|---|--------|--------|
+| 1 | [Foundation](how-to/01-foundation.md) | Repo structure, packages, running the app, key concepts. |
+| 2 | [Editor shell and slots](how-to/02-workspace-shell.md) | WorkspaceShell, WorkspaceHeader, WorkspaceToolbar, DockLayout, WorkspaceStatusBar, WorkspaceOverlaySurface. |
+| 3 | [Styling and theming](how-to/03-styling.md) | Design tokens, data-theme, @forge/ui, shared styles. |
+| 4 | [Data and state](how-to/04-data-and-state.md) | Draft (Zustand), server state (TanStack Query), API boundary. |
+| 5 | [Building an editor](how-to/05-building-a-workspace.md) | Step-by-step: shell, main, inspector, toolbar, system contract. |
+| 6 | [Dialogue Editor walkthrough](how-to/06-forge-workspace-walkthrough.mdx) | How Dialogue Editor is built; plan, patch, review, commit. |
+| 7 | [Copilot and AI integration](how-to/07-copilot.md) | Context, actions, suggestions, plan-execute-review-commit. |
+| 8 | [Adding AI to editors](how-to/08-adding-ai-to-workspaces.md) | System actions, app-level actions, agents. |
+| 9 | [Video Editor walkthrough](how-to/09-twick-workspace.mdx) | Timeline UI, Twick-inspired data flow, AI actions. |
+| 21 | [Workspace -> Editor migration](how-to/21-migration-guide-workspace-to-editor.mdx) | Old vs new names, compatibility notes, migration checklist. |
+| 22 | [AI generation components](how-to/22-ai-generation-components.mdx) | GenerateMediaModal, hooks, assistant-ui strategy editor. |
+| 15 | [Shadcn registries and UI components](how-to/15-shadcn-registries-and-components.mdx) | Registries, components.json, where to add shared vs app-only, how to add and use. |
+| 24 | [Vendoring third-party code](how-to/24-vendoring-third-party-code.mdx) | Vendor external repos (Twick), wire pnpm overrides, and contribute fixes upstream. |
+| 25 | [Verdaccio and local registry](how-to/25-verdaccio-local-registry.mdx) | Run the local npm registry; publish and consume @forge/* so other codebases can use the dev-kit. |
+
+Full how-to index: [how-to/00-index.md](how-to/00-index.md).
+
+### 2. Architecture and reference
+
+- **Architecture map (start here):** [architecture/README.md](architecture/README.md) — packages/apps overview, data flows, where state lives, API boundaries, and links to the rest.
+- **Architecture:** [Architecture index](architecture/00-index.mdx) - [Unified editor](architecture/01-unified-workspace.mdx), [Editor architecture](architecture/02-workspace-editor-architecture.mdx), [CopilotKit and agents](architecture/03-copilotkit-and-agents.mdx), [Component library + registry](architecture/04-component-library-and-registry.mdx), [Editor platform (DockLayout)](architecture/05-editor-platform.mdx), [Editors as MCP Apps](architecture/07-modes-as-mcp-apps.mdx), [CopilotKit vs assistant-ui](architecture/08-copilotkit-vs-assistant-ui.mdx), [MCP vs CopilotKit and assistant-ui](architecture/11-mcp-copilotkit-assistant-ui.mdx), [MCP hosts and chat-first](architecture/12-mcp-hosts-and-chat-first.mdx), [Dialogue system and Yarn Spinner](architecture/09-dialogue-domain-and-yarn-spinner.mdx).
+- **AI architecture** (Assistant UI, domain contract, tools, agents, MCP, migration): [AI architecture index](ai/00-index.mdx). **Example flows:** [Agent conversation flows](ai/21-agent-conversation-flows.mdx). **AI strategy & optimization:** [Model strategy](ai/10-model-strategy.mdx) (multi-model routing, domain-specific models, 75%+ cost savings), [AI roadmap](ai/11-ai-roadmap.mdx) (quarterly phases, model intelligence, multimodal), [Technical considerations](ai/12-technical-considerations.mdx) (registry, performance, security, observability), [Cost optimization](ai/13-cost-optimization.mdx) (caching, batching, compression, 90%+ savings).
+- **Use Studio from Cursor, Claude, or other MCP hosts (chat-first):** [MCP hosts and chat-first](architecture/12-mcp-hosts-and-chat-first.mdx) — host matrix, setup, and example flows.
+- **Product and roadmap:** [Product index](product/00-index.mdx) - [MVP and first revenue](product/mvp-and-revenue.mdx). **Business (revenue, Stripe, listings/clones):** [Business index](business/00-index.mdx). [Roadmap index](roadmap/00-roadmap-index.mdx) - [Product roadmap](roadmap/product.mdx).
+- **Design:** [Design index](design/00-index.mdx) - [Styling and theming](design/01-styling-and-theming.mdx), [Components](design/02-components.mdx).
+- [Project overview](10-project-overview.mdx)
+- [Tech stack](11-tech-stack.mdx)
+- [Editor design](12-workspace-design.mdx)
+- [Code organization](13-code-organization.mdx)
+- [Adding system actions](14-adding-domain-actions.mdx)
+- [AI editor integration](15-ai-workspace-integration.mdx)
+- [CopilotKit editor integration](16-copilotkit-workspace-integration.mdx)
+- [Co-agents and multi-agent](17-co-agents-and-multi-agent.mdx)
+
+### 3. Contributor editor requirement
+
+We expect every new contributor to **build their own editor** (tutorial: [05 - Building an editor](how-to/05-building-a-workspace.mdx)) and **submit a PR** to add it under **`packages/shared/contributor_workspaces/`**. See the [README](../README.md) contributor section and [contributor_workspaces README](../packages/shared/contributor_workspaces/README.md).
+
+---
+
+## I'm a coding agent
+
+1. **Start:** [Agent artifacts index](18-agent-artifacts-index.mdx) and root [AGENTS.md](../AGENTS.md).
+2. **Then:** [Coding agent strategy](19-coding-agent-strategy.mdx) - how we use and extend these artifacts, and how to implement your own workflows or benchmarking.
+
+**Always follow this strategy when making changes** (loop, STATUS updates, errors-and-attempts, doc placement). **Quick loop:** STATUS + AGENTS → one slice → update STATUS and affected docs.
+
+Human-facing guides under `docs/` are in MDX where possible for richer in-app reading; living agent artifacts live in `docs/agent-artifacts/core/`. **Doc placement** (where things go: root = entrypoint+policy only; core = living state; no plan docs in core): see [19-coding-agent-strategy.mdx](19-coding-agent-strategy.mdx#doc-placement-where-things-go). **Documentation conventions** (human vs agent, format, number prefixes): see [18-agent-artifacts-index.mdx](18-agent-artifacts-index.mdx#documentation-conventions-human-vs-agent).
+
+**Documentation audiences:** This folder (`docs/`) is for **contributors and in-app docs** (Studio at `/docs`). Consumer-facing docs (Overview, Getting started, Features, Pricing) live in **`apps/platform/content/docs/`** and are shown on the platform site at `/docs`.

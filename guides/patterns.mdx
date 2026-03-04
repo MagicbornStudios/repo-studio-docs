@@ -1,0 +1,30 @@
+---
+title: Component patterns
+---
+
+# Component patterns
+
+Production-tested patterns: slots, state, feature gating.
+
+## Slot-based composition
+
+Use slots for flexible composition without prop drilling. `WorkspaceLayout` exposes `.Left`, `.Main`, `.Right`, `.Bottom` and `WorkspaceLayout.Panel`.
+
+## State management
+
+- Draft in Zustand; patch operations for AI-compatible edits
+- Server state via TanStack Query
+- Selection as shared contract (`Selection` type)
+
+## Feature gating
+
+Use `FeatureGate` and `CAPABILITIES` from `packages/shared/entitlements`. Avoid ad-hoc plan checks.
+
+**Next:** [Theming](theming)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/`, `WorkspaceLayout`, `FeatureGate`
+Related: how-to/04-data-and-state
+Do not: Add imperative toolbar APIs; use declarative slots
+</Callout>
+

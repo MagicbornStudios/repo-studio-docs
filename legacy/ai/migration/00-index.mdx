@@ -1,0 +1,66 @@
+---
+title: Migration overview
+created: 2026-02-11
+updated: 2026-02-12
+---
+
+# Migration overview
+
+Phases for replacing CopilotKit with Assistant UI + OpenRouter, agents, and MCP. **Source plan:** [archive/plan-assistant-ui-copilotkit-replacement.md](../../agent-artifacts/archive/plan-assistant-ui-copilotkit-replacement.md).
+
+---
+
+## Progress
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 1 - Foundation | Done | `@forge/assistant-runtime` package added; `/api/assistant-chat` remains single endpoint with legacy + LangGraph paths behind feature flags |
+| 2 - Tool system | Done | forge_getGraph, forge_createNode wired in DialogueAssistantPanel via contract prop |
+| 3 - Forge domain | Done | Forge tools wired, `forge_createPlan` + `forge_createStoryFromPremise` backed by runtime workflows |
+| 4 - Character domain | Partial | Character assistant contract + core/relationship/portrait tools wired; Question Flow + audio extensions pending |
+| 4b - Writer domain | Pending | Optional |
+| 5 - Agent system | Partial | LangGraph chat orchestrator, context assemblers, and durable checkpoint sessions implemented; registry/delegation layer pending |
+| 6 - MCP | Partial | MCP descriptor adapters and Forge/Character descriptor factories shipped; executable MCP server deferred |
+| 7 - Cleanup | Done | CopilotKit fully removed: deps, shared copilot types stripped, CopilotKitProvider/next/runtime deleted, BypassProvider retained for CopilotSidebarContext. |
+
+---
+
+## Phases
+
+| Phase | Focus | Duration |
+|-------|-------|----------|
+| [1 - Foundation](phase-1-foundation.mdx) | Package, API, components, test page | Week 1 |
+| [2 - Tool system](phase-2-tool-system.mdx) | DomainAssistantContract, useDomainAssistant, 2–3 forge tools | Week 1–2 |
+| [3 - Forge domain](phase-3-forge-domain.mdx) | All forge tools, plan workflow, highlights | Week 2–3 |
+| [4 - Character domain](phase-4-character-domain.mdx) | Character tools, Question Flow, ElevenLabs + Audio | Week 3–4 |
+| [4b - Writer domain](phase-4b-writer.mdx) | Lexical block-level tools, LexicalDiffPanel, Notion-style | Optional |
+| [5 - Agent system](phase-5-agent-system.mdx) | AgentRegistry, AppAgent, delegation | Week 4–5 |
+| [6 - MCP](phase-6-mcp.mdx) | mcp-studio package, tool mapping | Week 5–6 |
+| [7 - Cleanup](phase-7-cleanup.mdx) | Remove CopilotKit, docs | Week 6–7 |
+
+---
+
+## Coexistence
+
+Both systems run simultaneously during migration:
+
+```typescript
+useDomainAssistant(assistantContract, { enabled: USE_ASSISTANT_UI });
+useDomainCopilot(copilotContract, { toolsEnabled: !USE_ASSISTANT_UI });
+```
+
+---
+
+## Rollback plan
+
+- **Feature flag**: `USE_ASSISTANT_UI` environment variable (or PostHog `copilotkit-enabled` inverse)
+- **LangGraph rollout flags**: `AI_LANGGRAPH_ENABLED` (server) and `NEXT_PUBLIC_AI_LANGGRAPH_ENABLED` (client mirror)
+- Both systems coexist; toggle between them
+- Migrate domain-by-domain independently
+- Keep CopilotKit until full migration validated
+
+---
+
+## Verification
+
+See [verification.mdx](verification.mdx) for post-migration checklist.

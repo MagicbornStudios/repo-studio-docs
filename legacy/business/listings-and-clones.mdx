@@ -1,0 +1,80 @@
+---
+title: Listings and clones
+created: 2026-02-08
+updated: 2026-02-11
+---
+
+# Listings and clones
+
+Business rules for catalog listings and clone-to-account. Technical implementation details (Payload collections, clone APIs, webhook behavior, media references) are in [agent-artifacts/core/decisions.md](../agent-artifacts/core/decisions.md) and the platform monetization task breakdown.
+
+---
+
+## Listing creation (free)
+
+- **Creators do not pay** to create listings.
+- Buyers pay the creator-set price to clone a listing (project/template/core).
+- Listings are owned in org context where applicable (`listings.organization`) for creator operations and payouts.
+
+---
+
+## Clone mode (creator choice per listing)
+
+Creator chooses how clone-again behaves via listing `cloneMode`:
+
+- `indefinite`: clone-again can pull current listing project state.
+- `version-only`: clone-again reuses the purchased snapshot/version boundary.
+
+This is a listing-level setting in listing create/edit flows.
+
+---
+
+## Catalog UX fields
+
+- Optional `playUrl` on listings allows "Play" CTA when present.
+- Catalog/detail UI shows clone mode and play availability.
+- Dashboard listing/game management uses org-scoped creator endpoints:
+  - `GET /api/me/listings`
+  - `GET /api/me/projects`
+
+---
+
+## Clone scope (what is copied)
+
+Cloning to buyer account copies project-linked authoring data:
+
+- project row (new slug/name as needed)
+- forge graphs
+- characters + relationships
+- pages + blocks
+- project settings and linked project domain data
+
+**Media files:** clone preserves references first. If clone owner replaces/removes an asset later, new owned media is uploaded and old reference can be dropped for that asset.
+
+**Org attribution and storage:** cloned projects are assigned to the buyer's active organization, and clone growth is blocked when org storage limits are exceeded.
+
+---
+
+## License semantics
+
+- Paid clone checkout creates a **license** record at settlement.
+- License enables clone-again according to clone mode.
+- License records carry financial attribution fields used in creator/platform reporting.
+
+---
+
+## Free vs paid clone path
+
+1. Buyer opens catalog listing.
+2. If unauthenticated, "Get/Clone" redirects to login with return URL.
+3. If listing is free (`price=0`), platform calls `POST /api/catalog/:id/clone` (no Stripe).
+4. If listing is paid (`price>0`), platform creates Stripe Checkout session and redirects to Stripe.
+5. On paid success webhook: create/update license and complete clone flow.
+
+---
+
+## Platform route expectations
+
+- Buyer discovery: `/catalog`, `/catalog/[slug]`
+- Creator management: `/dashboard/listings`, `/dashboard/games`, `/dashboard/licenses`
+- Compatibility: `/account/*` redirects to `/dashboard/*`

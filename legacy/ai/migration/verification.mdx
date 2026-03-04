@@ -1,0 +1,45 @@
+---
+title: Verification checklist
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Verification checklist
+
+After implementation, confirm each capability:
+
+---
+
+## Basic chat
+
+Open Dialogue editor, chat with Assistant, see streaming responses.
+
+---
+
+## Tool execution
+
+"Create a character node" → node appears in graph, highlighted.
+
+---
+
+## Plan workflow
+
+"Add 3 connected dialogue nodes" → plan appears in chat → click Apply → nodes created.
+
+---
+
+## Cross-editor
+
+"Create a character named Alice" from app-level chat → character created → visible in Character tab.
+
+---
+
+## MCP
+
+External MCP client can list tools and execute `forge_createNode`.
+
+---
+
+## Coexistence
+
+Toggle `USE_ASSISTANT_UI` flag → both systems work independently during migration.

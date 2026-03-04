@@ -1,0 +1,1178 @@
+---
+title: AI Integration Tutorial
+created: 2026-02-12
+updated: 2026-02-12
+icon: "🤖"
+---
+
+# 🤖 AI Integration Tutorial
+
+**Complete guide to integrating AI assistants into your Forge editors**
+
+Learn how to add intelligent AI assistants to your editors using Forge's domain contract system. This tutorial walks through creating a fully functional AI agent from scratch, using real examples from the Character and Dialogue editors.
+
+---
+
+## What You'll Build
+
+By the end of this tutorial, you'll have:
+
+- A domain contract that defines your AI agent's capabilities
+- Multiple tools that let the AI manipulate your editor's state
+- Custom tool rendering (React components in the chat)
+- Context snapshots that provide editor state to the AI
+- Highlight coordination for visual feedback
+- A complete working example: TaskAgent for a task management editor
+
+---
+
+## Prerequisites
+
+Before starting, you should be familiar with:
+
+- React and TypeScript
+- Forge editor components (WorkspaceShell, DockLayout, etc.)
+- Basic state management (Zustand or similar)
+
+---
+
+## Architecture Overview
+
+### The Domain Contract Pattern
+
+Forge uses a **domain contract** system to integrate AI:
+
+```typescript
+interface DomainAssistantContract {
+  domain: string;                                    // Domain identifier (e.g., 'character', 'forge')
+  getContextSnapshot: () => DomainContextSnapshot;   // Provide editor state to AI
+  getInstructions: () => string;                     // System instructions for AI
+  createTools: () => DomainTool[];                   // Define AI tools
+  getSuggestions?: () => string[];                   // Optional chat suggestions
+  onHighlight?: (entities: Record<string, string[]>) => void;  // Visual feedback
+  clearHighlights?: () => void;                      // Clear highlights
+}
+```
+
+### How It Works
+
+1. **Context** - Your editor provides a snapshot of its current state
+2. **Instructions** - You tell the AI what it's helping with and how to use tools
+3. **Tools** - You define operations the AI can perform
+4. **Execution** - When AI calls a tool, your function runs and updates the editor
+5. **Feedback** - Highlights show what the AI just changed
+
+---
+
+## Step 1: Define Your Domain Contract
+
+Let's build a `TaskAgent` for a task management editor.
+
+### Create the Hook
+
+```typescript
+// packages/domain-task/src/assistant/index.ts
+'use client';
+
+import { useMemo } from 'react';
+import type { DomainAssistantContract, DomainContextSnapshot } from '@forge/shared/assistant';
+import type { Selection } from '@forge/shared';
+import type { TaskDoc } from '@forge/types/task';
+import { createTaskAssistantTools } from './tools';
+
+export interface TaskAssistantDeps {
+  tasks: TaskDoc[];
+  activeTaskId: number | null;
+  projectId: number | null;
+  selection: Selection | null;
+  isDirty: boolean;
+  createTask: (data: { title: string; description?: string; status?: string }) => Promise<TaskDoc>;
+  updateTask: (id: number, updates: Partial<TaskDoc>) => Promise<void>;
+  deleteTask: (id: number) => Promise<void>;
+  setActiveTask: (id: number | null) => void;
+  onAIHighlight: (entities: Record<string, string[]>) => void;
+  clearAIHighlights: () => void;
+}
+
+export function useTaskAssistantContract(
+  deps: TaskAssistantDeps
+): DomainAssistantContract {
+  const {
+    tasks,
+    activeTaskId,
+    projectId,
+    selection,
+    isDirty,
+    createTask,
+    updateTask,
+    deleteTask,
+    setActiveTask,
+    onAIHighlight,
+    clearAIHighlights,
+  } = deps;
+
+  return useMemo<DomainAssistantContract>(
+    () => ({
+      domain: 'task',
+
+      getContextSnapshot: (): DomainContextSnapshot => {
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+
+        return {
+          domain: 'task',
+          domainState: {
+            projectId,
+            taskCount: tasks.length,
+            tasks: tasks.map(t => ({
+              id: t.id,
+              title: t.title,
+              status: t.status,
+              priority: t.priority,
+            })),
+            activeTask: activeTask ? {
+              id: activeTask.id,
+              title: activeTask.title,
+              description: activeTask.description,
+              status: activeTask.status,
+            } : null,
+            isDirty,
+          },
+          selectionSummary: selection?.type === 'entity'
+            ? `Selected: ${selection.entityType} ${selection.id}`
+            : 'No selection',
+        };
+      },
+
+      getInstructions: () =>
+        'You are helping manage a task list. ' +
+        'Use task_getTasks to see all tasks. ' +
+        'Use task_create to add new tasks. ' +
+        'Use task_update to modify existing tasks. ' +
+        'Use task_delete to remove tasks. ' +
+        'Always confirm task IDs by calling task_getTasks first. ' +
+        'Do not claim success unless tool results confirm it.',
+
+      createTools: () =>
+        createTaskAssistantTools({
+          getTasks: () => tasks,
+          getProjectId: () => projectId,
+          createTask,
+          updateTask,
+          deleteTask,
+          setActiveTask,
+          onAIHighlight,
+        }),
+
+      getSuggestions: () => {
+        if (tasks.length === 0) {
+          return ['Create my first task', 'Add a todo list'];
+        }
+        const incompleteTasks = tasks.filter(t => t.status !== 'completed');
+        if (incompleteTasks.length > 0) {
+          return [
+            'Mark all tasks complete',
+            'Show high priority tasks',
+            'Create a new urgent task',
+          ];
+        }
+        return ['Add a new task', 'Show all tasks'];
+      },
+
+      onHighlight: (entities) => onAIHighlight(entities),
+      clearHighlights: clearAIHighlights,
+    }),
+    [
+      tasks,
+      activeTaskId,
+      projectId,
+      selection,
+      isDirty,
+      createTask,
+      updateTask,
+      deleteTask,
+      setActiveTask,
+      onAIHighlight,
+      clearAIHighlights,
+    ]
+  );
+}
+```
+
+### Key Points
+
+1. **Dependencies** - Pass all editor state and operations into the hook
+2. **Context Snapshot** - Provide current state in a structured format
+3. **Instructions** - Clear, specific guidance for the AI
+4. **Memoization** - Wrap in `useMemo` to avoid recreating on every render
+5. **Dependency Array** - Include all values used inside the contract
+
+---
+
+## Step 2: Create Your First Tool
+
+Tools are the **operations** your AI can perform. Let's start with a simple "create task" tool.
+
+### Tool Structure
+
+```typescript
+interface DomainTool {
+  domain: string;                    // Domain identifier
+  name: string;                      // Tool name (e.g., 'task_create')
+  description: string;               // What this tool does
+  parameters: JSONSchemaObject;      // JSON Schema for parameters
+  execute: (args: unknown, context: DomainToolContext) => Promise<ToolResult>;  // Execute function
+  render?: (call: AssistantToolCallContentPartComponent) => React.ReactNode;    // Optional custom UI
+}
+```
+
+### Create the Tools File
+
+```typescript
+// packages/domain-task/src/assistant/tools.ts
+import type { DomainTool, DomainToolContext } from '@forge/shared/assistant';
+import type { TaskDoc } from '@forge/types/task';
+
+export interface TaskAssistantToolsDeps {
+  getTasks: () => TaskDoc[];
+  getProjectId: () => number | null;
+  createTask: (data: { title: string; description?: string; status?: string }) => Promise<TaskDoc>;
+  updateTask: (id: number, updates: Partial<TaskDoc>) => Promise<void>;
+  deleteTask: (id: number) => Promise<void>;
+  setActiveTask: (id: number | null) => void;
+  onAIHighlight: (entities: Record<string, string[]>) => void;
+}
+
+function toJsonSchema(
+  params: Array<{ name: string; type: string; description?: string; required?: boolean }>
+): { type: 'object'; properties: Record<string, unknown>; required?: string[] } {
+  const properties: Record<string, unknown> = {};
+  const required: string[] = [];
+
+  for (const p of params) {
+    properties[p.name] = { type: p.type, description: p.description };
+    if (p.required) required.push(p.name);
+  }
+
+  return {
+    type: 'object',
+    properties,
+    required: required.length > 0 ? required : undefined,
+  };
+}
+
+export function createTaskAssistantTools(deps: TaskAssistantToolsDeps): DomainTool[] {
+  const {
+    getTasks,
+    getProjectId,
+    createTask,
+    updateTask,
+    deleteTask,
+    setActiveTask,
+    onAIHighlight,
+  } = deps;
+
+  return [
+    {
+      domain: 'task',
+      name: 'task_getTasks',
+      description: 'Get all tasks in the current project. Call this before creating edges or updating tasks to get task IDs.',
+      parameters: toJsonSchema([]),
+      execute: async (_args, _context: DomainToolContext) => {
+        const tasks = getTasks();
+        const projectId = getProjectId();
+
+        if (!projectId) {
+          return { success: false, message: 'No active project' };
+        }
+
+        return {
+          success: true,
+          message: `Found ${tasks.length} task(s)`,
+          data: {
+            projectId,
+            taskCount: tasks.length,
+            tasks: tasks.map(t => ({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              status: t.status,
+              priority: t.priority,
+            })),
+          },
+        };
+      },
+    },
+
+    {
+      domain: 'task',
+      name: 'task_create',
+      description: 'Create a new task. Use this when the user wants to add a task or todo item.',
+      parameters: toJsonSchema([
+        { name: 'title', type: 'string', description: 'Task title', required: true },
+        { name: 'description', type: 'string', description: 'Task description', required: false },
+        { name: 'status', type: 'string', description: 'Status: todo, in_progress, completed', required: false },
+        { name: 'priority', type: 'string', description: 'Priority: low, medium, high', required: false },
+      ]),
+      execute: async (args: unknown, _context: DomainToolContext) => {
+        const a = args as Record<string, unknown>;
+        const { title, description, status, priority } = a;
+
+        if (!title || typeof title !== 'string') {
+          return { success: false, message: 'title is required' };
+        }
+
+        try {
+          const task = await createTask({
+            title,
+            description: description as string | undefined,
+            status: status as string | undefined,
+            priority: priority as string | undefined,
+          });
+
+          // Highlight the new task
+          onAIHighlight({ 'task.item': [String(task.id)] });
+
+          return {
+            success: true,
+            message: `Created task: ${task.title}`,
+            data: { taskId: task.id, title: task.title },
+          };
+        } catch (err) {
+          return {
+            success: false,
+            message: err instanceof Error ? err.message : 'Failed to create task',
+          };
+        }
+      },
+    },
+
+    {
+      domain: 'task',
+      name: 'task_update',
+      description: 'Update an existing task. Use this to change task properties like title, status, or priority.',
+      parameters: toJsonSchema([
+        { name: 'taskId', type: 'number', description: 'ID of the task to update', required: true },
+        { name: 'title', type: 'string', description: 'New title', required: false },
+        { name: 'description', type: 'string', description: 'New description', required: false },
+        { name: 'status', type: 'string', description: 'New status', required: false },
+        { name: 'priority', type: 'string', description: 'New priority', required: false },
+      ]),
+      execute: async (args: unknown, _context: DomainToolContext) => {
+        const a = args as Record<string, unknown>;
+        const { taskId, ...updates } = a;
+
+        if (typeof taskId !== 'number') {
+          return { success: false, message: 'taskId must be a number' };
+        }
+
+        try {
+          await updateTask(taskId, updates);
+          onAIHighlight({ 'task.item': [String(taskId)] });
+
+          return {
+            success: true,
+            message: `Updated task ${taskId}`,
+            data: { taskId },
+          };
+        } catch (err) {
+          return {
+            success: false,
+            message: err instanceof Error ? err.message : 'Failed to update task',
+          };
+        }
+      },
+    },
+
+    {
+      domain: 'task',
+      name: 'task_delete',
+      description: 'Delete a task. Use this when the user wants to remove a task.',
+      parameters: toJsonSchema([
+        { name: 'taskId', type: 'number', description: 'ID of the task to delete', required: true },
+      ]),
+      execute: async (args: unknown, _context: DomainToolContext) => {
+        const a = args as Record<string, unknown>;
+        const { taskId } = a;
+
+        if (typeof taskId !== 'number') {
+          return { success: false, message: 'taskId must be a number' };
+        }
+
+        try {
+          await deleteTask(taskId);
+          return { success: true, message: `Deleted task ${taskId}` };
+        } catch (err) {
+          return {
+            success: false,
+            message: err instanceof Error ? err.message : 'Failed to delete task',
+          };
+        }
+      },
+    },
+  ];
+}
+```
+
+### Tool Best Practices
+
+1. **Descriptive names** - Use `domain_operation` format (e.g., `task_create`)
+2. **Clear descriptions** - Tell the AI when to use this tool
+3. **JSON Schema** - Define parameters with types and required fields
+4. **Error handling** - Always try/catch and return structured errors
+5. **Highlight entities** - Call `onAIHighlight` after successful operations
+6. **Return data** - Include created IDs in the response for chaining tools
+
+---
+
+## Step 3: Custom Tool Rendering
+
+Add custom React components to display tool results in the chat.
+
+### Create a Tool UI Component
+
+```typescript
+// packages/domain-task/src/assistant/task-tool-ui.tsx
+'use client';
+
+import React from 'react';
+import { makeAssistantToolUI } from '@assistant-ui/react';
+import { Card } from '@forge/ui/card';
+import { Badge } from '@forge/ui/badge';
+import { CheckCircle, Circle, Clock } from 'lucide-react';
+
+const STATUS_ICONS = {
+  todo: <Circle className="h-4 w-4 text-muted-foreground" />,
+  in_progress: <Clock className="h-4 w-4 text-blue-500" />,
+  completed: <CheckCircle className="h-4 w-4 text-green-500" />,
+};
+
+const PRIORITY_COLORS = {
+  low: 'text-gray-500',
+  medium: 'text-yellow-500',
+  high: 'text-red-500',
+};
+
+export const TaskGetTasksToolUI = makeAssistantToolUI({
+  toolName: 'task_getTasks',
+  render: ({ result }) => {
+    if (!result) return null;
+
+    const data = result.data as {
+      tasks?: Array<{
+        id: number;
+        title: string;
+        status: string;
+        priority: string;
+      }>;
+    };
+
+    if (!data?.tasks || data.tasks.length === 0) {
+      return (
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground">No tasks found</p>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="p-4 space-y-2">
+        <div className="text-sm font-semibold mb-2">Tasks ({data.tasks.length})</div>
+        {data.tasks.map(task => (
+          <div
+            key={task.id}
+            className="flex items-center gap-2 p-2 rounded-md bg-muted/30"
+          >
+            {STATUS_ICONS[task.status as keyof typeof STATUS_ICONS] || STATUS_ICONS.todo}
+            <span className="flex-1 text-sm">{task.title}</span>
+            {task.priority && (
+              <Badge variant="outline" className={PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS]}>
+                {task.priority}
+              </Badge>
+            )}
+          </div>
+        ))}
+      </Card>
+    );
+  },
+});
+
+export const TaskCreateToolUI = makeAssistantToolUI({
+  toolName: 'task_create',
+  render: ({ result }) => {
+    if (!result) return null;
+
+    const data = result.data as { title?: string; taskId?: number };
+
+    return (
+      <Card className="p-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <span className="text-sm font-medium">Created task</span>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">{data.title}</p>
+        {data.taskId && (
+          <p className="text-xs text-muted-foreground mt-1">ID: {data.taskId}</p>
+        )}
+      </Card>
+    );
+  },
+});
+```
+
+### Register Tool UIs
+
+```typescript
+// In your editor component
+import { ToolUIRegistry } from '@forge/shared/components/tool-ui/assistant-tools';
+import { TaskGetTasksToolUI, TaskCreateToolUI } from '@forge/domain-task/assistant';
+
+export function TaskEditor() {
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <ToolUIRegistry />
+      <TaskGetTasksToolUI />
+      <TaskCreateToolUI />
+      {/* ... rest of your editor */}
+    </AssistantRuntimeProvider>
+  );
+}
+```
+
+---
+
+## Step 4: Integrate with Your Editor
+
+Now connect everything to your editor component.
+
+### Editor Integration
+
+```typescript
+// apps/studio/components/editors/TaskEditor.tsx
+'use client';
+
+import React, { useCallback, useState } from 'react';
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  EditorDockLayout,
+  EditorDockPanel,
+  WorkspaceStatusBar,
+} from '@forge/shared/components/editor';
+import { useAIHighlight } from '@forge/shared/assistant';
+import { useTaskAssistantContract } from '@forge/domain-task/assistant';
+import { DialogueAssistantPanel } from '@/components/editors/dialogue/DialogueAssistantPanel';
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/lib/data/hooks';
+import { useTaskStore } from '@/lib/domains/task/store';
+
+export function TaskEditor() {
+  const projectId = 1; // Get from app state
+  const store = useTaskStore();
+  const { tasks, activeTaskId, setActiveTask } = store;
+
+  // Data hooks
+  const { data: fetchedTasks } = useTasks(projectId);
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+
+  // Selection and highlights
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const { onAIHighlight, clearHighlights, isHighlighted } = useAIHighlight();
+
+  // CRUD operations
+  const handleCreateTask = useCallback(
+    async (data: { title: string; description?: string; status?: string }) => {
+      const result = await createTaskMutation.mutateAsync({ ...data, project: projectId });
+      return result as TaskDoc;
+    },
+    [createTaskMutation, projectId]
+  );
+
+  const handleUpdateTask = useCallback(
+    async (id: number, updates: Partial<TaskDoc>) => {
+      await updateTaskMutation.mutateAsync({ id, ...updates });
+    },
+    [updateTaskMutation]
+  );
+
+  const handleDeleteTask = useCallback(
+    async (id: number) => {
+      await deleteTaskMutation.mutateAsync(id);
+    },
+    [deleteTaskMutation]
+  );
+
+  // Build the contract
+  const taskAssistantContract = useTaskAssistantContract({
+    tasks,
+    activeTaskId,
+    projectId,
+    selection,
+    isDirty: false,
+    createTask: handleCreateTask,
+    updateTask: handleUpdateTask,
+    deleteTask: handleDeleteTask,
+    setActiveTask,
+    onAIHighlight: (entities) => onAIHighlight({ entities }),
+    clearAIHighlights: clearHighlights,
+  });
+
+  return (
+    <WorkspaceShell editorId="task" title="Tasks" domain="task">
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left>
+          <span className="text-xs text-muted-foreground">
+            {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+          </span>
+        </WorkspaceToolbar.Left>
+      </WorkspaceToolbar>
+
+      <EditorDockLayout layoutId="task-layout">
+        <EditorDockLayout.Main>
+          <EditorDockPanel id="main" title="Tasks">
+            <div className="p-4 space-y-2">
+              {tasks.map(task => (
+                <div
+                  key={task.id}
+                  className={cn(
+                    'p-3 rounded-md border',
+                    isHighlighted('task.item', String(task.id)) && 'border-primary ring-2 ring-primary/20'
+                  )}
+                  onClick={() => setSelection({ type: 'entity', entityType: 'task.item', id: String(task.id) })}
+                >
+                  <h4 className="font-medium">{task.title}</h4>
+                  {task.description && (
+                    <p className="text-sm text-muted-foreground">{task.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </EditorDockPanel>
+        </EditorDockLayout.Main>
+
+        <EditorDockLayout.Right>
+          <EditorDockPanel id="chat" title="AI Assistant">
+            <DialogueAssistantPanel
+              contract={taskAssistantContract}
+              toolsEnabled={true}
+            />
+          </EditorDockPanel>
+        </EditorDockLayout.Right>
+      </EditorDockLayout>
+
+      <WorkspaceStatusBar>
+        {tasks.length > 0 ? `${tasks.length} task(s)` : 'No tasks'}
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Step 5: Multi-Tool Workflows
+
+Enable complex operations by combining multiple tools.
+
+### Plan Tool Example
+
+```typescript
+{
+  domain: 'task',
+  name: 'task_createFromTemplate',
+  description: 'Create multiple tasks from a template or checklist.',
+  parameters: toJsonSchema([
+    { name: 'template', type: 'string', description: 'Template name (e.g., "project_kickoff")', required: true },
+  ]),
+  execute: async (args: unknown, context: DomainToolContext) => {
+    const a = args as Record<string, unknown>;
+    const { template } = a;
+
+    // Define templates
+    const templates: Record<string, Array<{ title: string; description?: string }>> = {
+      project_kickoff: [
+        { title: 'Define project scope', description: 'Document requirements and goals' },
+        { title: 'Create timeline', description: 'Set milestones and deadlines' },
+        { title: 'Assign team roles', description: 'Identify stakeholders and responsibilities' },
+        { title: 'Set up communication channels', description: 'Slack, email, meetings' },
+      ],
+      code_review: [
+        { title: 'Run tests', description: 'Ensure all tests pass' },
+        { title: 'Check code style', description: 'Run linter and formatter' },
+        { title: 'Review for security', description: 'Check for vulnerabilities' },
+        { title: 'Update documentation', description: 'README, API docs, comments' },
+      ],
+    };
+
+    const tasks = templates[template as string];
+    if (!tasks) {
+      return { success: false, message: `Template "${template}" not found` };
+    }
+
+    // Create all tasks
+    const created: number[] = [];
+    for (const task of tasks) {
+      const result = await createTask(task);
+      created.push(result.id);
+    }
+
+    onAIHighlight({ 'task.item': created.map(String) });
+
+    return {
+      success: true,
+      message: `Created ${created.length} tasks from template "${template}"`,
+      data: { taskIds: created },
+    };
+  },
+}
+```
+
+### Chaining Tools
+
+The AI can now:
+1. Call `task_getTasks` to see existing tasks
+2. Call `task_createFromTemplate` with `"project_kickoff"`
+3. Call `task_update` to modify specific tasks
+
+---
+
+## Real Example: Forge Domain
+
+Here's how the Dialogue Editor implements its domain contract.
+
+### Forge Assistant Contract
+
+```typescript
+// From packages/domain-forge/src/assistant/index.ts
+export function useForgeAssistantContract(deps: ForgeAssistantDeps): DomainAssistantContract {
+  const {
+    graph,
+    selection,
+    isDirty,
+    applyOperations,
+    onAIHighlight,
+    clearAIHighlights,
+    createPlanApi,
+    createStoryBuilderApi,
+    setPendingFromPlan,
+    openOverlay,
+    revealSelection,
+    createNodeOverlayId,
+  } = deps;
+
+  return useMemo<DomainAssistantContract>(
+    () => ({
+      domain: 'forge',
+
+      getContextSnapshot: (): DomainContextSnapshot => {
+        const ctx = buildForgeContext({ graph, selection, isDirty });
+        return {
+          domain: ctx.domain,
+          domainState: ctx.domainState,
+          selectionSummary: ctx.selectionSummary,
+        };
+      },
+
+      getInstructions: () =>
+        'You are helping edit a graph (nodes and edges). This graph represents dialogue/narrative. ' +
+        'Available node types: CHARACTER, PLAYER, CONDITIONAL. ' +
+        'Use forge_* tools to modify the graph. Call forge_getGraph before creating edges to get node IDs. ' +
+        'When the user asks for a premise-driven scaffold, use forge_createStoryFromPremise. ' +
+        'For planning, use forge_createPlan to propose changes; the user can Apply or Request Changes. ' +
+        'When the user asks to create dialogue, use forge_createNode and forge_createEdge together.',
+
+      createTools: () =>
+        createForgeAssistantTools({
+          getGraph: () => graph,
+          applyOperations,
+          onAIHighlight,
+          createPlanApi,
+          createStoryBuilderApi,
+          setPendingFromPlan,
+          openOverlay,
+          revealSelection,
+          createNodeOverlayId,
+        }),
+
+      getSuggestions: () => getForgeSuggestions({ graph, selection }),
+
+      onHighlight: (entities) => onAIHighlight({ entities }),
+      clearHighlights: clearAIHighlights,
+    }),
+    [graph, selection, isDirty, applyOperations, ...]
+  );
+}
+```
+
+### forge_createNode Tool
+
+```typescript
+// From packages/domain-forge/src/assistant/tools.ts
+{
+  domain: 'forge',
+  name: 'forge_createNode',
+  description: 'Create a new node in the dialogue graph. Use this when the user wants to add a character dialogue, player choice, or conditional logic node.',
+  parameters: copilotParamsToJsonSchema([
+    { name: 'nodeType', type: 'string', description: `The type of node to create. Must be one of: ${Object.values(FORGE_NODE_TYPE).join(', ')}`, required: true },
+    { name: 'label', type: 'string', description: 'A label for the node', required: true },
+    { name: 'content', type: 'string', description: 'The dialogue content or text', required: false },
+    { name: 'speaker', type: 'string', description: 'The speaker name for dialogue nodes', required: false },
+    { name: 'x', type: 'number', description: 'X position', required: false },
+    { name: 'y', type: 'number', description: 'Y position', required: false },
+  ]),
+  execute: async (args: unknown, _context: DomainToolContext) => {
+    const a = args as Record<string, unknown>;
+    const { nodeType, label, content, speaker, x, y } = a;
+    const graph = getGraph();
+    if (!graph) return { success: false, message: 'No active graph' };
+
+    const nodeId = `node_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const position = {
+      x: (x as number | undefined) ?? Math.random() * 500,
+      y: (y as number | undefined) ?? Math.random() * 500,
+    };
+
+    applyOperations([
+      {
+        type: 'createNode',
+        nodeType: nodeType as ForgeNodeType,
+        position,
+        data: {
+          label: label as string | undefined,
+          content: content as string | undefined,
+          speaker: speaker as string | undefined,
+        },
+        id: nodeId,
+      },
+    ]);
+    onAIHighlight({ entities: { 'forge.node': [nodeId] } });
+
+    return { success: true, message: `Created ${String(nodeType)} node: ${String(label)}`, data: { nodeId } };
+  },
+}
+```
+
+---
+
+## Testing Your Agent
+
+### Manual Testing
+
+1. **Start the editor** and open the AI chat panel
+2. **Type a command**: "Create a task called 'Write documentation'"
+3. **Verify**:
+   - Tool was called correctly
+   - Task appears in the UI
+   - Task is highlighted (visual feedback)
+   - AI responds with success message
+
+### Test Cases
+
+```typescript
+// Test 1: Create task
+User: "Add a task to review code"
+Expected: task_create called with title="Review code"
+Result: Task appears, highlighted
+
+// Test 2: Multiple operations
+User: "Create 3 tasks: design, code, test"
+Expected: task_create called 3 times
+Result: All 3 tasks appear, all highlighted
+
+// Test 3: Update task
+User: "Mark the first task as completed"
+Expected: task_getTasks called, then task_update with status="completed"
+Result: Task status updates
+
+// Test 4: Context awareness
+User: "What tasks do I have?"
+Expected: task_getTasks called
+Result: AI lists all tasks from the result
+```
+
+### Debugging
+
+Use the Assistant UI DevTools:
+
+```typescript
+import { AssistantDevToolsBridge } from '@forge/shared/components/assistant-ui';
+
+<AssistantRuntimeProvider runtime={runtime}>
+  <AssistantDevToolsBridge />
+  {/* ... your editor */}
+</AssistantRuntimeProvider>
+```
+
+This adds a DevTools panel showing:
+- Tool calls and results
+- Context snapshots
+- Instructions sent to AI
+- Model responses
+
+---
+
+## Advanced Patterns
+
+### 1. Conditional Tools
+
+Show/hide tools based on editor state:
+
+```typescript
+createTools: () => {
+  const baseTools = [getTasks, createTask, updateTask];
+
+  // Only show delete if there are tasks
+  if (tasks.length > 0) {
+    baseTools.push(deleteTask);
+  }
+
+  // Only show archive if project supports it
+  if (projectFeatures.archiving) {
+    baseTools.push(archiveTask);
+  }
+
+  return baseTools;
+}
+```
+
+### 2. Context Enrichment
+
+Add rich context for better AI decisions:
+
+```typescript
+getContextSnapshot: () => {
+  const overdueTasks = tasks.filter(t =>
+    t.dueDate && new Date(t.dueDate) < new Date()
+  );
+
+  return {
+    domain: 'task',
+    domainState: {
+      tasks: tasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        dueDate: t.dueDate,
+        isOverdue: overdueTasks.some(ot => ot.id === t.id),
+      })),
+      summary: {
+        total: tasks.length,
+        completed: tasks.filter(t => t.status === 'completed').length,
+        overdue: overdueTasks.length,
+      },
+    },
+    selectionSummary: `${tasks.length} tasks (${overdueTasks.length} overdue)`,
+  };
+}
+```
+
+### 3. Multi-Step Operations
+
+Break complex operations into atomic tools:
+
+```typescript
+// Instead of one "reorderTasks" tool, use:
+// 1. task_getTasks - Get current order
+// 2. task_updateOrder - Update specific task positions
+// 3. task_verifyOrder - Confirm new order
+
+// AI can chain these together and handle errors at each step
+```
+
+### 4. Optimistic Updates
+
+Update UI immediately, rollback on error:
+
+```typescript
+execute: async (args) => {
+  const tempId = `temp_${Date.now()}`;
+
+  // Show task immediately
+  addTaskOptimistic({ id: tempId, ...args });
+  onAIHighlight({ 'task.item': [tempId] });
+
+  try {
+    const result = await createTask(args);
+    // Replace temp with real task
+    replaceTask(tempId, result);
+    return { success: true, data: { taskId: result.id } };
+  } catch (err) {
+    // Remove temp task on error
+    removeTask(tempId);
+    return { success: false, message: err.message };
+  }
+}
+```
+
+---
+
+## Performance Optimization
+
+### 1. Memoize Tools
+
+Tools are recreated on every render if not memoized:
+
+```typescript
+const tools = useMemo(
+  () => createTaskAssistantTools({ getTasks, createTask, ... }),
+  [getTasks, createTask, ...]  // Only recreate when deps change
+);
+```
+
+### 2. Lazy Context
+
+Only compute expensive context when needed:
+
+```typescript
+getContextSnapshot: () => {
+  // Cheap: just IDs and counts
+  if (selection?.type === 'none') {
+    return { domain: 'task', domainState: { taskCount: tasks.length } };
+  }
+
+  // Expensive: full task details
+  return {
+    domain: 'task',
+    domainState: {
+      tasks: tasks.map(t => ({ ...t, relatedTasks: findRelated(t) }))
+    }
+  };
+}
+```
+
+### 3. Debounce Highlights
+
+Avoid re-rendering on every highlight:
+
+```typescript
+const debouncedHighlight = useMemo(
+  () => debounce((entities: Record<string, string[]>) => {
+    onAIHighlight({ entities });
+  }, 100),
+  [onAIHighlight]
+);
+```
+
+---
+
+## Common Pitfalls
+
+### 1. Missing Context
+
+```typescript
+// ❌ BAD: AI has no idea what tasks exist
+getContextSnapshot: () => ({ domain: 'task', domainState: {} });
+
+// ✅ GOOD: AI knows current state
+getContextSnapshot: () => ({
+  domain: 'task',
+  domainState: { tasks: tasks.map(t => ({ id: t.id, title: t.title })) }
+});
+```
+
+### 2. Vague Instructions
+
+```typescript
+// ❌ BAD: AI doesn't know when to use tools
+getInstructions: () => 'Help with tasks';
+
+// ✅ GOOD: Clear guidance
+getInstructions: () =>
+  'You are helping manage tasks. ' +
+  'Use task_getTasks to see existing tasks. ' +
+  'Use task_create to add new tasks. ' +
+  'Always call task_getTasks before updating to get current IDs.';
+```
+
+### 3. No Error Handling
+
+```typescript
+// ❌ BAD: Unhandled errors crash the tool
+execute: async (args) => {
+  const result = await createTask(args);
+  return { success: true, data: result };
+};
+
+// ✅ GOOD: Graceful error handling
+execute: async (args) => {
+  try {
+    const result = await createTask(args);
+    return { success: true, data: result };
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Unknown error'
+    };
+  }
+};
+```
+
+### 4. Not Memoizing Contract
+
+```typescript
+// ❌ BAD: Contract recreated on every render
+const contract = useTaskAssistantContract({ ... });
+
+// ✅ GOOD: Wrapped in useMemo internally
+const contract = useTaskAssistantContract({ ... });  // Already memoized in the hook
+```
+
+---
+
+## Next Steps
+
+### Extend Your Agent
+
+1. **Add more tools** - Edit, delete, bulk operations
+2. **Custom UI** - Rich tool result rendering
+3. **Plan workflows** - Multi-step operations with approval
+4. **Cross-domain** - Coordinate with other editors
+
+### Learn More
+
+- [Component Patterns](../guides/patterns.mdx) - Best practices for editor components
+- [Performance Guide](../guides/performance.mdx) - Optimize your editor
+- [AI Technical Docs](../../ai/00-index.mdx) - Deep dive into AI architecture
+
+---
+
+## Complete Example: TaskAgent
+
+Here's the full implementation:
+
+```typescript
+// packages/domain-task/src/assistant/index.ts
+export { useTaskAssistantContract } from './contract';
+export { createTaskAssistantTools } from './tools';
+export { TaskGetTasksToolUI, TaskCreateToolUI } from './task-tool-ui';
+
+// packages/domain-task/src/assistant/contract.ts
+// [Full contract from Step 1]
+
+// packages/domain-task/src/assistant/tools.ts
+// [Full tools from Step 2]
+
+// packages/domain-task/src/assistant/task-tool-ui.tsx
+// [Full UI from Step 3]
+
+// apps/studio/components/editors/TaskEditor.tsx
+// [Full editor from Step 4]
+```
+
+You now have a complete, production-ready AI agent for your editor.
+
+---
+
+## Summary
+
+You've learned:
+
+- ✅ How to define a domain contract
+- ✅ How to create AI tools with JSON Schema parameters
+- ✅ How to execute operations and update editor state
+- ✅ How to add custom tool rendering
+- ✅ How to integrate with your editor
+- ✅ Real examples from Character and Dialogue editors
+- ✅ Advanced patterns and optimization techniques
+
+**Your editor now has an intelligent AI assistant that can manipulate state, provide feedback, and help users accomplish tasks through natural language.**

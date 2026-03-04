@@ -1,0 +1,36 @@
+---
+title: 04 - Editors as MCP apps
+---
+
+# 04 - Editors as MCP apps
+
+Each editor can expose an **MCP App** — tools + UI resources for external MCP hosts.
+
+## App tools
+
+| Tool | Purpose |
+|------|---------|
+| studio_switchEditor | Switch active editor tab |
+| studio_openEditor | Open editor (add tab) |
+| studio_closeEditor | Close editor tab |
+| studio_getProject | Current project context |
+| studio_listProjects | List user projects |
+| studio_publish | Create listing |
+| studio_updateListing | Update listing |
+
+## Editor registration
+
+Editors export `McpAppDescriptor` (id, name, tools, uiResources) and register with Studio. MCP server aggregates and exposes a single tool surface.
+
+## MCP App = tools + UI resources
+
+1. **Tools** — Functions the host agent can invoke (create node, run plan, etc.).
+2. **UI Resources** — React component trees the host can render.
+
+**Next:** [05 - Assistant UI architecture](05-assistant-ui-architecture)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/components/AppShell.tsx`, `packages/shared/.../workspace/README.md`, MCP server
+Related: ai/06-mcp-integration, architecture/05-assistant-ui-architecture
+Do not: Add app tools without updating MCP server; assume headless auth
+</Callout>

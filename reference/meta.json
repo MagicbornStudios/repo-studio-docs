@@ -1,0 +1,12 @@
+{
+  "title": "Reference",
+  "pages": [
+    "00-index",
+    "packages",
+    "environment-variables",
+    "typescript-interfaces",
+    "---Forge Loop---",
+    "forge-loop-artifacts",
+    "forge-loop-troubleshooting"
+  ]
+}

@@ -1,0 +1,360 @@
+---
+title: Model Selection Strategy
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Model Selection Strategy
+
+This document defines how we select, route, and optimize AI models across domains and operations in Forge Studio.
+
+## Philosophy
+
+**Not all operations are equal.** A $0.0001 node creation shouldn't use a $0.01 model. We optimize for:
+
+1. **Cost efficiency** — Use cheap models for structural operations
+2. **Quality** — Use premium models for creative tasks
+3. **Latency** — Use fast models for interactive operations
+4. **User control** — Let users override with quality/cost preferences
+
+## Model Tiers
+
+### Premium Tier ($3-5 per million tokens)
+
+**Models:**
+- `anthropic/claude-3.5-sonnet` — Best for creative writing, character development
+- `openai/gpt-4o` — Good all-rounder, vision capable
+
+**Use cases:**
+- Creative dialogue generation
+- Character personality/background writing
+- Story arc planning
+- Complex narrative analysis
+
+### Standard Tier ($0.15-1 per million tokens)
+
+**Models:**
+- `openai/gpt-4o-mini` — Fast, cheap, structured
+- `google/gemini-2.0-flash-exp` — Good for structured output
+- `deepseek/deepseek-chat` — Strong reasoning, low cost
+
+**Use cases:**
+- Graph CRUD operations (create/update/delete nodes)
+- Data validation
+- Simple transformations
+- Quick suggestions
+
+### Reasoning Tier ($0.55-2 per million tokens)
+
+**Models:**
+- `deepseek/deepseek-reasoner` — R1-level reasoning, $0.55/M tokens
+- `openai/o1-mini` — Advanced reasoning
+
+**Use cases:**
+- Complex planning (narrative arcs, quest structures)
+- Multi-entity relationship analysis
+- Validation of complex scenarios
+- Strategic decision-making
+
+### Free Tier
+
+**Models:**
+- `qwen/qwq-32b-preview` — Free, good for quick tasks
+- `meta-llama/llama-3.3-70b-instruct` — Free, decent quality
+
+**Use cases:**
+- Background batch operations
+- Non-critical suggestions
+- Development/testing
+- Rate limit fallback
+
+## Domain-Specific Strategies
+
+### Dialogue Editor (Forge)
+
+| Operation | Model | Complexity | Rationale |
+|-----------|-------|------------|-----------|
+| `forge_createNode` | `gpt-4o-mini` | trivial | Just creating JSON structure |
+| `forge_updateNode` | `gpt-4o-mini` | trivial | Simple field updates |
+| `forge_generateDialogue` | `claude-3.5-sonnet` | creative | Character voice, narrative flow |
+| `forge_createPlan` | `deepseek/deepseek-reasoner` | complex | Multi-step narrative planning |
+| `forge_executePlan` | `gpt-4o-mini` | simple | Executing pre-planned operations |
+| `forge_validateGraph` | `qwen/qwq-32b-preview` | simple | Logic checking |
+
+**Cost impact:**
+- Without optimization: 100% Sonnet = $3.00/M tokens
+- With optimization: 20% Sonnet + 70% Mini + 10% DeepSeek = $0.75/M tokens
+- **Savings: 75%**
+
+### Character Editor
+
+| Operation | Model | Complexity | Rationale |
+|-----------|-------|------------|-----------|
+| `character_create` (basic) | `gpt-4o-mini` | simple | CRUD operation |
+| `character_generatePersonality` | `claude-3.5-sonnet` | creative | Deep character understanding |
+| `character_generateBackground` | `claude-3.5-sonnet` | creative | Rich storytelling |
+| `character_analyzeRelationships` | `deepseek/deepseek-reasoner` | complex | Multi-entity reasoning |
+| `character_generatePortrait` | `flux-1.1-pro-ultra` | creative | Image generation |
+| `character_batchCreate` | `claude-3.5-sonnet` (cached) | creative | Shared context, prompt caching |
+
+**Special consideration:** When creating multiple characters in one project, use prompt caching to share world/tone descriptions (80% cost reduction).
+
+### Storylets (Merchants, NPCs, Barks)
+
+| Storylet Type | Model | Tone | Examples |
+|--------------|-------|------|----------|
+| **Merchant dialogue** | `claude-3.5-sonnet` | Conversational, economical | "Finest wares in all the realm!" |
+| **Combat barks** | `gpt-4o-mini` | Terse, urgent | "Behind you!" |
+| **Lore/mysteries** | `claude-3.5-sonnet` | Descriptive, mysterious | "The old gods sleep beneath the ice..." |
+| **Generic NPCs** | `gpt-4o-mini` | Casual, brief | "Good day to you." |
+
+**Differentiation from dialogue:**
+- **Dialogue** (narrative): Large context, unique scenes, high variation → Premium models
+- **Storylets** (systemic): Small context, templates + variation, medium variation → Budget models
+
+## Operation Complexity Classification
+
+Every tool is classified by complexity to enable auto-routing:
+
+```typescript
+type OperationComplexity = 'trivial' | 'simple' | 'complex' | 'creative';
+
+interface ToolMetadata {
+  name: string;
+  complexity: OperationComplexity;
+  estimatedCost: number;  // Average cost per call
+  preferredModel?: string;  // Override auto-selection
+}
+```
+
+### Classification Rules
+
+**Trivial:**
+- CRUD operations (create, read, update, delete)
+- Data validation
+- Schema transformations
+- Model: `gpt-4o-mini` (always)
+
+**Simple:**
+- Basic text generation (< 200 tokens)
+- Simple queries
+- Quick suggestions
+- Model: `gpt-4o-mini` or free tier
+
+**Complex:**
+- Multi-step reasoning
+- Planning with dependencies
+- Complex analysis
+- Model: `deepseek/deepseek-reasoner`
+
+**Creative:**
+- Narrative writing
+- Character development
+- Creative ideation
+- Model: `claude-3.5-sonnet` or user preference
+
+## User Control
+
+Users can configure model preferences at three levels:
+
+### 1. Automatic (Recommended)
+
+System chooses optimal model based on operation complexity.
+
+```typescript
+{
+  allowAutoRouting: true,
+  costPreference: 'balanced',  // 'cost' | 'balanced' | 'quality'
+}
+```
+
+### 2. Tier-Based
+
+User specifies models per tier:
+
+```typescript
+{
+  allowAutoRouting: true,
+  models: {
+    creative: 'anthropic/claude-3.5-sonnet',
+    reasoning: 'deepseek/deepseek-reasoner',
+    fast: 'openai/gpt-4o-mini',
+  }
+}
+```
+
+### 3. Manual Override
+
+User locks to one model for all operations:
+
+```typescript
+{
+  allowAutoRouting: false,
+  model: 'anthropic/claude-3.5-sonnet',
+}
+```
+
+## Latency Optimization
+
+### Streaming Strategy
+
+| Operation Type | Streaming | Rationale |
+|----------------|-----------|-----------|
+| CRUD operations | Never | Instant structured response |
+| Short generation (< 50 tokens) | Never | Blocking is faster |
+| Long generation (> 50 tokens) | Always | Progressive rendering |
+| Plans | Always | Show steps as they're created |
+
+### Speculative Execution
+
+Prefetch context for likely next operations:
+
+```typescript
+// User selects a node
+onSelectionChange(node) => {
+  prefetchContext({
+    operations: ['updateNode', 'createEdge', 'generateDialogue'],
+    context: { selectedNode: node },
+  });
+}
+```
+
+**Impact:** 500ms → 50ms latency (10x improvement)
+
+## Cost Optimization Techniques
+
+### 1. Prompt Caching (Anthropic)
+
+**Use when:**
+- Creating multiple items with shared context (characters, dialogue nodes)
+- Repeated system prompts
+- Long context reuse
+
+**Savings:**
+- First call: Full price
+- Subsequent calls (within 5min): 50-90% discount on cached portion
+
+**Implementation:**
+```typescript
+system: [
+  {
+    type: 'text',
+    text: projectWorldContext,
+    cache_control: { type: 'ephemeral' },
+  },
+]
+```
+
+### 2. Batched Operations
+
+Instead of N individual calls, make 1 call with N items:
+
+```typescript
+// Bad: 5 calls
+for (const char of characters) {
+  await character_create({ name: char });
+}
+
+// Good: 1 call
+await character_createBatch({ characters, sharedContext });
+```
+
+**Savings:** 80% (shared context overhead amortized)
+
+### 3. Tiered Fallback
+
+On rate limits or errors, fall back to cheaper/faster model:
+
+```typescript
+const FALLBACK_CHAIN = {
+  'claude-3.5-sonnet': ['gpt-4o', 'deepseek-chat'],
+  'gpt-4o': ['gpt-4o-mini', 'gemini-2.0-flash-exp'],
+  'gpt-4o-mini': ['qwen/qwq-32b-preview'],
+};
+```
+
+### 4. Request Deduplication
+
+If user spams a button, deduplicate identical requests:
+
+```typescript
+const cache = new Map<string, Promise>();
+const key = hash(tool, args);
+if (cache.has(key)) return cache.get(key);
+```
+
+## Observability
+
+Track these metrics per tool:
+
+```typescript
+interface ToolMetrics {
+  toolName: string;
+  modelUsed: string;
+  tokensIn: number;
+  tokensOut: number;
+  cost: number;
+  latencyMs: number;
+  cacheHit: boolean;
+  userSatisfaction?: 'thumbs_up' | 'thumbs_down' | 'regenerate';
+}
+```
+
+### Dashboard Views
+
+1. **Cost by domain** — Where is budget going?
+2. **Latency by operation** — P50/P95/P99 percentiles
+3. **Model utilization** — Are expensive models wasted on trivial ops?
+4. **Regeneration rate** — Quality indicator per model
+
+## Future Considerations
+
+### Multimodal (2026)
+
+**Vision:**
+- Character creation from concept art
+- Model: `claude-3.5-sonnet` (vision-capable)
+
+**Audio:**
+- Voice-first dialogue authoring
+- Flow: Speech → Whisper → Claude → ElevenLabs
+
+### Local Edge Models
+
+For trivial operations, run small models locally:
+
+```typescript
+const localModels = {
+  'forge_validateNode': '@huggingface/gte-small',  // WASM in browser
+};
+```
+
+**Latency:** 10ms vs 500ms remote
+
+### Multi-Agent Orchestration
+
+Complex tasks use specialized agents:
+
+```typescript
+const AGENT_SWARM = {
+  planner: 'deepseek/deepseek-reasoner',
+  writer: 'anthropic/claude-3.5-sonnet',
+  implementer: 'openai/gpt-4o-mini',
+  reviewer: 'qwen/qwq-32b-preview',
+};
+```
+
+**Example:** "Create a merchant quest line"
+1. Planner: Quest structure
+2. Writer: Dialogue for each step
+3. Implementer: Build graph nodes
+4. Reviewer: Validate consistency
+
+**Cost:** $0.02 (vs $0.15 single Sonnet agent)
+
+## References
+
+- [AI Roadmap](./11-ai-roadmap.mdx)
+- [Model Routing Implementation](./12-model-routing-implementation.mdx)
+- [Cost Optimization](./13-cost-optimization.mdx)
+- [Architecture: Model routing and OpenRouter](../architecture/06-model-routing-and-openrouter.mdx)

@@ -1,0 +1,138 @@
+---
+title: Environment variables
+---
+
+# Environment variables
+
+Environment configuration is managed by `@forge/forge-env` profiles. For forge-agent defaults, see `packages/forge-env/src/lib/forge-agent-manifest.mjs`. Use `pnpm forge-repo-studio open --view env` (or `pnpm env:portal`) for GUI workflows, `pnpm env:sync:examples` to refresh `.env.example` files, and `pnpm forge-env:doctor -- --mode headless --strict` to validate headless readiness.
+
+## Bootstrap flow
+
+1. Run `pnpm dev` — bootstrap checks required keys
+2. If keys are missing → **env portal** opens in your browser
+3. Fill values per section → Save → rerun `pnpm dev`
+
+## @forge/studio
+
+### Core runtime
+
+Payload and app URL configuration for Studio runtime.
+
+| Key | Description | Required | Example | Secret |
+|-----|-------------|----------|---------|--------|
+| `PAYLOAD_SECRET` | Payload auth secret. | local, preview, production | dev-secret-change-me | yes |
+| `DATABASE_URI` | Database connection URI. Optional in local (sqlite default), required in preview/production. | preview, production | file:./data/payload.db | yes |
+| `NEXT_PUBLIC_APP_URL` | Public Studio URL used in redirects and checkout fallbacks. | preview, production | http://localhost:3000 | |
+
+### Local developer bootstrap
+
+Local-only auth bootstrap and seed defaults.
+
+| Key | Description | Required | Example | Secret | Local only |
+|-----|-------------|----------|---------|--------|------------|
+| `NEXT_PUBLIC_LOCAL_DEV_AUTO_ADMIN` | Enable local-only auto-login bootstrap for seeded admin (set 0 to disable). | local | 1 | | yes |
+| `NEXT_PUBLIC_LOCAL_DEV_AUTO_ADMIN_EMAIL` | Local auto-admin email used by LocalDevAuthGate. | local | admin@forge.local | | yes |
+| `NEXT_PUBLIC_LOCAL_DEV_AUTO_ADMIN_PASSWORD` | Local auto-admin password used by LocalDevAuthGate. | local | admin12345 | yes | yes |
+| `SEED_ADMIN_EMAIL` | Optional admin seed override for local data bootstrap. | | admin@forge.local | | yes |
+| `SEED_ADMIN_PASSWORD` | Optional admin seed password override. | | admin12345 | yes | yes |
+| `SEED_USER_EMAIL` | Optional non-admin user seed override. | | user@forge.local | | yes |
+| `SEED_USER_PASSWORD` | Optional non-admin user seed password override. | | user12345 | yes | yes |
+
+### AI and model routing
+
+OpenRouter and optional Copilot dev/public key settings.
+
+| Key | Description | Required | Example | Secret |
+|-----|-------------|----------|---------|--------|
+| `OPENROUTER_API_KEY` | OpenRouter API key for chat, planning, structured output, and image routes. | preview, production | | yes |
+| `OPENROUTER_BASE_URL` | Optional OpenRouter base URL override. | | https://openrouter.ai/api/v1 | |
+| `OPENROUTER_TIMEOUT_MS` | Optional OpenRouter timeout in milliseconds. | | 60000 | |
+| `AI_LANGGRAPH_ENABLED` | Enable LangGraph orchestration path in /api/assistant-chat (1 enabled). | | 0 | |
+| `NEXT_PUBLIC_AI_LANGGRAPH_ENABLED` | Client mirror flag for LangGraph transport metadata wiring (1 enabled). | | 0 | |
+| `OPENROUTER_RESPONSES_PROBE` | Enable/disable responses compatibility probing (1 enabled, 0 disabled). | | 1 | |
+| `NEXT_PUBLIC_COPILOTKIT_API_KEY` | Optional CopilotKit public key for dev tooling. | | | yes |
+
+### Stripe and billing
+
+Checkout, webhooks, and storage add-on billing variables.
+
+| Key | Description | Required | Example | Secret |
+|-----|-------------|----------|---------|--------|
+| `STRIPE_SECRET_KEY` | Stripe secret API key. | preview, production | | yes |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret. | preview, production | | yes |
+| `STRIPE_PRICE_ID_PRO` | Stripe price id for Pro subscription checkout. | preview, production | | yes |
+| `STRIPE_PRICE_ID_STORAGE_ADDON` | Stripe price id for storage add-on checkout. | preview, production | | yes |
+| `STORAGE_ADDON_BYTES` | Storage bytes granted per storage add-on checkout. | | 53687091200 | |
+| `STRIPE_ACCOUNT_ID` | Optional Stripe account id reference used in docs/ops. | | | yes |
+| `STRIPE_SUPPORT_EMAIL` | Optional support contact for Stripe product metadata. | | you@example.com | |
+| `STRIPE_SUPPORT_URL` | Optional support URL for Stripe product metadata. | | https://example.com/support | |
+| `PRIVACY_POLICY_URL` | Optional privacy URL for Stripe/legal metadata. | | https://example.com/privacy-policy | |
+| `TERMS_OF_SERVICE_URL` | Optional terms URL for Stripe/legal metadata. | | https://example.com/terms-of-service | |
+
+### Media upload and voice
+
+S3-compatible upload and ElevenLabs voice integration.
+
+| Key | Description | Example | Secret |
+|-----|-------------|---------|--------|
+| `BETTER_UPLOAD_BUCKET` | S3-compatible bucket name for Better Upload. | | yes |
+| `AWS_ACCESS_KEY_ID` | S3-compatible access key id. | | yes |
+| `AWS_SECRET_ACCESS_KEY` | S3-compatible secret access key. | | yes |
+| `AWS_REGION` | S3-compatible region. | us-east-1 | |
+| `AWS_S3_BUCKET` | Optional legacy S3 bucket fallback key. | | yes |
+| `ELEVENLABS_API_KEY` | ElevenLabs API key for voice endpoints. | | yes |
+
+### Analytics and logging
+
+PostHog analytics/flags and structured logging controls.
+
+| Key | Description | Example | Secret | Local only |
+|-----|-------------|---------|--------|------------|
+| `NEXT_PUBLIC_POSTHOG_KEY` | Optional PostHog project key. | | yes | |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host URL. | https://us.i.posthog.com | | |
+| `LOG_LEVEL` | Logger level (debug, info, warn, error). | info | | |
+| `LOG_FILE` | Optional log file path for Studio server logs. | .logs/studio.log | | |
+| `LOG_NAMESPACES` | Optional comma-separated namespace filter for logging. | | | |
+| `ALLOW_CLIENT_LOG` | Allow browser log relay endpoint in development (1 enabled). | 0 | | yes |
+| `NEXT_PUBLIC_LOG_TO_SERVER` | Enable browser log forwarding to /api/dev/log (1 enabled). | 0 | | yes |
+
+### Email and announcements
+
+Optional newsletter/notification sender variables.
+
+| Key | Description | Example | Secret |
+|-----|-------------|---------|--------|
+| `RESEND_API_KEY` | Optional Resend API key for newsletter welcome mail. | | yes |
+| `FROM_EMAIL` | Sender email used by newsletter route when Resend is enabled. | `Forge <onboarding@resend.dev>` | |
+
+### Cross-origin platform auth
+
+Allowed origins for Platform -> Studio credentialed requests.
+
+| Key | Description | Example |
+|-----|-------------|---------|
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowlist for credentialed cross-origin API access. | http://localhost:3001 |
+| `PLATFORM_APP_URL` | Optional single-origin alias for platform app URL. | http://localhost:3001 |
+
+## @forge/platform
+
+### Core runtime
+
+Platform -> Studio API boundary and local development defaults.
+
+| Key | Description | Required | Example |
+|-----|-------------|----------|---------|
+| `NEXT_PUBLIC_STUDIO_APP_URL` | Studio API/app URL for platform auth, data, and Open Studio links. | local, preview, production | http://localhost:3000 |
+
+### Analytics
+
+| Key | Description | Example | Secret |
+|-----|-------------|---------|--------|
+| `NEXT_PUBLIC_POSTHOG_KEY` | Optional PostHog project key for platform analytics. | | yes |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host URL. | https://us.i.posthog.com | |
+
+### Docs and branding
+
+| Key | Description | Example |
+|-----|-------------|---------|
+| `NEXT_PUBLIC_GITHUB_URL` | Optional GitHub link shown in docs/layout shell. | https://github.com |

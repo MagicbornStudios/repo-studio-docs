@@ -1,0 +1,71 @@
+---
+title: Studio vs Platform
+description: Creator/authoring app vs customer/marketplace. How they work together, env boundary, when to work in each.
+---
+
+# Studio vs Platform
+
+## Overview [#overview]
+
+| App | Role | Port | Purpose |
+|-----|------|------|---------|
+| **Studio** | Creator / authoring | 3000 | Edit graphs, characters, dialogue. AI assistant. Payload backend. |
+| **Platform** | Customer / marketplace | 3001 | Docs, marketing, content. Connects to Studio for Open Studio links. |
+
+Both are Next.js apps in the monorepo. Shared packages (`@forge/ui`, `@forge/shared`) are used by both.
+
+---
+
+## Studio [#studio]
+
+**`apps/studio`** — The creator-facing application.
+
+- **Editors:** Dialogue (Forge graph), Character (relationship graph), Video (locked; timeline TBD)
+- **Data:** Payload CMS (projects, forge-graphs, characters, users, settings)
+- **AI:** Assistant UI, domain tools, model routing (OpenRouter)
+- **Env:** `apps/studio/.env.local` — Payload, OpenRouter, Stripe, etc.
+
+**Run:** `pnpm dev` from root (Studio is the default). Or `pnpm --filter @forge/studio dev` for Studio only.
+
+**Entry:** `http://localhost:3000`
+
+---
+
+## Platform [#platform]
+
+**`apps/platform`** — The customer-facing application.
+
+- **Content:** Docs (Fumadocs), marketing pages, product content
+- **Auth:** Platform users; connects to Studio for credentialed API calls when needed
+- **Env:** `apps/platform/.env.local` — `NEXT_PUBLIC_STUDIO_APP_URL` (Studio API URL), analytics
+
+**Run:** `pnpm --filter @forge/platform dev` — starts on port 3001.
+
+**Entry:** `http://localhost:3001`
+
+---
+
+## How they work together [#together]
+
+- **Env boundary:** Platform's `NEXT_PUBLIC_STUDIO_APP_URL` points to Studio (e.g. `http://localhost:3000`). Platform uses this for "Open Studio" links and any credentialed requests to Studio APIs.
+- **Shared packages:** Both use `@forge/ui`, `@forge/shared`, domain packages. UI and editor primitives are shared.
+- **Data:** Studio owns Payload and all creator data. Platform may fetch public content or proxy to Studio for auth-gated data.
+
+**CORS:** Studio can allow Platform origins via `CORS_ALLOWED_ORIGINS` and `PLATFORM_APP_URL` (see [Environment variables](../reference/environment-variables.mdx)).
+
+---
+
+## When to work in each [#when]
+
+| Task | App |
+|------|-----|
+| Editor chrome, AI assistant, graph logic | Studio |
+| New editor type (e.g. Strategy) | Studio |
+| Payload collections, API routes | Studio |
+| Docs content, marketing pages | Platform |
+| Product landing, pricing UI | Platform |
+| Shared components (atoms, molecules) | `packages/ui`, `packages/shared` |
+
+**Single dev flow:** Most day-to-day work is in Studio. Platform is for docs and customer-facing content. When adding a feature that spans both (e.g. "Open Studio" from Platform), implement Studio APIs first, then Platform calls them.
+
+**Next:** [Product index](../product/00-index), [Building Studio](building-studio.mdx)

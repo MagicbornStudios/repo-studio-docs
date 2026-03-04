@@ -1,0 +1,50 @@
+---
+title: Studio apps and app spec
+---
+
+# Studio apps and app spec
+
+All studio-style apps use the same **app spec** pattern: one generated file per app (`app-spec.generated.ts`) that defines workspaces, layout definitions (panel specs with rail), settings defaults, and pinned panels. One import surface; same canonical shape.
+
+Repo Studio is the active product focus. Legacy Studio/consumer surfaces are being treated as reference examples.
+
+## Repeatable pattern
+
+1. **Workspace components** (e.g. under `components/workspaces/`): each exports `WORKSPACE_ID` and `WORKSPACE_LABEL` and uses `WorkspaceLayout` slots (`Left`, `Main`, `Right`, `Bottom`) with `WorkspaceLayout.Panel` (id, title, rail from slot). Viewport-as-canvas workspaces use `WorkspaceLayout.Main hideTabBar` and a viewport panel (id `viewport`); that panel can be marked **pinned** so it is never hidden.
+2. **Config:** `forge-codegen.config.mjs` at app root with `workspaceFiles`, `appSpecOutputPath`, `layoutIdPrefix`, `panelKeyFormat` or `panelKeyPrefix`, optional `extensionWorkspaceFiles` (+ extension key/layout prefixes), optional `settingsRegistryPath` / `settingsMergeDefaults`, optional `pinnedPanelIds`, optional `extraPanels`.
+3. **Codegen:** Run `pnpm run codegen` (or `node ../../packages/forge-codegen/cli.mjs all --config forge-codegen.config.mjs`). One pass produces `app-spec.generated.ts`.
+4. **Consumption:** Shell, store, menu, settings import only from `app-spec.generated.ts`: `WORKSPACE_IDS`, `WorkspaceId`, `WORKSPACE_LABELS`, `getWorkspaceLayoutDefinition`, `getExtensionWorkspaceLayoutDefinition`, `getWorkspacePanelSpecs`, `getWorkspaceLayoutId`, `sanitizeWorkspaceHiddenPanelIds`, `createEmptyWorkspaceHiddenPanelMap`, `PINNED_PANEL_IDS`, and settings defaults (e.g. `REPO_SETTINGS_GENERATED_DEFAULTS` or `APP_SETTINGS_DEFAULTS`).
+
+## Canonical schema (shared types)
+
+Types live in `@forge/shared`: `PanelRail`, `WorkspacePanelSpec` (id, label, key, rail), `WorkspaceLayoutDefinition`. Generated files import these and export app-specific data and helpers.
+
+## Viewport and pinned panels
+
+- **Pinned panels** (e.g. `viewport`): In config set `pinnedPanelIds: ['viewport']`. Codegen emits `PINNED_PANEL_IDS`. Shell/store use it so those panels are never hidden (View menu, Settings panel toggles, persisted state). Repo-studio uses this for viewport-as-canvas; consumer-studio can use `pinnedPanelIds: []` or omit.
+- **hideTabBar:** `WorkspaceLayout.Main` (and Left/Right) accept `hideTabBar` to hide the Dockview tab bar for that rail (Cursor/VS Code style).
+- **Extension layouts:** if `extensionWorkspaceFiles` are configured, codegen emits extension layout definitions and `getExtensionWorkspaceLayoutDefinition(workspaceId)` for runtime catalog composition.
+
+## Adding a new studio app
+
+1. Create the app under `apps/` (e.g. `apps/my-studio`).
+2. Add workspace component(s) that export `WORKSPACE_ID`, `WORKSPACE_LABEL` and use `WorkspaceLayout.*` + `WorkspaceLayout.Panel`.
+3. Add `forge-codegen.config.mjs` with `workspaceFiles`, `appSpecOutputPath`, `layoutIdPrefix`, panel key format, and optional extension layout sources (`extensionWorkspaceFiles`) plus settings/pinned panels.
+4. Add a `codegen` script that runs `node ../../packages/forge-codegen/cli.mjs all --config forge-codegen.config.mjs` and depend on `@forge/forge-codegen` (and `@forge/shared` for types).
+5. Run codegen; wire shell/layout to import from `app-spec.generated.ts` (layoutId from `getWorkspaceLayoutId(workspaceId)`, panel specs from `getWorkspacePanelSpecs`, etc.).
+
+## References
+
+- Shared app-spec types: `packages/shared/src/shared/workspace/app-spec-types.ts`
+- Codegen: `packages/forge-codegen` (cli.mjs, lib/emit-app-spec.mjs, lib/extract-layout.mjs)
+- Active example config: `apps/repo-studio/forge-codegen.config.mjs`
+- Legacy archived examples: `legacy/studio-apps/studio/forge-codegen.config.mjs`, `legacy/studio-apps/consumer-studio/forge-codegen.config.mjs`
+
+## Repo Studio extension registry split
+
+Repo Studio's Extensions workspace now reads two catalogs from `vendor/repo-studio-extensions`:
+
+- Installables: `extensions/<id>`
+- Studio examples (reference-only): `examples/studios/<id>`
+
+Examples are discoverable link-outs, not install targets.

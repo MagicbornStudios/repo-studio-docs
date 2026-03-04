@@ -1,0 +1,33 @@
+{
+  "title": "How-to guides",
+  "pages": [
+    "---Getting started---",
+    "00-index",
+    "01-foundation",
+    "02-workspace-shell",
+    "03-styling",
+    "---Building editors---",
+    "04-data-and-state",
+    "05-building-a-workspace",
+    "06-forge-workspace-walkthrough",
+    "21-migration-guide-workspace-to-editor",
+    "---AI and integrations---",
+    "07-copilot",
+    "08-adding-ai-to-workspaces",
+    "09-twick-workspace",
+    "20-create-a-workspace",
+    "22-ai-generation-components",
+    "---Reference---",
+    "10-marketing-site",
+    "11-marketing-auth",
+    "12-marketing-stripe",
+    "13-marketing-email-newsletter",
+    "14-marketing-announcements-scheduling",
+    "15-shadcn-registries-and-components",
+    "23-adding-a-collection-or-client",
+    "24-vendoring-third-party-code",
+    "25-verdaccio-local-registry",
+    "26-styling-debugging-with-cursor",
+    "27-posthog-llm-analytics","28-vercel-supabase-launch"
+  ]
+}

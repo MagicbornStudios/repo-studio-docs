@@ -1,0 +1,536 @@
+---
+title: Performance Optimization
+created: 2026-02-12
+updated: 2026-02-12
+icon: "⚡"
+---
+
+# ⚡ Performance Optimization
+
+**Production strategies for building fast, responsive Forge editors**
+
+Learn how to optimize your Forge editors for maximum performance using proven patterns from Character and Dialogue editors.
+
+---
+
+## React Rendering Optimization
+
+### React.memo
+
+Prevent unnecessary re-renders of expensive components:
+
+```typescript
+// Expensive list item that shouldn't re-render unless props change
+export const CharacterListItem = React.memo(
+  function CharacterListItem({ character, onSelect }: Props) {
+    return (
+      <div onClick={() => onSelect(character.id)}>
+        <Avatar src={character.imageUrl} />
+        <span>{character.name}</span>
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: only re-render if character ID or name changes
+    return (
+      prevProps.character.id === nextProps.character.id &&
+      prevProps.character.name === nextProps.character.name
+    );
+  }
+);
+```
+
+### useMemo
+
+Cache expensive computations:
+
+```typescript
+// From DialogueEditor.tsx
+const viewMenuItems = useMemo(
+  () => {
+    const panelIcons: Record<string, React.ReactNode> = {
+      left: <PanelLeft size={16} />,
+      right: <PanelRight size={16} />,
+    };
+
+    const layoutSubmenu = panelSpecs.map((spec) => ({
+      id: `panel-${spec.id}`,
+      label: panelVisibility[spec.key] === false ? `Show ${spec.label}` : `Hide ${spec.label}`,
+      icon: panelIcons[spec.id],
+      onSelect: () => setPanelVisible(spec.key, !panelVisibility[spec.key]),
+    }));
+
+    return [{ id: 'layout', label: 'Layout', submenu: layoutSubmenu }];
+  },
+  [panelSpecs, panelVisibility, setPanelVisible]
+);
+```
+
+### useCallback
+
+Stabilize callback references:
+
+```typescript
+// From CharacterEditor.tsx
+const handleCreateCharacter = useCallback(
+  async (data: CharacterUpsertPayload): Promise<CharacterDoc> => {
+    const result = await createCharMutation.mutateAsync({ ...data, project: projectId! });
+    addCharacter(result as CharacterDoc);
+    setActiveCharacter(result.id);
+    return result as CharacterDoc;
+  },
+  [createCharMutation, projectId, addCharacter, setActiveCharacter]
+);
+
+// This callback won't change unless dependencies change
+<CreateCharacterModal onCreate={handleCreateCharacter} />
+```
+
+---
+
+## Virtualization
+
+For rendering large lists (100+ items):
+
+```typescript
+import { FixedSizeList } from 'react-window';
+
+function VirtualizedCharacterList({ characters }: { characters: CharacterDoc[] }) {
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => (
+    <div style={style}>
+      <CharacterListItem character={characters[index]} />
+    </div>
+  );
+
+  return (
+    <FixedSizeList
+      height={600}
+      itemCount={characters.length}
+      itemSize={72}
+      width="100%"
+    >
+      {Row}
+    </FixedSizeList>
+  );
+}
+```
+
+For variable-height items:
+
+```typescript
+import { VariableSizeList } from 'react-window';
+
+const getItemSize = (index: number) => {
+  // Return height for each item
+  return items[index].expanded ? 200 : 72;
+};
+
+<VariableSizeList
+  height={600}
+  itemCount={items.length}
+  itemSize={getItemSize}
+  width="100%"
+>
+  {Row}
+</VariableSizeList>
+```
+
+---
+
+## Debouncing and Throttling
+
+### Debounce User Input
+
+```typescript
+import { useDebouncedCallback } from 'use-debounce';
+
+function SearchInput() {
+  const [query, setQuery] = useState('');
+
+  const debouncedSearch = useDebouncedCallback(
+    (value: string) => {
+      performExpensiveSearch(value);
+    },
+    300  // Wait 300ms after user stops typing
+  );
+
+  return (
+    <input
+      value={query}
+      onChange={(e) => {
+        setQuery(e.target.value);
+        debouncedSearch(e.target.value);
+      }}
+    />
+  );
+}
+```
+
+### Throttle Scroll Events
+
+```typescript
+import { useThrottle } from '@uidotdev/usehooks';
+
+function InfiniteScrollList() {
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const throttledPosition = useThrottle(scrollPosition, 100);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollPosition(e.currentTarget.scrollTop);
+  };
+
+  // This only updates every 100ms max
+  useEffect(() => {
+    if (throttledPosition > threshold) {
+      loadMoreItems();
+    }
+  }, [throttledPosition]);
+
+  return <div onScroll={handleScroll}>{items}</div>;
+}
+```
+
+---
+
+## Code Splitting
+
+### Route-Based Splitting
+
+```typescript
+import { lazy, Suspense } from 'react';
+
+const DialogueEditor = lazy(() => import('@/components/editors/DialogueEditor'));
+const CharacterEditor = lazy(() => import('@/components/editors/CharacterEditor'));
+
+function App() {
+  return (
+    <Suspense fallback={<EditorLoadingSkeleton />}>
+      <Router>
+        <Route path="/dialogue" element={<DialogueEditor />} />
+        <Route path="/character" element={<CharacterEditor />} />
+      </Router>
+    </Suspense>
+  );
+}
+```
+
+### Component-Based Splitting
+
+```typescript
+const HeavyComponent = lazy(() => import('./HeavyComponent'));
+
+function Editor() {
+  const [showHeavy, setShowHeavy] = useState(false);
+
+  return (
+    <>
+      <Button onClick={() => setShowHeavy(true)}>Show Details</Button>
+      {showHeavy && (
+        <Suspense fallback={<Spinner />}>
+          <HeavyComponent />
+        </Suspense>
+      )}
+    </>
+  );
+}
+```
+
+---
+
+## Bundle Optimization
+
+### Tree Shaking
+
+Import only what you need:
+
+```typescript
+// ❌ Bad: Imports entire library
+import _ from 'lodash';
+
+// ✅ Good: Import specific functions
+import { debounce } from 'lodash-es';
+```
+
+### Dynamic Imports
+
+```typescript
+// Only load when needed
+async function handleExport() {
+  const { exportToPDF } = await import('@/lib/export/pdf');
+  await exportToPDF(data);
+}
+```
+
+---
+
+## Profiling Tools
+
+### React DevTools Profiler
+
+1. Open React DevTools
+2. Go to Profiler tab
+3. Click "Record"
+4. Interact with your editor
+5. Stop recording
+6. Analyze flame graph for slow components
+
+### Chrome DevTools Performance
+
+1. Open Chrome DevTools
+2. Go to Performance tab
+3. Click Record
+4. Perform actions in your editor
+5. Stop recording
+6. Look for long tasks (> 50ms)
+
+### Identify Issues
+
+```typescript
+// Add performance marks
+performance.mark('graph-render-start');
+renderGraph(nodes, edges);
+performance.mark('graph-render-end');
+performance.measure('graph-render', 'graph-render-start', 'graph-render-end');
+
+const measurements = performance.getEntriesByName('graph-render');
+console.log(`Graph render took ${measurements[0].duration}ms`);
+```
+
+---
+
+## Real-World Optimizations
+
+### From DialogueEditor
+
+```typescript
+// Memoize expensive menu generation
+const fileMenuItems = useMemo(
+  () => [
+    {
+      id: 'new-narrative',
+      label: 'New narrative',
+      icon: <FilePlus2 size={16} />,
+      onSelect: () => handleCreateGraph('narrative'),
+    },
+    // ... more items
+  ],
+  [handleCreateGraph, activeDirty, saveActiveGraph]
+);
+
+// Stable callback for graph operations
+const applyNarrativeOperations = useCallback(
+  (ops: ForgeGraphPatchOp[]) => {
+    applyOperations('narrative', ops);
+  },
+  [applyOperations]
+);
+
+// Memoize selection computation
+const narrativeSelection = useForgeSelection(
+  selectedNarrativeNodeIds,
+  selectedNarrativeEdgeIds,
+  narrativeGraph
+);
+```
+
+### From CharacterEditor
+
+```typescript
+// Memoize character selection
+const charSelection = useCharacterSelection(
+  selectedCharId,
+  selectedRelId
+);
+
+// Stable overlay handlers
+const openOverlay = useCallback((id: string, payload?: Record<string, unknown>) => {
+  setActiveOverlay({ id, payload });
+}, []);
+
+const dismissOverlay = useCallback(() => setActiveOverlay(null), []);
+
+// Memoize overlay specs (expensive)
+const overlays = useMemo<OverlaySpec[]>(
+  () => [
+    {
+      id: CREATE_CHARACTER_OVERLAY_ID,
+      type: 'modal',
+      title: 'Create Character',
+      size: 'md',
+      render: ({ onDismiss }) => (
+        <CreateCharacterModal
+          onCreate={handleCreateCharacter}
+          onClose={onDismiss}
+        />
+      ),
+    },
+  ],
+  [characters, handleCreateCharacter, handleUpdateCharacter]
+);
+```
+
+---
+
+## State Management Performance
+
+### Zustand with Immer
+
+```typescript
+// From forge/store.ts
+export const useForgeGraphsStore = create<ForgeGraphsState>()(
+  devtools(
+    persist(
+      immer((set, get) => ({
+        applyOperations: (scope, ops) => {
+          set((state) => {
+            // Immer enables immutable updates with mutable syntax
+            const graph = scope === 'narrative' ? state.narrativeGraph : state.storyletGraph;
+            if (!graph) return;
+
+            for (const op of ops) {
+              if (op.type === 'createNode') {
+                graph.flow.nodes.push(createNode(op));
+              }
+              // ... more operations
+            }
+
+            state.dirtyByScope[scope] = true;
+          });
+        },
+      })),
+      { name: 'forge-graphs' }
+    ),
+    { name: 'ForgeGraphs' }
+  )
+);
+```
+
+### Selector Optimization
+
+```typescript
+// ❌ Bad: Creates new object on every render
+const data = useStore((s) => ({
+  characters: s.characters,
+  relationships: s.relationships,
+}));
+
+// ✅ Good: Select only what you need
+const characters = useStore((s) => s.characters);
+const relationships = useStore((s) => s.relationships);
+
+// ✅ Also good: Use shallow equality
+import shallow from 'zustand/shallow';
+
+const { characters, relationships } = useStore(
+  (s) => ({ characters: s.characters, relationships: s.relationships }),
+  shallow
+);
+```
+
+---
+
+## TanStack Query Optimization
+
+### Stale Time
+
+```typescript
+export function useCharacters(projectId: number | null) {
+  return useQuery({
+    queryKey: ['characters', projectId],
+    queryFn: () => fetchCharacters(projectId!),
+    enabled: projectId != null,
+    staleTime: 1000 * 60 * 5,  // Don't refetch for 5 minutes
+  });
+}
+```
+
+### Prefetching
+
+```typescript
+const queryClient = useQueryClient();
+
+// Prefetch on hover
+<div
+  onMouseEnter={() => {
+    queryClient.prefetchQuery({
+      queryKey: ['character', characterId],
+      queryFn: () => fetchCharacter(characterId),
+    });
+  }}
+>
+  <CharacterPreview />
+</div>
+```
+
+### Optimistic Updates
+
+```typescript
+export function useUpdateCharacter() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateCharacter,
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['characters'] });
+
+      // Snapshot previous value
+      const previous = queryClient.getQueryData(['characters']);
+
+      // Optimistically update
+      queryClient.setQueryData(['characters'], (old: CharacterDoc[]) =>
+        old.map((c) => (c.id === variables.id ? { ...c, ...variables } : c))
+      );
+
+      return { previous };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['characters'], context?.previous);
+    },
+  });
+}
+```
+
+---
+
+## Checklist
+
+### Before Release
+
+- [ ] Profile with React DevTools
+- [ ] Measure with Chrome Performance
+- [ ] Test with 1000+ items
+- [ ] Check bundle size (`yarn build --analyze`)
+- [ ] Verify lazy loading works
+- [ ] Test on slow network (throttled)
+- [ ] Test on low-end devices
+- [ ] Measure Time to Interactive
+- [ ] Check for memory leaks (heap snapshots)
+
+### Common Issues
+
+| Symptom | Likely Cause | Solution |
+|---------|--------------|----------|
+| Slow typing | Expensive onChange | Debounce input |
+| Janky scrolling | Too many items | Virtualize list |
+| Slow initial load | Large bundle | Code splitting |
+| UI freezes | Long synchronous task | Web worker |
+| Memory grows | Missing cleanup | useEffect cleanup |
+
+---
+
+## Summary
+
+1. **React.memo** for expensive components
+2. **useMemo** for expensive computations
+3. **useCallback** for stable callbacks
+4. **Virtualization** for long lists
+5. **Debounce** user input
+6. **Code splitting** for large bundles
+7. **Profile** before optimizing
+8. **Measure** impact of changes
+
+---
+
+**Your editors are now optimized for production performance.**

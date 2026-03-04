@@ -1,0 +1,155 @@
+---
+title: 25 - Verdaccio and local registry
+created: 2026-02-07
+updated: 2026-02-07
+---
+
+# 25 - Verdaccio and local registry
+
+This guide gets the **local npm registry** up and running so you can publish `@forge/*` **and** `@twick/*` packages and install them from **another codebase** (e.g. your own app using the dev-kit) without publishing to public npm.
+
+## What is Verdaccio?
+
+**Verdaccio** is a lightweight, private npm registry that runs on your machine. We use it so that:
+
+- Other codebases (or your own external app) can install `@forge/ui`, `@forge/shared`, `@forge/agent-engine`, `@forge/dev-kit`, and vendored `@twick/*` packages from your local registry.
+- You don't need to publish to public npm while iterating.
+- Public packages are still fetched from npmjs; only `@forge/*` are published to the local instance.
+
+Config lives in the repo: [verdaccio.yaml](../../verdaccio.yaml) (storage under `./verdaccio/storage`, proxy to npmjs, `@forge/*` + `@twick/*` publish allowed).
+
+---
+
+## Quick launch
+
+From the **repo root**:
+
+```bash
+pnpm install
+pnpm registry:start
+```
+
+Verdaccio runs at **http://localhost:4873**. Run it in a **separate terminal** (or in the background) when you are publishing or when another repo is installing `@forge/*` or `@twick/*` from this registry.
+
+### Login (recommended for publish)
+
+`verdaccio.yaml` allows publish for `@forge/*` and `@twick/*`, but **npm still expects credentials** when publishing scoped packages. Log in once, then publishing works reliably.
+
+```bash
+npm adduser --registry http://localhost:4873 --auth-type=legacy
+```
+
+Non-interactive login (CI or scripts):
+
+```bash
+pnpm dlx npm-cli-login -u forge -p forge -e forge@local.dev -r http://localhost:4873
+```
+
+If you see `E409 Conflict` (bad username/password, access denied), it usually means the username already exists in `verdaccio/storage/htpasswd`. Fix it by either:
+
+```bash
+npm login --registry http://localhost:4873 --auth-type=legacy
+```
+
+Or reset the user (below).
+
+### Reset registry user
+
+```bash
+# stop Verdaccio
+# delete the local user file
+rm -f verdaccio/storage/htpasswd
+
+# restart Verdaccio
+pnpm registry:start
+
+# re-add user (optional)
+npm adduser --registry http://localhost:4873 --auth-type=legacy
+```
+
+PowerShell equivalent:
+
+```powershell
+# stop Verdaccio
+Remove-Item verdaccio\\storage\\htpasswd -ErrorAction SilentlyContinue
+
+# restart Verdaccio
+pnpm registry:start
+
+# re-add user (optional)
+npm adduser --registry http://localhost:4873 --auth-type=legacy
+```
+
+---
+
+## Publish flow (summary)
+
+1. **Start Verdaccio** (see above).
+2. **Build** the foundation packages from repo root:
+
+   ```bash
+   pnpm registry:forge:build
+   ```
+
+3. **Publish** from repo root:
+
+   ```bash
+   pnpm registry:forge:publish:local
+   ```
+
+For full detail (e.g. `.npmrc` scope, package layout), see [Architecture: Component library and registry](../architecture/04-component-library-and-registry.mdx).
+
+### Twick (vendored) publish
+
+If you need Twick packages in consumer repos, follow the vendored workflow in [24 - Vendoring third-party code](24-vendoring-third-party-code.mdx). That guide includes the Twick build + publish commands.
+
+---
+
+## Consume from another repo
+
+In the **consumer repo** (a different project, not this monorepo):
+
+1. **`.npmrc`** in the consumer repo root:
+
+   ```ini
+    @forge:registry=http://localhost:4873
+    @twick:registry=http://localhost:4873
+   ```
+
+2. **`package.json`** - add a dependency:
+
+   ```json
+   {
+     "dependencies": {
+       "@forge/dev-kit": "^0.1.0"
+     }
+   }
+   ```
+
+3. **Install:** ensure Verdaccio is running, then:
+
+   ```bash
+   pnpm install
+   ```
+
+4. **Use** in your app:
+
+```ts
+import { WorkspaceShell, DockLayout } from '@forge/dev-kit';
+import { Button } from '@forge/ui';
+import { ForgeCopilotProvider, createForgeCopilotRuntime } from '@forge/dev-kit';
+```
+
+This repo includes a minimal consumer app at [examples/consumer](../../examples/consumer) (see [examples/consumer/README.md](../../examples/consumer/README.md)) that uses `workspace:*` when developed inside the monorepo; the same app can be wired to the local registry when used from a separate clone or repo.
+
+---
+
+## Related guides
+
+- [01 - Foundation](01-foundation.mdx) - Repo structure, packages, running the app.
+- [05 - Building an editor](05-building-a-workspace.mdx) - Build your own editor in this repo.
+- [20 - Create an editor](20-create-a-workspace.mdx) - Wire a new editor to the app shell.
+- [24 - Vendoring third-party code](24-vendoring-third-party-code.mdx) - Twick vendor workflow and Verdaccio publishing.
+- [Architecture: Component library and registry](../architecture/04-component-library-and-registry.mdx) - Full publish/consume flow and dev-kit surface.
+- [Contributor workspaces](../../packages/shared/contributor_workspaces/README.md) - Contribute an editor to this repo.
+- [Dev-kit consumer example](../../examples/consumer/README.md) - In-repo Next.js app using `@forge/dev-kit`.

@@ -1,0 +1,45 @@
+---
+title: Phase 3 - Forge domain
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Phase 3: Forge domain migration (Week 2–3)
+
+---
+
+## Tasks
+
+1. Migrate all forge tools to Assistant UI format
+2. Align forge_createPlan with tool-ui Plan + responseActions (Apply Plan, Request Changes)
+3. Add Progress Tracker for plan execution (step-by-step in chat)
+4. Add GraphDiffPanel for ops preview (before/after summary)
+5. Test highlights and visual feedback
+6. Migrate generative UI components
+7. A/B test both systems
+
+---
+
+## Tool migration pattern
+
+Copy from `packages/domain-forge/src/copilot/actions.ts` → `packages/domain-forge/src/assistant/tools.ts`, adapt signatures.
+
+---
+
+## Critical files
+
+**Create:**
+
+- `packages/domain-forge/src/assistant/index.ts`
+- `packages/domain-forge/src/assistant/tools.ts`
+- GraphDiffPanel (or extend DiffPreview for graph ops summary)
+
+**Modify:**
+
+- `apps/studio/components/editors/DialogueEditor.tsx` — Add Assistant UI integration
+
+**Reference:**
+
+- [packages/domain-forge/src/copilot/actions.ts](../../../packages/domain-forge/src/copilot/actions.ts)
+- [07 - Components reference](../../07-components-reference.mdx) — Plan, Progress Tracker
+- [08 - Best practices](../../08-best-practices.mdx) — Graph diff strategy (tools not JSON)

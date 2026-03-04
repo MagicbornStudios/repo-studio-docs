@@ -1,0 +1,41 @@
+---
+title: 04 - Data and state
+---
+
+# 04 - Data and state
+
+Draft state (Zustand), server state (TanStack Query), and the rule: **client talks only to our Next API**.
+
+## Draft state (Zustand)
+
+Editable document state in Zustand (e.g. `apps/studio/lib/store.ts`). Actions update draft; **Save** persists via mutation.
+
+| Pattern | Use |
+|---------|-----|
+| `create` with `immer` | Mutable patches, selection |
+| Scoped stores | Per-editor or per-document |
+| `persist` (optional) | LocalStorage for layout, last project |
+
+## Server state (TanStack Query)
+
+List/single-document data via Next API routes. Keys and hooks in `apps/studio/lib/data/`:
+`useGraphs`, `useGraph(id)`, `useSaveGraph`, etc.
+
+- **Collection CRUD** — Payload SDK (`apps/studio/lib/api-client/payload-sdk.ts`)
+- **Custom endpoints** — Generated services or manual client modules in `lib/api-client/`
+
+Do not use raw `fetch` for API routes.
+
+## API boundary
+
+Browser never calls Payload REST/GraphQL directly. All server-state through Next API routes.
+
+**Related:** [decisions § Client boundary](agent-artifacts/core/decisions.md)
+
+**Next:** [05 - Building an editor](05-building-an-editor)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/lib/data/hooks/`, `apps/studio/lib/api-client/`, `docs/agent-artifacts/core/decisions.md`
+Related: decisions § Client boundary, 11-tech-stack
+Do not: Direct fetch for /api/*; extend client or use vendor SDK
+</Callout>

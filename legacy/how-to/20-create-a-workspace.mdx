@@ -1,0 +1,75 @@
+---
+title: 20 - Create an editor
+created: 2026-02-06
+updated: 2026-02-07
+---
+
+# 20 - Create an editor
+
+This guide is a practical walkthrough for adding a new **editor** in
+Studio. It uses **CharacterEditor** as the reference implementation
+(React Flow + Copilot + Payload-backed CRUD).
+
+## 1. Payload collections + types
+
+1. Add collections under `apps/studio/payload/collections/` (e.g. `characters.ts`, `relationships.ts`).
+2. Register them in `apps/studio/payload/collections/index.ts`.
+3. Run `pnpm payload:types` and update system/domain types in `packages/types/src` (e.g. `CharacterDoc`).
+
+## 2. Data hooks (TanStack Query)
+
+1. Add query keys in `apps/studio/lib/data/keys.ts`.
+2. Implement hooks in `apps/studio/lib/data/hooks/` and export from the barrel.
+3. Use hooks from the editor (no raw fetch inside components).
+
+## 3. System store (Zustand)
+
+1. Create a system store under `apps/studio/lib/domains/<domain>/store.ts` (domain folder name kept for now).
+2. Keep canonical data in the store, synced from hooks; use local state only for transient UI.
+3. Persist draft state per project/scope with `persist` and `partialize`.
+
+## 4. System copilot package
+
+1. Create `packages/domain-<domain>/src/copilot/` with `actions.ts`, `context.ts`, `suggestions.ts` (domain package = system).
+2. Expose a `use<Domain>Contract` hook in `packages/domain-<domain>/src/index.ts`.
+3. Actions must be created via `createDomainAction('<domain>', ...)` (system prefix).
+
+## 5. Editor shell composition
+
+Use shared editor primitives:
+
+- `WorkspaceShell` -> `WorkspaceHeader` -> `WorkspaceToolbar` -> `DockLayout` -> `WorkspaceStatusBar` -> `WorkspaceOverlaySurface`.
+- Sidebars should use `DockPanel` + `PanelTabs` (or `DockSidebar` if you need shadcn Sidebar).
+
+## 6. Graph editor + palette
+
+1. Build a React Flow editor that derives nodes/edges from system data.
+2. Add `NodePalette` for drag-and-drop creation; connect to `onDrop` in the editor.
+3. Keep node/edge types registered in a stable `nodeTypes`/`edgeTypes` map.
+
+## 7. AppShell integration
+
+1. Extend `EditorId` in `apps/studio/lib/app-shell/store.ts`.
+2. Add editor metadata in `apps/studio/lib/app-shell/editor-metadata.ts`.
+3. Render the editor in `apps/studio/components/AppShell.tsx`.
+
+## 8. Theming standards (shadcn + context)
+
+- Use shadcn semantic classes: `bg-background`, `text-foreground`, `bg-card`, `border-border`, `bg-sidebar`, `text-muted-foreground`.
+- Graph surfaces can use the extended tokens: `bg-canvas`, `bg-editor`, `border-editor-border`.
+- Editor context accent is applied via `data-domain` (see `contexts.css`). This wires `--primary`, `--ring`, and `--accent` to the domain accent.
+
+## 9. Optional UI components
+
+- **ElevenLabs audio player** (used for voice preview): see `packages/ui/src/components/ui/audio-player.tsx`.
+- **shadcn AI components** (image, chain-of-thought, plan cards) can be added manually or via CLI when needed; keep them in `packages/ui` so all apps can import `@forge/ui/*`. To add more third-party components (e.g. ElevenLabs), see [15 - Shadcn registries and UI components](15-shadcn-registries-and-components.mdx); use `pnpm dlx` for vendor CLIs to avoid npx errors.
+
+## 10. Verification
+
+- Editor renders without console errors.
+- CRUD hooks load data and updates persist.
+- Copilot actions work against the active selection.
+- Drag-and-drop from the palette creates nodes at the drop location.
+- Theming respects `data-theme` and `data-domain` changes.
+
+Next: See [06 - Dialogue Editor walkthrough](06-forge-workspace-walkthrough.mdx) for a full end-to-end example.

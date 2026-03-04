@@ -1,0 +1,65 @@
+---
+title: Forge Loop artifacts
+created: 2026-02-13
+updated: 2026-02-13
+---
+
+# Forge Loop artifacts
+
+`.planning/` is canonical. Legacy docs are one-way snapshots only.
+
+## Canonical files
+
+- `.planning/PROJECT.md`: product scope and boundaries.
+- `.planning/REQUIREMENTS.md`: requirement IDs and traceability.
+- `.planning/ROADMAP.md`: phase graph and progression.
+- `.planning/STATE.md`: current active phase/plan/task.
+- `.planning/DECISIONS.md`: accepted technical decisions.
+- `.planning/ERRORS.md`: failed attempts and avoid-repeat notes.
+- `.planning/TASK-REGISTRY.md`: planning backlog registry.
+- `.planning/TEMP-REFACTOR-BACKLOG.md`: temporary migration queue.
+- `.planning/migration-report.json`: one-time legacy import report.
+- `.planning/config.json`: loop runtime/config policy.
+
+## Auto-commit scope contract
+
+- Default scope: `.planning/**` and `docs/agent-artifacts/core/**`.
+- Auto-commit fails if:
+  - commit target files are outside scope, or
+  - already-staged files outside scope exist.
+- Use explicit override only when intentionally widening scope for a specific run.
+
+## Phase files
+
+Directory pattern:
+`\.planning/phases/<NN-slug>/`
+
+Common files:
+- `<NN>-CONTEXT.md`
+- `<NN>-RESEARCH.md`
+- `<NN>-<PP>-PLAN.md`
+- `<NN>-<PP>-SUMMARY.md`
+- `<NN>-UAT.md`
+- `<NN>-VERIFICATION.md`
+
+## Plan frontmatter schema (required)
+
+Every `*-PLAN.md` must include:
+- `phase`
+- `plan`
+- `wave`
+- `depends_on`
+- `files_modified`
+- `autonomous`
+- `must_haves.truths`
+- `must_haves.artifacts`
+- `must_haves.key_links`
+
+## Legacy snapshot marker contract
+
+Generated sections in legacy files are updated only between:
+
+- `<!-- forge-loop:generated:start -->`
+- `<!-- forge-loop:generated:end -->`
+
+Manual content outside markers is preserved.

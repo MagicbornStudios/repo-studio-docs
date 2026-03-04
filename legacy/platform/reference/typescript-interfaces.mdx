@@ -1,0 +1,649 @@
+---
+title: TypeScript Interfaces Reference
+description: Complete TypeScript interface definitions for all major platform types
+---
+
+# TypeScript Interfaces Reference
+
+Complete TypeScript interface definitions for the Forge platform. All interfaces include full JSDoc documentation and usage examples.
+
+## Table of Contents
+
+1. [Selection Types](#selection-types)
+2. [Inspector Types](#inspector-types)
+3. [Overlay Types](#overlay-types)
+4. [Settings Types](#settings-types)
+5. [Panel Types](#panel-types)
+6. [Toolbar Types](#toolbar-types)
+7. [Domain Contract Types](#domain-contract-types)
+
+---
+
+## Selection Types
+
+### Selection (Discriminated Union)
+
+```typescript
+/**
+ * Shared selection model for all editors.
+ * Discriminated union enables type-safe handling across different selection types.
+ *
+ * @example
+ * ```ts
+ * const selection: Selection = {
+ *   type: 'entity',
+ *   entityType: 'forge.node',
+ *   id: 'node-123'
+ * };
+ * ```
+ */
+export type Selection =
+  | { type: 'none' }
+  | SelectionEntity
+  | SelectionTextRange
+  | SelectionCanvasObject;
+```
+
+### SelectionEntity
+
+```typescript
+/**
+ * Entity selection for nodes, edges, characters, cells, etc.
+ * Most common selection type across all editors.
+ *
+ * @property type - Always 'entity' (discriminant)
+ * @property entityType - Domain-specific type (e.g. 'forge.node', 'characters.cell')
+ * @property id - Unique identifier for the entity
+ * @property ref - Optional reference (e.g. node type, cell category)
+ * @property meta - Additional metadata (labels, positions, etc.)
+ *
+ * @example
+ * ```ts
+ * const nodeSelection: SelectionEntity = {
+ *   type: 'entity',
+ *   entityType: 'forge.node',
+ *   id: 'node-abc-123',
+ *   ref: 'dialogue',
+ *   meta: { label: 'Start Node', position: { x: 100, y: 200 } }
+ * };
+ * ```
+ */
+export interface SelectionEntity {
+  type: 'entity';
+  entityType: string;
+  id: string;
+  ref?: string;
+  meta?: Record<string, unknown>;
+}
+```
+
+### SelectionTextRange
+
+```typescript
+/**
+ * Text range selection for rich text editors.
+ * Represents a selection span within text content.
+ *
+ * @property type - Always 'textRange' (discriminant)
+ * @property anchor - Selection start point
+ * @property focus - Selection end point
+ * @property textPreview - Optional preview of selected text
+ * @property meta - Additional metadata
+ *
+ * @example
+ * ```ts
+ * const textSelection: SelectionTextRange = {
+ *   type: 'textRange',
+ *   anchor: { key: 'paragraph-1', offset: 0 },
+ *   focus: { key: 'paragraph-1', offset: 15 },
+ *   textPreview: 'Selected text...'
+ * };
+ * ```
+ */
+export interface SelectionTextRange {
+  type: 'textRange';
+  anchor: { key: string; offset: number };
+  focus: { key: string; offset: number };
+  textPreview?: string;
+  meta?: Record<string, unknown>;
+}
+```
+
+### SelectionCanvasObject
+
+```typescript
+/**
+ * Canvas object selection for canvas-based systems.
+ *
+ * @property type - Always 'canvasObject' (discriminant)
+ * @property system - Canvas system identifier (e.g. 'twick', 'joints')
+ * @property id - Unique identifier within the canvas system
+ * @property meta - Additional metadata
+ *
+ * @example
+ * ```ts
+ * const canvasSelection: SelectionCanvasObject = {
+ *   type: 'canvasObject',
+ *   system: 'twick',
+ *   id: 'actor-1',
+ *   meta: { layer: 'foreground' }
+ * };
+ * ```
+ */
+export interface SelectionCanvasObject {
+  type: 'canvasObject';
+  system: string;
+  id: string;
+  meta?: Record<string, unknown>;
+}
+```
+
+### Type Guards
+
+```typescript
+/**
+ * Check if selection is none/empty.
+ *
+ * @param s - Selection to check (nullable)
+ * @returns true if selection is null, undefined, or type 'none'
+ */
+export function isNone(s: Selection | null | undefined): boolean;
+
+/**
+ * Type guard for entity selections.
+ *
+ * @param s - Selection to check
+ * @returns true if selection is SelectionEntity
+ */
+export function isEntity(s: Selection): s is SelectionEntity;
+
+/**
+ * Type guard for text range selections.
+ *
+ * @param s - Selection to check
+ * @returns true if selection is SelectionTextRange
+ */
+export function isTextRange(s: Selection): s is SelectionTextRange;
+
+/**
+ * Type guard for canvas object selections.
+ *
+ * @param s - Selection to check
+ * @returns true if selection is SelectionCanvasObject
+ */
+export function isCanvasObject(s: Selection): s is SelectionCanvasObject;
+```
+
+---
+
+## Inspector Types
+
+### InspectorSection
+
+```typescript
+/**
+ * Inspector section definition for conditional rendering.
+ * Sections are shown/hidden based on selection predicates.
+ *
+ * @property id - Unique section identifier
+ * @property title - Display title for the section
+ * @property when - Predicate function determining visibility
+ * @property render - Render function for section content
+ *
+ * @example
+ * ```ts
+ * const nodeSection: InspectorSection = {
+ *   id: 'node-properties',
+ *   title: 'Node Properties',
+ *   when: (selection) =>
+ *     isEntity(selection) && selection.entityType === 'forge.node',
+ *   render: ({ selection }) => {
+ *     if (!isEntity(selection)) return null;
+ *     return <NodePropertiesForm nodeId={selection.id} />;
+ *   }
+ * };
+ * ```
+ */
+export interface InspectorSection {
+  id: string;
+  title: string;
+  when: (selection: Selection | null) => boolean;
+  render: (props: { selection: Selection | null }) => ReactNode;
+}
+```
+
+---
+
+## Overlay Types
+
+### OverlaySpec
+
+```typescript
+/**
+ * Declarative overlay specification (modal, drawer, popover).
+ * All overlays are defined in one place per editor.
+ *
+ * @typeParam P - Payload type for type-safe data passing
+ * @property id - Unique overlay identifier
+ * @property type - Overlay rendering type
+ * @property title - Optional overlay title
+ * @property size - Size variant (sm, md, lg, full)
+ * @property render - Render function receiving payload and dismiss callback
+ *
+ * @example
+ * ```ts
+ * const createNodeOverlay: OverlaySpec<{ position: { x: number; y: number } }> = {
+ *   id: 'create-node',
+ *   type: 'modal',
+ *   title: 'Create Node',
+ *   size: 'md',
+ *   render: ({ payload, onDismiss }) => (
+ *     <CreateNodeForm
+ *       position={payload?.position}
+ *       onSubmit={(node) => {
+ *         createNode(node);
+ *         onDismiss();
+ *       }}
+ *     />
+ *   )
+ * };
+ * ```
+ */
+export interface OverlaySpec<P = Record<string, unknown>> {
+  id: string;
+  type: 'modal' | 'drawer' | 'popover';
+  title?: string;
+  size?: OverlaySize;
+  render: (props: { payload?: P; onDismiss: () => void }) => ReactNode;
+}
+
+/**
+ * Overlay size variants.
+ *
+ * @remarks
+ * - sm: ~28rem (448px) - Confirmations, quick forms
+ * - md: ~36rem (576px) - Standard forms
+ * - lg: ~42rem (672px) - Complex forms
+ * - full: 90vw x 90vh - Near fullscreen
+ */
+export type OverlaySize = 'sm' | 'md' | 'lg' | 'full';
+```
+
+### ActiveOverlay
+
+```typescript
+/**
+ * Currently active overlay state.
+ * Stored in editor state (Zustand/React) and matched to OverlaySpec by id.
+ *
+ * @typeParam P - Payload type (should match OverlaySpec<P>)
+ * @property id - Overlay identifier matching OverlaySpec.id
+ * @property payload - Optional typed data passed to overlay
+ *
+ * @example
+ * ```ts
+ * const activeOverlay: ActiveOverlay<{ nodeId: string }> = {
+ *   id: 'edit-node',
+ *   payload: { nodeId: 'node-123' }
+ * };
+ * ```
+ */
+export interface ActiveOverlay<P = Record<string, unknown>> {
+  id: string;
+  payload?: P;
+}
+```
+
+---
+
+## Settings Types
+
+### SettingsScope
+
+```typescript
+/**
+ * Settings scope levels for inheritance chain.
+ *
+ * @remarks
+ * Inheritance order: App → Project → Editor → Viewport
+ *
+ * - app: Global application settings
+ * - project: Per-project settings
+ * - editor: Per-editor-type settings
+ * - viewport: Per-viewport/graph settings
+ */
+export type SettingsScope = 'app' | 'project' | 'editor' | 'viewport';
+```
+
+### SettingsField
+
+```typescript
+/**
+ * Individual setting field definition.
+ *
+ * @property key - Dot-separated setting key (e.g. 'graph.showMiniMap')
+ * @property label - Display label
+ * @property type - Field type determining control type
+ * @property description - Optional help text
+ * @property placeholder - Placeholder text for inputs
+ * @property options - Options array for select fields
+ * @property default - Default value (required for codegen)
+ *
+ * @example
+ * ```ts
+ * const field: SettingsField = {
+ *   key: 'graph.showMiniMap',
+ *   label: 'Show Mini Map',
+ *   type: 'toggle',
+ *   description: 'Display navigation mini map',
+ *   default: true
+ * };
+ * ```
+ */
+export interface SettingsField {
+  key: string;
+  label: string;
+  type: SettingsFieldType;
+  description?: string;
+  placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
+  default?: unknown;
+}
+
+/**
+ * Setting field types.
+ *
+ * @remarks
+ * - text: Single-line text input
+ * - textarea: Multi-line text input
+ * - select: Dropdown with options
+ * - number: Numeric input with step/min/max
+ * - toggle: Boolean switch
+ */
+export type SettingsFieldType =
+  | 'text'
+  | 'textarea'
+  | 'select'
+  | 'number'
+  | 'toggle';
+```
+
+### SettingsSection
+
+```typescript
+/**
+ * Logical grouping of related settings.
+ *
+ * @property id - Unique section identifier
+ * @property title - Display title
+ * @property description - Optional section description
+ * @property fields - Array of setting fields
+ *
+ * @example
+ * ```ts
+ * const section: SettingsSection = {
+ *   id: 'ai-core',
+ *   title: 'AI Assistant',
+ *   description: 'Configure AI behavior',
+ *   fields: [
+ *     { key: 'ai.agentName', label: 'Agent Name', type: 'text', default: 'Forge' },
+ *     { key: 'ai.temperature', label: 'Temperature', type: 'number', default: 0.7 }
+ *   ]
+ * };
+ * ```
+ */
+export interface SettingsSection {
+  id: string;
+  title: string;
+  description?: string;
+  fields: SettingsField[];
+}
+```
+
+---
+
+## Panel Types
+
+### PanelTabDef
+
+```typescript
+/**
+ * Tab definition for PanelTabs component.
+ *
+ * @property id - Unique tab identifier
+ * @property label - Display label
+ * @property icon - Optional icon element
+ * @property content - Tab panel content
+ * @property accentColor - Optional accent color for active indicator
+ * @property closable - Whether tab can be closed (future feature)
+ *
+ * @example
+ * ```ts
+ * const tab: PanelTabDef = {
+ *   id: 'graphs',
+ *   label: 'Graphs',
+ *   icon: <BookOpen size={12} />,
+ *   accentColor: 'var(--status-info)',
+ *   content: <GraphList />
+ * };
+ * ```
+ */
+export interface PanelTabDef {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  content: React.ReactNode;
+  accentColor?: string;
+  closable?: boolean;
+}
+```
+
+---
+
+## Toolbar Types
+
+### ToolbarItem
+
+```typescript
+/**
+ * Toolbar item definition (buttons, dropdowns, etc.).
+ *
+ * @property id - Unique identifier
+ * @property type - Item type determining rendering
+ * @property label - Display label
+ * @property icon - Optional icon element
+ * @property onClick - Click handler (for button type)
+ * @property disabled - Whether item is disabled
+ * @property variant - Visual variant
+ *
+ * @example
+ * ```ts
+ * const saveButton: ToolbarItem = {
+ *   id: 'save',
+ *   type: 'button',
+ *   label: 'Save',
+ *   icon: <Save size={14} />,
+ *   onClick: () => saveDocument(),
+ *   variant: 'default'
+ * };
+ * ```
+ */
+export interface ToolbarItem {
+  id: string;
+  type: 'button' | 'dropdown' | 'separator' | 'custom';
+  label?: string;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  variant?: 'default' | 'ghost' | 'destructive';
+}
+```
+
+---
+
+## Domain Contract Types
+
+### DomainAssistantContract
+
+```typescript
+/**
+ * Contract for domain-specific AI assistant integration.
+ * Implements the adapter pattern for domain logic.
+ *
+ * @typeParam TContext - Type of context snapshot (domain-specific)
+ * @property getInstructions - Generate instructions for AI from context
+ * @property tools - Available tools for AI to call
+ * @property getContextSnapshot - Capture current editor state
+ * @property highlightEntity - Visual feedback for AI operations
+ *
+ * @example
+ * ```ts
+ * const forgeContract: DomainAssistantContract<ForgeContext> = {
+ *   getInstructions: (ctx) => `You are editing a dialogue graph with ${ctx.nodeCount} nodes...`,
+ *   tools: [createNodeTool, updateNodeTool, deleteNodeTool],
+ *   getContextSnapshot: () => ({ graph, selectedNode, nodeCount: graph.nodes.length }),
+ *   highlightEntity: (entityType, id) => highlightNode(id)
+ * };
+ * ```
+ */
+export interface DomainAssistantContract<TContext = unknown> {
+  getInstructions: (context: TContext) => string;
+  tools: DomainTool[];
+  getContextSnapshot: () => TContext;
+  highlightEntity?: (entityType: string, id: string) => void;
+}
+```
+
+### DomainTool
+
+```typescript
+/**
+ * AI tool definition for domain-specific operations.
+ *
+ * @property name - Tool identifier (kebab-case)
+ * @property description - Human-readable description for AI
+ * @property parameters - JSON Schema for parameters
+ * @property execute - Async execution function
+ * @property render - Optional React component for tool result display
+ *
+ * @example
+ * ```ts
+ * const createNodeTool: DomainTool = {
+ *   name: 'create-node',
+ *   description: 'Create a new dialogue node',
+ *   parameters: {
+ *     type: 'object',
+ *     properties: {
+ *       label: { type: 'string', description: 'Node label' },
+ *       position: {
+ *         type: 'object',
+ *         properties: {
+ *           x: { type: 'number' },
+ *           y: { type: 'number' }
+ *         }
+ *       }
+ *     },
+ *     required: ['label']
+ *   },
+ *   execute: async ({ label, position }) => {
+ *     const node = await createNode({ label, position });
+ *     return { success: true, nodeId: node.id };
+ *   },
+ *   render: ({ result }) => (
+ *     <div>Created node: {result.nodeId}</div>
+ *   )
+ * };
+ * ```
+ */
+export interface DomainTool {
+  name: string;
+  description: string;
+  parameters: JSONSchema;
+  execute: (params: unknown) => Promise<unknown>;
+  render?: React.ComponentType<{ result: unknown }>;
+}
+```
+
+---
+
+## Usage Examples
+
+### Type-Safe Selection Handling
+
+```typescript
+function handleSelection(selection: Selection) {
+  if (isEntity(selection)) {
+    // TypeScript knows this is SelectionEntity
+    console.log(`Selected ${selection.entityType}: ${selection.id}`);
+    console.log('Metadata:', selection.meta);
+  } else if (isTextRange(selection)) {
+    // TypeScript knows this is SelectionTextRange
+    console.log(`Text selected: ${selection.textPreview}`);
+  } else if (isCanvasObject(selection)) {
+    // TypeScript knows this is SelectionCanvasObject
+    console.log(`Canvas object ${selection.id} in ${selection.system}`);
+  } else {
+    // TypeScript knows this is { type: 'none' }
+    console.log('No selection');
+  }
+}
+```
+
+### Type-Safe Overlay Payloads
+
+```typescript
+interface CreateNodePayload {
+  position: { x: number; y: number };
+  nodeType: string;
+}
+
+const overlays: OverlaySpec<CreateNodePayload>[] = [
+  {
+    id: 'create-node',
+    type: 'modal',
+    title: 'Create Node',
+    size: 'md',
+    render: ({ payload, onDismiss }) => {
+      // TypeScript knows payload is CreateNodePayload | undefined
+      if (!payload) return null;
+
+      return (
+        <CreateNodeForm
+          position={payload.position}
+          nodeType={payload.nodeType}
+          onSubmit={onDismiss}
+        />
+      );
+    },
+  },
+];
+
+// Type-safe trigger
+function openCreateNode(position: { x: number; y: number }) {
+  setActiveOverlay({
+    id: 'create-node',
+    payload: { position, nodeType: 'dialogue' },
+  });
+}
+```
+
+---
+
+## Summary
+
+This reference provides **complete TypeScript definitions** for:
+
+✅ **Selection types** - Discriminated unions with type guards
+✅ **Inspector sections** - Conditional rendering
+✅ **Overlay specs** - Type-safe payloads
+✅ **Settings system** - Inheritance and scopes
+✅ **Panel tabs** - Icon and accent support
+✅ **Toolbar items** - Flexible composition
+✅ **Domain contracts** - AI integration
+
+All types include full JSDoc with examples and usage patterns.
+
+**Related Documentation:**
+- [Component Patterns Guide](../guides/patterns.mdx)
+- [WorkspaceInspector Guide](../components/editor-inspector-complete.mdx)
+- [Settings System Guide](../components/settings-system-complete.mdx)

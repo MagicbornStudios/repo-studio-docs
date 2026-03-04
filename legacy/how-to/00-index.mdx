@@ -1,0 +1,52 @@
+---
+title: How-to guides
+
+created: 2026-02-04
+updated: 2026-02-10
+---
+
+# How-to guides
+
+Numbered guides that build an editor from the ground up. Read in order; each states **what the AI can do at that stage** and points to real code. Files can be `.mdx` (preferred) or `.md`.
+
+| # | Guide | Summary |
+|---|--------|--------|
+| 1 | [Foundation](01-foundation.md) | Repo structure, packages, running the app, key concepts. |
+| 2 | [Editor shell and slots](02-workspace-shell.md) | WorkspaceShell, WorkspaceHeader, WorkspaceToolbar, DockLayout, WorkspaceStatusBar, WorkspaceOverlaySurface. |
+| 3 | [Styling and theming](03-styling.md) | Design tokens, data-theme, @forge/ui, shared styles. |
+| 4 | [Data and state](04-data-and-state.md) | Draft (Zustand), server state (TanStack Query), API boundary. |
+| 5 | [Building an editor](05-building-a-workspace.md) | Step-by-step: shell, main, inspector, toolbar, system contract. |
+| 6 | [Dialogue Editor walkthrough](06-forge-workspace-walkthrough.mdx) | How the Dialogue Editor is built; plan, patch preview, review, commit, highlighting. |
+| 7 | [Copilot and AI integration](07-copilot.md) | Context, actions, suggestions, plan-execute-review-commit; app actions. |
+| 8 | [Adding AI to editors](08-adding-ai-to-workspaces.md) | How to add system actions, app-level actions, agents, and (future) graphs. |
+| 9 | [Video Editor walkthrough](09-twick-workspace.mdx) | Timeline UI, Twick-inspired data flow, AI actions, and extension points. |
+| 21 | [Workspace -> Editor migration](21-migration-guide-workspace-to-editor.mdx) | Old vs new names, compatibility notes, migration checklist. |
+| 22 | [AI generation components](22-ai-generation-components.mdx) | GenerateMediaModal, hooks, assistant-ui strategy editor. |
+| 23 | [Adding a collection or client](23-adding-a-collection-or-client.mdx) | Payload collection, slug, keys, hooks; when to add a custom API route and client. |
+| 24 | [Vendoring third-party code](24-vendoring-third-party-code.mdx) | Vendor external repos (Twick), wire pnpm overrides, and contribute fixes upstream. |
+| 25 | [Verdaccio and local registry](25-verdaccio-local-registry.mdx) | Run the local npm registry; publish and consume @forge/* so other codebases can use the dev-kit. |
+| 26 | [Styling debugging with Cursor](26-styling-debugging-with-cursor.mdx) | Workflow for fixing styling issues: browser selectors, screenshots, plans; before/after images in docs/images; agent and human process. |
+| 27 | [PostHog LLM analytics](27-posthog-llm-analytics.mdx) | LLM/agent analytics: OpenRouter Broadcast to PostHog (recommended); optional SDK for in-app trace IDs. |
+
+## Platform site (customer-facing)
+
+| # | Guide | Summary |
+|---|--------|--------|
+| 10 | [Platform site](10-marketing-site.mdx) | Platform app overview: routes, layout, docs shell, auth boundary, component structure. |
+| 11 | [Platform auth](11-marketing-auth.mdx) | Payload users, login, cookie, useAuth, CORS and cookie domain. |
+| 12 | [Platform Stripe](12-marketing-stripe.mdx) | Checkout Session, webhook, user.plan; listing checkout and session result flow. |
+| 13 | [Platform email / newsletter](13-marketing-email-newsletter.mdx) | Newsletter + waitlist endpoints, optional Resend welcome email. |
+| 14 | [Platform announcements and scheduling](14-marketing-announcements-scheduling.mdx) | Promotions collection, startsAt/endsAt, Payload Jobs (waitUntil), serverless note. |
+| 15 | [Shadcn registries and UI components](15-shadcn-registries-and-components.mdx) | Registries, components.json, where to add shared vs app-only, how to add and use. |
+
+## Reference docs
+
+- [Project overview](../10-project-overview.mdx)
+- [Architecture: CopilotKit and agents](../architecture/03-copilotkit-and-agents.mdx)
+- [Architecture: Editors as MCP Apps](../architecture/07-modes-as-mcp-apps.mdx)
+- [Architecture: CopilotKit vs assistant-ui](../architecture/08-copilotkit-vs-assistant-ui.mdx)
+- [Architecture: Dialogue system and Yarn Spinner](../architecture/09-dialogue-domain-and-yarn-spinner.mdx)
+- [Product roadmap](../roadmap/product.mdx)
+- [Decisions](../agent-artifacts/core/decisions.md)
+- [Tech stack](../11-tech-stack.mdx)
+- [STATUS](../agent-artifacts/core/STATUS.md)

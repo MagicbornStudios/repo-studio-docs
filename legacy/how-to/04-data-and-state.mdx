@@ -1,0 +1,40 @@
+---
+title: 04 - Data and state
+
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# 04 - Data and state
+
+Draft state (Zustand), server state (TanStack Query), and the rule: **client talks only to our Next API**.
+
+## Draft state (Zustand)
+
+Editable document state lives in Zustand stores (e.g. `apps/studio/lib/store.ts` for graphs, `apps/studio/lib/domains/video/store.ts` for video). Actions update the draft; **Save** persists via a mutation that calls the API and invalidates queries.
+
+## Server state (TanStack Query)
+
+List and single-document data is fetched through Next API routes and cached with TanStack Query. Keys and hooks live in `apps/studio/lib/data/`: `keys.ts`, hooks in `hooks/` (e.g. `useGraphs`, `useGraph(id)`, `useSaveGraph`, `useCreateGraph`, `useVideoDocs`, `useCreateVideoDoc`).
+
+- **Collection CRUD** uses the Payload SDK (`apps/studio/lib/api-client/payload-sdk.ts`).
+- **Custom endpoints** use generated services in `lib/api-client/services/` where present (Auth, Settings, Model, AI) or manual client modules in `lib/api-client/` (elevenlabs, media, workflows).
+
+Do not use raw `fetch` for API routes. See [docs/agent-artifacts/core/decisions.md](../agent-artifacts/core/decisions.md) and [docs/11-tech-stack.mdx](../11-tech-stack.mdx).
+
+## API boundary
+
+The browser never calls Payload REST/GraphQL directly. All server-state goes through our Next API routes. The OpenAPI/Swagger spec is for documentation only (no streaming); do not rely on it to generate new clients.
+
+## Loading and saving a document
+
+- **Load**: On app load, read the last document id from the app-shell store (or first from list, or create empty). The component uses `useGraph(id)` (and `useGraphs()` / `useCreateGraph()` as needed); server data is synced into the graph store. No raw fetch - hooks use the Payload SDK or generated/manual clients.
+- **Save**: User clicks Save (or `forge_commit`); component calls `useSaveGraph().mutate()` which updates via the Payload SDK, then invalidates `studioKeys.graph(id)` and `studioKeys.graphs()`.
+
+Code: `apps/studio/app/page.tsx` (initial load), `apps/studio/lib/data/hooks/use-save-graph.ts` (mutation), `apps/studio/lib/store.ts` (draft state only).
+
+## What the AI can do at this stage
+
+The agent could call APIs via tools if you exposed them; there are no editor-specific actions yet. Once you add a system contract (context + actions), the AI can read context and run actions that update the draft and trigger save.
+
+**Next:** [05 - Building an editor](05-building-a-workspace.md)

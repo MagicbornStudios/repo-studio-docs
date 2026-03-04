@@ -1,0 +1,43 @@
+---
+title: TypeScript interfaces
+---
+
+# TypeScript interfaces
+
+## Selection
+
+Discriminated union: `none`, `entity`, `textRange`, `canvasObject`.
+
+```ts
+type Selection =
+  | { type: 'none' }
+  | { type: 'entity'; entityType: string; id: string; meta?: Record<string, unknown> }
+  | SelectionTextRange
+  | SelectionCanvasObject;
+```
+
+**Source:** `packages/shared/src/shared/` (selection types)
+
+## DomainAssistantContract
+
+```ts
+interface DomainAssistantContract {
+  domain: string;
+  getContextSnapshot(): DomainContextSnapshot;
+  getInstructions(): string;
+  createTools(): DomainTool[];
+  getSuggestions(): Array<{ title: string; message: string }>;
+  onHighlight(entities: Record<string, string[]>): void;
+  clearHighlights(): void;
+}
+```
+
+**Source:** `packages/shared/src/shared/assistant/domain-contract.ts`
+
+**Next:** Back to [00-index](00-index)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/`, `packages/shared/src/shared/assistant/domain-contract.ts`
+Related: ai/02-domain-integration
+Do not: Duplicate types; import from source
+</Callout>

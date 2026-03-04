@@ -1,0 +1,162 @@
+---
+title: 06 - Dialogue Editor walkthrough (React Flow + AI)
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# 06 - Dialogue Editor walkthrough (React Flow + AI)
+
+This guide walks through **Dialogue Editor** (formerly ForgeWorkspace), which
+builds YarnSpinner-style dialogue graphs with React Flow and an AI
+plan -> patch -> review -> commit loop.
+
+## Goal
+
+Build a Dialogue Editor that:
+- Renders a React Flow graph editor inside the shared editor shell.
+- Uses a draft graph in Zustand with patch operations.
+- Supports AI plan -> patch -> review -> commit with streamed output.
+- Highlights changed nodes and edges after AI actions or patch acceptance.
+
+## 0. WorkspaceApp + AppProviders (app-level)
+
+Dialogue Editor lives inside the **App Shell**, which uses `WorkspaceApp`. Providers
+are centralized in `AppProviders` so a consumer app can drop in the shell with
+minimal setup.
+
+```tsx
+// apps/studio/components/AppShell.tsx
+return (
+  <WorkspaceApp>
+    <WorkspaceApp.Tabs>...</WorkspaceApp.Tabs>
+    <WorkspaceApp.Content>...</WorkspaceApp.Content>
+  </WorkspaceApp>
+);
+```
+
+```tsx
+// apps/studio/app/page.tsx
+export default function Home() {
+  return (
+    <AppProviders>
+      <AppShell />
+    </AppProviders>
+  );
+}
+```
+
+Expected behavior:
+- App shell layout is consistent across apps.
+- Providers (Copilot, tooltips, entitlements) are composed once.
+
+## 1. Create the editor shell
+
+Start with the shared editor shell and slots. The shell owns layout; the editor
+owns state and content.
+
+```tsx
+// apps/studio/components/editors/DialogueEditor.tsx
+return (
+  <WorkspaceShell
+    editorId="dialogue"
+    title="Dialogue"
+    subtitle={graph?.title}
+    domain="dialogue"
+    theme={workspaceTheme}
+    className="flex flex-col h-full min-h-0 bg-background"
+  >
+    <WorkspaceHeader>...</WorkspaceHeader>
+    <WorkspaceToolbar>...</WorkspaceToolbar>
+    <DockLayout main={mainPanel} right={inspectorPanel} bottom={bottomPanel} />
+    <WorkspaceStatusBar>...</WorkspaceStatusBar>
+    <WorkspaceOverlaySurface ... />
+  </WorkspaceShell>
+);
+```
+
+Expected behavior:
+- The shell provides consistent layout and theming.
+- The editor surface and inspector are just slots.
+
+## 2. Draft state + patch ops
+
+Draft state lives in `useForgeGraphsStore`. All edits are applied via patch ops
+(`ForgeGraphPatchOp`) so AI and humans follow the same mutation pipeline.
+
+Key file: `apps/studio/lib/domains/forge/store.ts`.
+
+Expected behavior:
+- All edits are patch ops; no direct mutation of `graph.flow`.
+- `isDirty` is true after any patch.
+
+## 3. Editor surface + selection
+
+React Flow is rendered in the main slot. Selection is converted to the shared
+`Selection` contract so the inspector and AI use a common model.
+
+Key file: `apps/studio/components/GraphEditor.tsx` and selection mapping in
+`apps/studio/components/editors/DialogueEditor.tsx`.
+
+Expected behavior:
+- Selection and highlighting are controlled by the editor, not the editor.
+- The editor is a pure surface; all state comes from props.
+
+## 4. Inspector sections
+
+Selection-driven inspector sections live in `dialogueInspectorSections`, then are
+rendered with `WorkspaceInspector` inside a `DockPanel`.
+
+Key file: `apps/studio/components/forge/ForgeInspectorSections.tsx`.
+
+Expected behavior:
+- Only sections whose `when(selection)` returns true are shown.
+- Inspector remains declarative and selection-driven.
+
+## 5. AI workflow (plan -> patch -> review)
+
+Dialogue Editor registers the Forge contract with `useDomainCopilot`, and renders
+`ForgeWorkflowPanel` inside the inspector. The workflow panel streams a plan,
+applies patches, and shows a review bar before commit.
+
+Key files:
+- `packages/domain-forge/src/copilot`
+- `apps/studio/components/forge/ForgeWorkflowPanel.tsx`
+
+Expected behavior:
+- Plan renders in chat (PlanCard + PlanActionBar).
+- Patches apply to draft, and `WorkspaceReviewBar` appears for accept/revert.
+- Accept commits the draft (save); Revert reloads server state.
+
+## 6. DockLayout + panels
+
+Dialogue Editor uses `DockLayout` for resizable panels. The left panel uses
+`PanelTabs` for graph lists and node palette; the right panel uses
+`WorkspaceInspector`. The workbench (Settings/Debug/Logs) is a **slide-out Drawer** from the bottom, not a dock panel.
+
+Key file: `apps/studio/components/editors/DialogueEditor.tsx`.
+
+Expected behavior:
+- Users can resize panels; sizes persist when `layoutId` is provided.
+- Panels can be hidden via settings (`panel.visible.*`).
+
+---
+
+## 7. Yarn Spinner integration
+
+Dialogue Editor is the primary editor for **Yarn Spinner** compatible dialogue
+graphs. The graph types (narrative + storylet) map to Yarn Spinner concepts:
+
+| Graph concept | Yarn Spinner equivalent |
+|---|---|
+| Narrative graph nodes | Yarn nodes (named dialogue blocks) |
+| Storylet graph branches | Options and lines within a node |
+| Character node | `CharacterName: Line text` |
+| Player node | `-> Option text` |
+| Conditional node | `<<if $variable>>` |
+
+Planned: `.yarn` file export/import, syntax preview panel, variable tracking.
+See [09 - Dialogue system and Yarn Spinner](../architecture/09-dialogue-domain-and-yarn-spinner.mdx).
+
+---
+
+**Next:** [07 - Copilot and AI integration](07-copilot.md)

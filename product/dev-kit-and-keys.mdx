@@ -1,0 +1,32 @@
+---
+title: Dev-kit and API keys
+---
+
+# Dev-kit and API keys
+
+How users use the dev-kit; keys and integrations. See [MVP](mvp-and-revenue).
+
+## Dev-kit contents
+
+Re-exports `@forge/shared`, `@forge/agent-engine`, `@forge/ui`. Consumers get WorkspaceShell, Assistant UI, tool-ui.
+
+## First-class support
+
+- **OpenRouter** — API key for chat/models when self-hosting. See [architecture/03-model-routing-openrouter](../architecture/03-model-routing-openrouter).
+
+## Optional
+
+- **ELEVENLABS_API_KEY** — voice (Character editor).
+- **OpenAPI key for Sora** — video when integrated.
+
+## Standard (cloud) users
+
+No API key concept; subscription covers AI. Cloud Studio on our infra.
+
+**Next:** Back to [00-index](00-index)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/dev-kit/`, `apps/consumer-studio/`
+Related: architecture/02-component-library, how-to/08-adding-ai-to-editors
+Do not: Document CopilotKit; use Assistant UI
+</Callout>

@@ -1,0 +1,111 @@
+---
+title: GamePlayer — how we build it
+created: 2026-02-08
+updated: 2026-02-08
+---
+
+# GamePlayer — how we build it
+
+**GamePlayer** is an **MVP editor**: a playable runtime for **Yarn Games**. Authors build content in Dialogue, Character, and Writer; they then play the game in GamePlayer. This doc describes how we are going to build it.
+
+---
+
+## Purpose
+
+- **In Studio:** GamePlayer is an editor tab. The user selects a project and hits "Play"; they see a thin runtime that runs the project's dialogue (and later narrative from Writer) with character data.
+- **MVP outcome:** A user can author a small game in Dialogue/Character/Writer and play it end-to-end in the same app, supporting the hero moment "Author a small game fully with AI" and the MVP success criterion (first paid clone E2E).
+
+---
+
+## Inputs (what GamePlayer runs)
+
+| Source | Content | When available |
+|--------|---------|----------------|
+| **Dialogue** | Narrative + storylet graphs; exported as **Yarn** (`.yarn`) or graph payload | After [first-class Yarn Spinner](09-dialogue-domain-and-yarn-spinner.mdx) (export/import in MVP) |
+| **Character** | Character definitions, names, voice IDs (for TTS in play) | Existing Character editor |
+| **Writer** | Branching narrative, choices (future) | Writer editor when built |
+| **Project** | Single project context (same as other editors); project-scoped assets | App shell `activeProjectId` |
+
+MVP GamePlayer runs **Dialogue + Character** first. Writer integration follows when the Writer editor exists.
+
+---
+
+## Runtime (thin engine)
+
+We use **[Pixi'VN](https://pixi-vn.web.app)** as the playable runtime for demos and hosted builds. Pixi'VN accepts a **JSON format** ([Pixi'VN + Json](https://pixi-vn.web.app/json)): labels, dialogue lines, jumps, and end states. This is the same integration path used for Ink and Ren'Py on their side; we feed it from our own format or from adapted formats.
+
+- **How we feed it:** We do **not** run Yarn bytecode directly in the browser. We either: **(A)** export our Dialogue graph (or Yarn export) to **PixiVN Json** (labels + dialogue + `labelToOpen` / `end`) and call `importPixiVNJson()` then `narration.call(label, {})`, or **(B)** use a small runner that produces the same JSON structure from our graph/Yarn for Pixi'VN to consume.
+- **Thin engine:** Pixi'VN handles (1) loading the narrative (via JSON), (2) dialogue flow (current label, lines, jumps), (3) presenting lines and choices and advancing state, (4) optionally character voice (ElevenLabs) when a line has a character with `voiceId`.
+- **No full game engine:** We do not ship Unity/Unreal/Godot inside the app. We provide a **dialogue-first playable** that can later be exported to real engines (post-MVP).
+- **In-browser:** Runtime runs in the browser. **Publish and host** is part of MVP so others can play builds; play-in-Studio and play-via-hosted-URL are both in scope for MVP.
+
+---
+
+## How we build it (phases)
+
+### Prerequisites (MVP-critical, before GamePlayer)
+
+1. **First-class Yarn Spinner** — Export/import `.yarn` from Dialogue graphs. GamePlayer needs a stable format to load (Yarn script or our own graph serialization). See [09 - Dialogue system and Yarn Spinner](09-dialogue-domain-and-yarn-spinner.mdx) and STATUS § Next.
+2. **Project + character data** — GamePlayer reads the active project's forge-graphs (or Yarn export) and character data via existing APIs (Payload, project context).
+
+### Phase 1: GamePlayer shell and load (MVP)
+
+| Slice | Description | Impact |
+|-------|-------------|--------|
+| **1. GamePlayer editor tab** | Register GamePlayer as an editor in AppShell; same chrome as other editors (WorkspaceShell, project context). Content area = "Play" button + placeholder or minimal UI. | Small |
+| **2. Load project dialogue** | For the active project, load narrative/storylet data (from Yarn export or forge-graphs API). No execution yet; just data load and validation. | Medium |
+| **3. Minimal runtime** | Interpret loaded dialogue: current node, lines, options, variables. State machine or small Yarn-like runner. Render current line and choices; on choice, advance state. No TTS required for slice. | Medium |
+
+### Phase 2: Playable and polish (MVP)
+
+| Slice | Description | Impact |
+|-------|-------------|--------|
+| **4. Character names and voice (optional)** | Resolve character names from Character editor; optionally play voice (ElevenLabs) for lines when `voiceId` is set. | Small–Medium |
+| **5. Variables and persistence** | Persist Yarn variables across the play session (and optionally across "sessions" for save/load later). | Small |
+| **6. Polish** | Full-screen or focused play view, basic styling, restart/restart from node. | Small |
+
+### After MVP
+
+- **Publish and host:** Authors publish a "build" (playable bundle); we host it so others can play via URL. In scope for **MVP** (see STATUS § Next "Platform: publish and host builds").
+- **Writer integration:** When Writer editor exists, GamePlayer can run combined Dialogue + Writer branching content.
+- **Export to engines:** Unity/Unreal/Godot export packages (full Yarn Spinner toolchain) are post-MVP.
+
+---
+
+## Where it lives in the repo
+
+- **Editor UI:** `apps/studio` — new GamePlayer editor component (e.g. `GamePlayerEditor`), registered in the app shell next to Dialogue, Character, Writer. Uses shared `WorkspaceShell`, project context, and (optionally) DockLayout or a single play surface.
+- **Runtime / engine:** **[Pixi'VN](https://pixi-vn.web.app)** — npm packages `@drincs/pixi-vn` and `@drincs/pixi-vn-json` (see [Pixi'VN + Json Integration](https://pixi-vn.web.app/json)). Implementation can live in `packages/gameplayer-runtime` or `apps/studio/lib/gameplayer/` and depend on these packages; same runtime for in-Studio play and hosted build URL.
+- **Data:** No new Payload collections for MVP. Reads existing forge-graphs (or Yarn export) and project-scoped character data.
+
+---
+
+## Ecosystem adapters (import from other tools)
+
+**Goal:** Pixi'VN + Json is a **universal target**. We add **adapters** (translators) that convert existing project formats into PixiVN Json so they can run in our GamePlayer and be published as playable builds.
+
+- **Order:** **Yarn Spinner first** (we already have Yarn export/import in MVP; adapter = Yarn script or graph → PixiVN Json). Later: **RenPy**, **Ink**, **Twine** (each has existing communities and many "dead" or stalled projects).
+- **Value for us:** Creators from those ecosystems can **import** projects (including dead or abandoned ones) into our system; we **generate assets** (AI) so they don't need to reassemble art/audio elsewhere. That drives **renewed interest**, more catalog content, and customer acquisition from RenPy/Ink/Twine/Yarn communities.
+- **Flow:** RenPy, Ink, Twine, Yarn Spinner → **Adapters** → Pixi'VN + Json → GamePlayer (demos + hosted builds). Four ecosystems into one runtime. See [Ecosystem and import strategy](../business/ecosystem-and-import-strategy.mdx) for business context.
+
+---
+
+## Order relative to other work
+
+- **Yarn Spinner (export/import)** is **before** GamePlayer: GamePlayer needs a format to load.
+- **GamePlayer** is **part of MVP** (with Dialogue, Character, Writer).
+- **Editors as MCP Apps** is **after MVP**; we do not block GamePlayer on MCP.
+- **Video editor** is not in MVP; Video work (Twick → VideoDoc, workflow panel) happens when Video is unlocked.
+
+See [STATUS § Next](../agent-artifacts/core/STATUS.md) and [decisions: MVP ordering and what to do next](../agent-artifacts/core/decisions.md).
+
+---
+
+## References
+
+- [Pixi'VN + Json Integration](https://pixi-vn.web.app/json) — JSON format for narrative (labels, dialogue, jumps, end).
+- [09 - Dialogue system and Yarn Spinner](09-dialogue-domain-and-yarn-spinner.mdx)
+- [Ecosystem and import strategy](../business/ecosystem-and-import-strategy.mdx) — Adapters and customer acquisition.
+- [Product roadmap](../roadmap/product.mdx) — GamePlayer section
+- [MVP and first revenue](../product/mvp-and-revenue.mdx)
+- [STATUS § Next](../agent-artifacts/core/STATUS.md)

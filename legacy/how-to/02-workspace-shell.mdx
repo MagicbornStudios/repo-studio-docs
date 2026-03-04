@@ -1,0 +1,53 @@
+---
+title: 02 - Editor shell and slots
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# 02 - Editor shell and slots
+
+Every editor uses the same surfaces: WorkspaceHeader, WorkspaceToolbar, DockLayout
+(main/right/bottom/left), WorkspaceStatusBar, and overlays. Composition only; no
+data binding in this guide.
+
+## Shared components
+
+From `packages/shared/src/shared/components/editor/`:
+
+- **WorkspaceShell** - Root; accepts `editorId`, `title`, `subtitle`, `domain`,
+  `theme`, `className`, `children`. Renders a flex column; children define order.
+- **WorkspaceHeader** - `WorkspaceHeader.Left`, `.Center`, `.Right` for composable sections.
+- **WorkspaceToolbar** - `WorkspaceToolbar.Left`, `.Center`, `.Right`; menubar, project
+  select, buttons.
+- **DockLayout** - Slots: `main` (required), `left?`, `right?`, `bottom?`.
+  Resizable and persistent.
+- **DockPanel** - Panel wrapper with optional title and tabs.
+- **WorkspaceStatusBar** - Footer strip (e.g. "Ready", "Unsaved changes").
+- **WorkspaceOverlaySurface** - Renders overlays from a declarative list:
+  `overlays`, `activeOverlay`, `onDismiss`.
+
+Legacy components still live in `components/workspace` but new work should use
+the editor kit. See [editor README](../../packages/shared/src/shared/components/editor/README.md)
+and [shared AGENTS.md](../../packages/shared/src/shared/AGENTS.md) (§ Workspace).
+
+## Minimal shell example
+
+```tsx
+<WorkspaceShell editorId="my-editor" title="My Editor" domain="my">
+  <WorkspaceHeader>...</WorkspaceHeader>
+  <WorkspaceToolbar>...</WorkspaceToolbar>
+  <DockLayout main={<DockPanel panelId="main">Main content</DockPanel>} />
+  <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+  <WorkspaceOverlaySurface overlays={[]} activeOverlay={null} onDismiss={() => {}} />
+</WorkspaceShell>
+```
+
+Real reference: `apps/studio/components/editors/DialogueEditor.tsx` composes these
+with Dialogue-specific content.
+
+## What the AI can do at this stage
+
+None - no Copilot contract or actions are registered yet. The shell is just
+layout.
+
+**Next:** [03 - Styling and theming](03-styling.md)

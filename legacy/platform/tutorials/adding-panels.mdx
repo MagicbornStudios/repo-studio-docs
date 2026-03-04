@@ -1,0 +1,760 @@
+---
+title: Tutorial - Adding Panels to Your Editor
+description: Step-by-step guide to building a multi-panel editor layout with navigation, inspector, and output panels
+---
+
+# Tutorial: Adding Panels to Your Editor
+
+This tutorial walks through building a complete multi-panel editor layout from scratch, starting with a simple 2-pane setup and progressively adding navigation, inspector, and output panels.
+
+## What You'll Build
+
+```
+┌────────────────────────────────────────────────────────┐
+│                    Editor Toolbar                       │
+├──────────┬───────────────────────────┬─────────────────┤
+│          │                           │                 │
+│ Navigator│     Main Canvas          │   Inspector     │
+│          │                           │                 │
+│ • Graphs │     [Editor Content]     │   Properties    │
+│ • Nodes  │                           │   - Node ID     │
+│ • Palette│                           │   - Label       │
+│          │                           │   - Body        │
+│          │                           │                 │
+├──────────┴───────────────────────────┴─────────────────┤
+│                   Output Panel                          │
+│  • Console  • Errors  • Warnings                        │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Step 1: Basic 2-Pane Layout
+
+Start with the simplest layout: canvas + inspector.
+
+```tsx
+// components/editors/MyEditor.tsx
+'use client';
+
+import { useState } from 'react';
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceStatusBar,
+  WorkspaceInspector,
+  type Selection,
+} from '@forge/shared';
+import { isEntity } from '@forge/shared';
+
+export function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+
+  return (
+    <WorkspaceShell>
+      {/* Toolbar */}
+      <WorkspaceToolbar>
+        <div className="flex items-center gap-2">
+          <h1 className="text-sm font-medium">My Editor</h1>
+        </div>
+      </WorkspaceToolbar>
+
+      {/* Main Content */}
+      <div className="flex flex-1 min-h-0">
+        {/* Canvas */}
+        <div className="flex-1 bg-editor p-8">
+          <div
+            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary"
+            onClick={() =>
+              setSelection({
+                type: 'entity',
+                entityType: 'my.item',
+                id: 'item-1',
+                meta: { label: 'Item 1' },
+              })
+            }
+          >
+            <p className="text-muted-foreground">Click to select</p>
+          </div>
+        </div>
+
+        {/* Inspector */}
+        <WorkspaceInspector selection={selection}>
+          {isEntity(selection) ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">ID</label>
+                <p className="text-xs text-muted-foreground">{selection.id}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <p className="text-xs text-muted-foreground">
+                  {selection.entityType}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No selection</p>
+          )}
+        </WorkspaceInspector>
+      </div>
+
+      {/* Status Bar */}
+      <WorkspaceStatusBar>
+        <span className="text-xs">Ready</span>
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+**Result:** Basic editor with clickable canvas and inspector panel.
+
+---
+
+## Step 2: Add Left Navigator Panel
+
+Add a resizable left panel with tabs for different views.
+
+```tsx
+import {
+  EditorDockPanel,
+  EditorDockLayout,
+  PanelTabs,
+  type PanelTabDef,
+  type DockLayoutRef,
+} from '@forge/shared';
+import { BookOpen, Boxes, Settings } from 'lucide-react';
+import { useRef } from 'react';
+
+export function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+  const layoutRef = useRef<DockLayoutRef>(null);
+
+  const navigatorTabs: PanelTabDef[] = [
+    {
+      id: 'items',
+      label: 'Items',
+      icon: <BookOpen size={12} />,
+      content: (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-medium">Items</h3>
+          <div className="space-y-1">
+            {['Item 1', 'Item 2', 'Item 3'].map((name, i) => (
+              <button
+                key={i}
+                onClick={() =>
+                  setSelection({
+                    type: 'entity',
+                    entityType: 'my.item',
+                    id: `item-${i + 1}`,
+                    meta: { label: name },
+                  })
+                }
+                className="w-full text-left text-sm px-2 py-1 rounded hover:bg-accent"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'palette',
+      label: 'Palette',
+      icon: <Boxes size={12} />,
+      content: (
+        <div className="p-4">
+          <h3 className="text-sm font-medium mb-2">Components</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <button className="p-4 border rounded hover:border-primary">
+              Node
+            </button>
+            <button className="p-4 border rounded hover:border-primary">
+              Edge
+            </button>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <WorkspaceShell>
+      <WorkspaceToolbar>
+        <div className="flex items-center gap-2">
+          <h1 className="text-sm font-medium">My Editor</h1>
+        </div>
+      </WorkspaceToolbar>
+
+      <EditorDockLayout ref={layoutRef}>
+        {/* Left Navigator */}
+        <EditorDockPanel
+          id="left-nav"
+          title="Navigator"
+          side="left"
+          defaultSize={280}
+          collapsible
+        >
+          <PanelTabs tabs={navigatorTabs} defaultTabId="items" />
+        </EditorDockPanel>
+
+        {/* Canvas (center) */}
+        <div className="flex-1 bg-editor p-8">
+          <div
+            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary"
+            onClick={() =>
+              setSelection({
+                type: 'entity',
+                entityType: 'my.item',
+                id: 'item-1',
+                meta: { label: 'Item 1' },
+              })
+            }
+          >
+            <p className="text-muted-foreground">Click to select</p>
+          </div>
+        </div>
+
+        {/* Inspector */}
+        <WorkspaceInspector selection={selection}>
+          {isEntity(selection) ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">ID</label>
+                <p className="text-xs text-muted-foreground">{selection.id}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Label</label>
+                <p className="text-xs text-muted-foreground">
+                  {selection.meta?.label as string}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No selection</p>
+          )}
+        </WorkspaceInspector>
+      </EditorDockLayout>
+
+      <WorkspaceStatusBar>
+        <span className="text-xs">Ready</span>
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+**New Features:**
+- `EditorDockLayout` - Container for dockable panels
+- `EditorDockPanel` - Resizable left panel
+- `PanelTabs` - Tab system with icons
+- Navigator with Items and Palette tabs
+
+---
+
+## Step 3: Add Right Inspector Panel
+
+Convert the inspector to a dockable panel with its own tabs.
+
+```tsx
+const inspectorTabs: PanelTabDef[] = [
+  {
+    id: 'properties',
+    label: 'Properties',
+    icon: <Settings size={12} />,
+    content: (
+      <div className="p-4 space-y-4">
+        {isEntity(selection) ? (
+          <>
+            <div>
+              <label className="text-sm font-medium">ID</label>
+              <Input value={selection.id} readOnly />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Label</label>
+              <Input
+                value={(selection.meta?.label as string) || ''}
+                onChange={(e) => updateLabel(selection.id, e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                rows={4}
+                placeholder="Enter description..."
+              />
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">No selection</p>
+        )}
+      </div>
+    ),
+  },
+  {
+    id: 'metadata',
+    label: 'Metadata',
+    icon: <FileText size={12} />,
+    content: (
+      <div className="p-4">
+        <h3 className="text-sm font-medium mb-2">Metadata</h3>
+        {isEntity(selection) ? (
+          <pre className="text-xs bg-muted p-2 rounded">
+            {JSON.stringify(selection.meta, null, 2)}
+          </pre>
+        ) : (
+          <p className="text-sm text-muted-foreground">No selection</p>
+        )}
+      </div>
+    ),
+  },
+];
+
+// Replace WorkspaceInspector with:
+<EditorDockPanel
+  id="right-inspector"
+  title="Inspector"
+  side="right"
+  defaultSize={320}
+  collapsible
+>
+  <PanelTabs tabs={inspectorTabs} defaultTabId="properties" />
+</EditorDockPanel>
+```
+
+---
+
+## Step 4: Add Bottom Output Panel
+
+Add a bottom panel for console, errors, and warnings.
+
+```tsx
+const outputTabs: PanelTabDef[] = [
+  {
+    id: 'console',
+    label: 'Console',
+    icon: <Terminal size={12} />,
+    content: (
+      <div className="p-4 font-mono text-xs space-y-1">
+        <div className="text-muted-foreground">[INFO] Editor initialized</div>
+        <div className="text-muted-foreground">[INFO] Canvas ready</div>
+        <div className="text-blue-500">[DEBUG] Selection changed: {selection.type}</div>
+      </div>
+    ),
+  },
+  {
+    id: 'errors',
+    label: 'Errors',
+    icon: <AlertCircle size={12} />,
+    accentColor: 'var(--status-error)',
+    content: (
+      <div className="p-4">
+        <p className="text-sm text-muted-foreground">No errors</p>
+      </div>
+    ),
+  },
+  {
+    id: 'warnings',
+    label: 'Warnings',
+    icon: <AlertTriangle size={12} />,
+    accentColor: 'var(--status-warning)',
+    content: (
+      <div className="p-4">
+        <p className="text-sm text-muted-foreground">No warnings</p>
+      </div>
+    ),
+  },
+];
+
+// Add after canvas, before closing EditorDockLayout:
+<EditorDockPanel
+  id="bottom-output"
+  title="Output"
+  side="bottom"
+  defaultSize={200}
+  collapsible
+>
+  <PanelTabs tabs={outputTabs} defaultTabId="console" />
+</EditorDockPanel>
+```
+
+---
+
+## Step 5: Panel Visibility Settings
+
+Add settings to control panel visibility.
+
+```tsx
+import { useEditorPanelVisibility } from '@/lib/app-shell/useEditorPanelVisibility';
+
+function MyEditor() {
+  const { isPanelVisible, togglePanel } = useEditorPanelVisibility('my-editor');
+
+  return (
+    <WorkspaceShell>
+      <WorkspaceToolbar>
+        <div className="flex items-center justify-between w-full">
+          <h1 className="text-sm font-medium">My Editor</h1>
+
+          <div className="flex gap-1">
+            <Button
+              variant={isPanelVisible('left-nav') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => togglePanel('left-nav')}
+            >
+              <PanelLeft size={14} />
+              Navigator
+            </Button>
+
+            <Button
+              variant={isPanelVisible('right-inspector') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => togglePanel('right-inspector')}
+            >
+              <PanelRight size={14} />
+              Inspector
+            </Button>
+
+            <Button
+              variant={isPanelVisible('bottom-output') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => togglePanel('bottom-output')}
+            >
+              <PanelBottom size={14} />
+              Output
+            </Button>
+          </div>
+        </div>
+      </WorkspaceToolbar>
+
+      <EditorDockLayout ref={layoutRef}>
+        {isPanelVisible('left-nav') && (
+          <EditorDockPanel id="left-nav" title="Navigator" side="left" defaultSize={280}>
+            <PanelTabs tabs={navigatorTabs} />
+          </EditorDockPanel>
+        )}
+
+        {/* Canvas */}
+        <div className="flex-1 bg-editor p-8">
+          {/* Canvas content */}
+        </div>
+
+        {isPanelVisible('right-inspector') && (
+          <EditorDockPanel id="right-inspector" title="Inspector" side="right" defaultSize={320}>
+            <PanelTabs tabs={inspectorTabs} />
+          </EditorDockPanel>
+        )}
+
+        {isPanelVisible('bottom-output') && (
+          <EditorDockPanel id="bottom-output" title="Output" side="bottom" defaultSize={200}>
+            <PanelTabs tabs={outputTabs} />
+          </EditorDockPanel>
+        )}
+      </EditorDockLayout>
+
+      <WorkspaceStatusBar>
+        <span className="text-xs">Ready</span>
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Complete Working Example
+
+Here's the full editor with all panels:
+
+```tsx
+'use client';
+
+import { useState, useRef } from 'react';
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceStatusBar,
+  EditorDockLayout,
+  EditorDockPanel,
+  PanelTabs,
+  type PanelTabDef,
+  type Selection,
+  type DockLayoutRef,
+  isEntity,
+} from '@forge/shared';
+import { Input } from '@forge/ui/input';
+import { Textarea } from '@forge/ui/textarea';
+import { Button } from '@forge/ui/button';
+import {
+  BookOpen,
+  Boxes,
+  Settings,
+  FileText,
+  Terminal,
+  AlertCircle,
+  AlertTriangle,
+  PanelLeft,
+  PanelRight,
+  PanelBottom,
+} from 'lucide-react';
+import { useEditorPanelVisibility } from '@/lib/app-shell/useEditorPanelVisibility';
+
+export function MyEditor() {
+  const [selection, setSelection] = useState<Selection>({ type: 'none' });
+  const layoutRef = useRef<DockLayoutRef>(null);
+  const { isPanelVisible, togglePanel } = useEditorPanelVisibility('my-editor');
+
+  const navigatorTabs: PanelTabDef[] = [
+    {
+      id: 'items',
+      label: 'Items',
+      icon: <BookOpen size={12} />,
+      content: (
+        <div className="p-4 space-y-2">
+          <h3 className="text-sm font-medium">Items</h3>
+          <div className="space-y-1">
+            {['Item 1', 'Item 2', 'Item 3'].map((name, i) => (
+              <button
+                key={i}
+                onClick={() =>
+                  setSelection({
+                    type: 'entity',
+                    entityType: 'my.item',
+                    id: `item-${i + 1}`,
+                    meta: { label: name },
+                  })
+                }
+                className="w-full text-left text-sm px-2 py-1 rounded hover:bg-accent"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'palette',
+      label: 'Palette',
+      icon: <Boxes size={12} />,
+      content: (
+        <div className="p-4">
+          <h3 className="text-sm font-medium mb-2">Components</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <button className="p-4 border rounded hover:border-primary">
+              Node
+            </button>
+            <button className="p-4 border rounded hover:border-primary">
+              Edge
+            </button>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const inspectorTabs: PanelTabDef[] = [
+    {
+      id: 'properties',
+      label: 'Properties',
+      icon: <Settings size={12} />,
+      content: (
+        <div className="p-4 space-y-4">
+          {isEntity(selection) ? (
+            <>
+              <div>
+                <label className="text-sm font-medium">ID</label>
+                <Input value={selection.id} readOnly />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Label</label>
+                <Input value={(selection.meta?.label as string) || ''} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Description</label>
+                <Textarea rows={4} placeholder="Enter description..." />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">No selection</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'metadata',
+      label: 'Metadata',
+      icon: <FileText size={12} />,
+      content: (
+        <div className="p-4">
+          <h3 className="text-sm font-medium mb-2">Metadata</h3>
+          {isEntity(selection) ? (
+            <pre className="text-xs bg-muted p-2 rounded">
+              {JSON.stringify(selection.meta, null, 2)}
+            </pre>
+          ) : (
+            <p className="text-sm text-muted-foreground">No selection</p>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const outputTabs: PanelTabDef[] = [
+    {
+      id: 'console',
+      label: 'Console',
+      icon: <Terminal size={12} />,
+      content: (
+        <div className="p-4 font-mono text-xs space-y-1">
+          <div className="text-muted-foreground">[INFO] Editor initialized</div>
+          <div className="text-muted-foreground">[INFO] Canvas ready</div>
+          <div className="text-blue-500">
+            [DEBUG] Selection: {selection.type}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'errors',
+      label: 'Errors',
+      icon: <AlertCircle size={12} />,
+      accentColor: 'var(--status-error)',
+      content: (
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground">No errors</p>
+        </div>
+      ),
+    },
+    {
+      id: 'warnings',
+      label: 'Warnings',
+      icon: <AlertTriangle size={12} />,
+      accentColor: 'var(--status-warning)',
+      content: (
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground">No warnings</p>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <WorkspaceShell>
+      <WorkspaceToolbar>
+        <div className="flex items-center justify-between w-full">
+          <h1 className="text-sm font-medium">My Editor</h1>
+
+          <div className="flex gap-1">
+            <Button
+              variant={isPanelVisible('left-nav') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => togglePanel('left-nav')}
+            >
+              <PanelLeft size={14} />
+              Navigator
+            </Button>
+
+            <Button
+              variant={isPanelVisible('right-inspector') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => togglePanel('right-inspector')}
+            >
+              <PanelRight size={14} />
+              Inspector
+            </Button>
+
+            <Button
+              variant={isPanelVisible('bottom-output') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => togglePanel('bottom-output')}
+            >
+              <PanelBottom size={14} />
+              Output
+            </Button>
+          </div>
+        </div>
+      </WorkspaceToolbar>
+
+      <EditorDockLayout ref={layoutRef}>
+        {isPanelVisible('left-nav') && (
+          <EditorDockPanel
+            id="left-nav"
+            title="Navigator"
+            side="left"
+            defaultSize={280}
+            collapsible
+          >
+            <PanelTabs tabs={navigatorTabs} defaultTabId="items" />
+          </EditorDockPanel>
+        )}
+
+        <div className="flex-1 bg-editor p-8">
+          <div
+            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary"
+            onClick={() =>
+              setSelection({
+                type: 'entity',
+                entityType: 'my.item',
+                id: 'item-1',
+                meta: { label: 'Item 1' },
+              })
+            }
+          >
+            <p className="text-muted-foreground">Click to select</p>
+          </div>
+        </div>
+
+        {isPanelVisible('right-inspector') && (
+          <EditorDockPanel
+            id="right-inspector"
+            title="Inspector"
+            side="right"
+            defaultSize={320}
+            collapsible
+          >
+            <PanelTabs tabs={inspectorTabs} defaultTabId="properties" />
+          </EditorDockPanel>
+        )}
+
+        {isPanelVisible('bottom-output') && (
+          <EditorDockPanel
+            id="bottom-output"
+            title="Output"
+            side="bottom"
+            defaultSize={200}
+            collapsible
+          >
+            <PanelTabs tabs={outputTabs} defaultTabId="console" />
+          </EditorDockPanel>
+        )}
+      </EditorDockLayout>
+
+      <WorkspaceStatusBar>
+        <span className="text-xs">Ready</span>
+      </WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Summary
+
+You've built a complete multi-panel editor with:
+
+✅ **Left Navigator** - Items list and palette
+✅ **Right Inspector** - Properties and metadata tabs
+✅ **Bottom Output** - Console, errors, warnings
+✅ **Panel visibility** - Toggle panels on/off
+✅ **Tab system** - Icons and accent colors
+✅ **Selection system** - Type-safe selection handling
+✅ **Resizable panels** - Drag to resize
+
+**Next Steps:**
+- [Tutorial: AI Integration](./ai-integration.mdx)
+- [Component Patterns Guide](../guides/patterns.mdx)
+- [WorkspaceInspector Guide](../components/editor-inspector-complete.mdx)

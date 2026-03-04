@@ -1,0 +1,33 @@
+---
+title: 04 - Runtime and components
+---
+
+# 04 - Runtime and components
+
+API route, DialogueAssistantPanel, tool-ui Plan, Progress Tracker.
+
+## API route
+
+**File:** `apps/studio/app/api/assistant-chat/route.ts`
+
+- Uses `streamText` with OpenRouter (baseURL)
+- Model from `getPersistedModelIdForProvider(req, 'assistantUi')`
+- Tools passed from client; maxSteps for multi-tool turns
+
+## DialogueAssistantPanel
+
+Renders chat UI with contract tools. Mounted in Dialogue editor right panel (Workbench). Uses `useDomainAssistant` and `DomainToolsRenderer`.
+
+## Components
+
+- **Plan card** — tool-ui; preview plan, approve/reject
+- **Progress Tracker** — tool-ui; multi-step progress
+- **Thread** — @assistant-ui/react; messages, composer
+
+**Next:** [05 - Agent system](05-agent-system)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/app/api/assistant-chat/route.ts`, `apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx`
+Related: ai/03-domains-forge-character, architecture/03-model-routing-openrouter
+Do not: Add CopilotKit route; use assistant-chat only
+</Callout>

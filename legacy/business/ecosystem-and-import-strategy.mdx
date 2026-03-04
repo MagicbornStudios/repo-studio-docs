@@ -1,0 +1,44 @@
+---
+title: Ecosystem and import strategy
+created: 2026-02-09
+updated: 2026-02-09
+---
+
+# Ecosystem and import strategy
+
+How we get more games and customers beyond greenfield authoring: GamePlayer runtime, ecosystem adapters, and the "renewed interest" value for creators from other tools.
+
+---
+
+## GamePlayer runtime
+
+We use **Pixi'VN + Json** for demos and hosted builds. The playable runtime loads narrative as JSON (labels, dialogue, jumps, end states) and runs it in the browser. Same runtime for play-in-Studio and play-via-hosted-URL. See [10 - GamePlayer (how we build it)](../architecture/10-gameplayer.mdx).
+
+---
+
+## Ecosystem adapters
+
+We add **adapters** (translators) that convert existing project formats into PixiVN Json so they can run in our GamePlayer and be published as playable builds.
+
+- **Yarn Spinner** (first) — We already have Yarn export/import in MVP; adapter = Yarn script or graph → PixiVN Json.
+- **RenPy, Ink, Twine** (later) — Each has existing communities and many "dead" or stalled projects. Import their projects → our format → Pixi'VN → playable in Studio and on hosted URL.
+
+---
+
+## Why it matters for business
+
+Creators with **dead or stalled projects** in RenPy, Ink, Twine, or Yarn get **renewed interest** by importing into Forge. We **generate assets** (AI), so they don't need to hunt down or recreate art/audio. Outcome: more catalog content, more clones, and acquisition from established VN/IF communities. We can get a lot of games and customers quickly by making it easy to bring existing work into our system.
+
+---
+
+## Customer experience
+
+- **Creator:** Imports (e.g. `.yarn` or RenPy script); we translate to our project + PixiVN Json; they edit in Studio, add or generate assets, publish build or list for clone.
+- **Player:** Unchanged — play in Studio or via hosted link.
+
+---
+
+## References
+
+- [10 - GamePlayer](../architecture/10-gameplayer.mdx) — Runtime, adapters order, and where it lives in the repo.
+- [MVP and first revenue](../product/mvp-and-revenue.mdx) — Hero moments and MVP editors.

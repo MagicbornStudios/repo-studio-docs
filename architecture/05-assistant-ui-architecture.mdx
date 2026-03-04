@@ -1,0 +1,36 @@
+---
+title: 05 - Assistant UI architecture
+---
+
+# 05 - Assistant UI architecture
+
+Assistant UI for chat, threads, tool rendering. No CopilotKit.
+
+## Stack
+
+| Layer | Package | Purpose |
+|-------|---------|---------|
+| Chat UI | @assistant-ui/react | Thread, Message, Composer |
+| Transport | @assistant-ui/react-ai-sdk | AI SDK streamText |
+| Tools | tool-ui | Plan cards, approval, progress |
+| Backend | POST /api/assistant-chat | LangGraph or legacy stream |
+
+## Flow
+
+1. User types in Assistant chat panel
+2. Chat → POST /api/assistant-chat (AI SDK streaming)
+3. Model may call domain tools (`forge_createNode`, `character_create`, etc.)
+4. Tools execute; results render (Plan, Progress Tracker)
+5. Editor applies changes, highlights entities
+
+## Domain contract
+
+Editors use `useDomainAssistant(contract, { enabled })` and `<DomainToolsRenderer contract={contract} />`. One contract per editor; tools map to MCP for external hosts.
+
+**Next:** [06 - Dialogue and Yarn Spinner](06-dialogue-yarn-spinner)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/assistant/`, `packages/assistant-runtime/`, `apps/studio/app/api/assistant-chat/route.ts`
+Related: ai/02-domain-integration, how-to/07-assistant-and-ai
+Do not: Use CopilotKit, useDomainCopilot, useCopilotAction; use Assistant UI only
+</Callout>

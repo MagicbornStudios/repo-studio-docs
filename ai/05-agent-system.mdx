@@ -1,0 +1,30 @@
+---
+title: 05 - Agent system
+---
+
+# 05 - Agent system
+
+BaseAgent, AgentRegistry, AppAgent with domain delegation.
+
+## Flow
+
+AppAgent receives request; delegates by scope (forge → ForgeAgent, character → CharacterAgent). Domain agents execute tools; AppAgent returns result.
+
+## BaseAgent
+
+- `AgentConfig`: id, name, description, instructions, tools, scopes
+- `canHandleScope(scope)`
+- `execute(context)` → AgentResult
+
+## AgentRegistry
+
+- `register(agent)`, `get(id)`, `findForScope(scope)`
+- Used by LangGraph orchestrator when enabled
+
+**Next:** [06 - MCP integration](06-mcp-integration)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/assistant-runtime/src/agents/`
+Related: ai/04-runtime-and-components, ai/06-mcp-integration
+Do not: Add agents without registering; assume single AppAgent for now
+</Callout>

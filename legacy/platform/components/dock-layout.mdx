@@ -1,0 +1,542 @@
+---
+title: DockLayout
+created: 2026-02-11
+updated: 2026-02-11
+icon: "🏗️"
+---
+
+# 🏗️ DockLayout
+
+**Flexible multi-panel layout manager with drag-and-drop, persistence, and viewport support**
+
+DockLayout (EditorDockLayout) is the core layout component built on the dockview library. It manages resizable, draggable panels with automatic persistence, viewport-scoped settings, and declarative slot-based composition.
+
+---
+
+## Usage
+
+```typescript
+import { EditorDockLayout } from '@forge/shared/components/editor';
+
+export function MyEditor() {
+  return (
+    <EditorDockLayout layoutId="my-editor">
+      <EditorDockLayout.Left>
+        <GraphLibrary />
+      </EditorDockLayout.Left>
+
+      <EditorDockLayout.Main>
+        <Canvas />
+      </EditorDockLayout.Main>
+
+      <EditorDockLayout.Right>
+        <Inspector />
+      </EditorDockLayout.Right>
+
+      <EditorDockLayout.Bottom>
+        <AIAssistant />
+      </EditorDockLayout.Bottom>
+    </EditorDockLayout>
+  );
+}
+```
+
+---
+
+## Props
+
+<div className="overflow-x-auto">
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="border-b">
+        <th className="text-left p-2">Prop</th>
+        <th className="text-left p-2">Type</th>
+        <th className="text-left p-2">Default</th>
+        <th className="text-left p-2">Description</th>
+      </tr>
+    </thead>
+    <tbody className="text-muted-foreground">
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">left</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Content for single left panel (legacy prop mode)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">main</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Content for single main panel (legacy prop mode)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">right</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Content for single right panel (legacy prop mode)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">rightInspector</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Inspector tab content (when using dual right panels)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">rightSettings</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Settings tab content (when using dual right panels)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">bottom</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Content for single bottom panel (legacy prop mode)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">leftPanels</td>
+        <td className="p-2 font-mono text-xs">RailPanelDescriptor[]</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Multi-panel left rail (overrides left prop)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">mainPanels</td>
+        <td className="p-2 font-mono text-xs">RailPanelDescriptor[]</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Multi-panel main area (overrides main prop)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">rightPanels</td>
+        <td className="p-2 font-mono text-xs">RailPanelDescriptor[]</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Multi-panel right rail (overrides right/rightInspector/rightSettings)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">bottomPanels</td>
+        <td className="p-2 font-mono text-xs">RailPanelDescriptor[]</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Multi-panel bottom rail (overrides bottom prop)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">layoutId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Unique layout identifier for localStorage persistence</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">viewport</td>
+        <td className="p-2 font-mono text-xs">DockLayoutViewport?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Viewport metadata (viewportId, viewportType, viewportScope)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">leftDefaultSize</td>
+        <td className="p-2 font-mono text-xs">number?</td>
+        <td className="p-2">20</td>
+        <td className="p-2">Left panel default width percentage (0-100)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">leftMinSize</td>
+        <td className="p-2 font-mono text-xs">number?</td>
+        <td className="p-2">10</td>
+        <td className="p-2">Left panel minimum width percentage (0-100)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">rightDefaultSize</td>
+        <td className="p-2 font-mono text-xs">number?</td>
+        <td className="p-2">25</td>
+        <td className="p-2">Right panel default width percentage (0-100)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">rightMinSize</td>
+        <td className="p-2 font-mono text-xs">number?</td>
+        <td className="p-2">10</td>
+        <td className="p-2">Right panel minimum width percentage (0-100)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">bottomDefaultSize</td>
+        <td className="p-2 font-mono text-xs">number?</td>
+        <td className="p-2">25</td>
+        <td className="p-2">Bottom panel default height percentage (0-100)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">bottomMinSize</td>
+        <td className="p-2 font-mono text-xs">number?</td>
+        <td className="p-2">10</td>
+        <td className="p-2">Bottom panel minimum height percentage (0-100)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">layoutJson</td>
+        <td className="p-2 font-mono text-xs">string | null?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Controlled layout JSON (use with onLayoutChange)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">onLayoutChange</td>
+        <td className="p-2 font-mono text-xs">(json: string) => void</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Called when layout changes (controlled mode)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">clearLayout</td>
+        <td className="p-2 font-mono text-xs">() => void</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Called to clear layout (controlled mode)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">onPanelClosed</td>
+        <td className="p-2 font-mono text-xs">(slotId: string) => void</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Called when user closes a panel (click X)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">slots</td>
+        <td className="p-2 font-mono text-xs">DockLayoutSlotConfig?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Custom tab config (title, icon) per slot</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">children</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Slot components (DockLayout.Left, .Main, etc.)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">className</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Additional CSS classes</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+---
+
+## TypeScript Definitions
+
+```typescript
+export interface RailPanelDescriptor {
+  id: string;
+  title: string;
+  icon?: React.ReactNode;
+  content: React.ReactNode;
+}
+
+export interface DockLayoutViewport {
+  viewportId?: string;
+  viewportType?: string;
+  viewportScope?: string;
+}
+
+export interface DockLayoutSlotConfig {
+  title?: string;
+  icon?: React.ReactNode;
+}
+
+export interface DockLayoutRef {
+  resetLayout: () => void;
+}
+```
+
+---
+
+## Slot Components
+
+DockLayout supports declarative composition via slot components:
+
+### Available Slots
+
+| Slot | Component | Purpose |
+|------|-----------|---------|
+| Left | `DockLayout.Left` | Left sidebar panel |
+| Main | `DockLayout.Main` | Central viewport |
+| Right | `DockLayout.Right` | Right sidebar panel |
+| Bottom | `DockLayout.Bottom` | Bottom panel (assistant, console) |
+| Panel | `DockLayout.Panel` | Multi-panel rail descriptor |
+
+### Multi-Panel Rails
+
+Use `DockLayout.Panel` inside slots for tabbed panels:
+
+```typescript
+<EditorDockLayout.Left>
+  <EditorDockLayout.Panel id="graphs" title="Graphs" icon={<BookOpen />}>
+    <GraphList />
+  </EditorDockLayout.Panel>
+  <EditorDockLayout.Panel id="nodes" title="Nodes" icon={<Boxes />}>
+    <NodePalette />
+  </EditorDockLayout.Panel>
+</EditorDockLayout.Left>
+```
+
+---
+
+## Examples
+
+### Basic 2-Pane Layout
+
+```typescript
+export function BasicEditor() {
+  return (
+    <EditorDockLayout layoutId="basic-editor">
+      <EditorDockLayout.Main>
+        <Canvas />
+      </EditorDockLayout.Main>
+
+      <EditorDockLayout.Right>
+        <Inspector />
+      </EditorDockLayout.Right>
+    </EditorDockLayout>
+  );
+}
+```
+
+### 3-Pane with Inspector and Settings
+
+```typescript
+export function EditorWithSettings() {
+  return (
+    <EditorDockLayout
+      layoutId="editor-settings"
+      rightInspector={<PropertyInspector />}
+      rightSettings={<SettingsPanel scope="editor" sections={sections} />}
+    >
+      <EditorDockLayout.Left>
+        <AssetLibrary />
+      </EditorDockLayout.Left>
+
+      <EditorDockLayout.Main>
+        <Viewport />
+      </EditorDockLayout.Main>
+
+      <EditorDockLayout.Bottom>
+        <AIAssistantPanel />
+      </EditorDockLayout.Bottom>
+    </EditorDockLayout>
+  );
+}
+```
+
+### Multi-Panel Rails
+
+```typescript
+export function AdvancedEditor() {
+  const leftPanels: RailPanelDescriptor[] = [
+    { id: 'library', title: 'Library', icon: <BookOpen />, content: <Library /> },
+    { id: 'outline', title: 'Outline', icon: <ListTree />, content: <Outline /> },
+    { id: 'search', title: 'Search', icon: <Search />, content: <SearchPanel /> },
+  ];
+
+  const rightPanels: RailPanelDescriptor[] = [
+    { id: 'inspector', title: 'Inspector', icon: <ScanSearch />, content: <Inspector /> },
+    { id: 'settings', title: 'Settings', icon: <Settings />, content: <SettingsPanel /> },
+    { id: 'history', title: 'History', icon: <History />, content: <HistoryPanel /> },
+  ];
+
+  return (
+    <EditorDockLayout
+      layoutId="advanced-editor"
+      leftPanels={leftPanels}
+      rightPanels={rightPanels}
+      leftDefaultSize={20}
+      rightDefaultSize={30}
+    >
+      <EditorDockLayout.Main>
+        <MainViewport />
+      </EditorDockLayout.Main>
+    </EditorDockLayout>
+  );
+}
+```
+
+### Controlled Layout with Persistence
+
+```typescript
+export function ControlledEditor() {
+  const [layoutJson, setLayoutJson] = useState<string | null>(null);
+
+  // Load from DB on mount
+  useEffect(() => {
+    loadLayoutFromDB().then(setLayoutJson);
+  }, []);
+
+  const handleLayoutChange = (json: string) => {
+    setLayoutJson(json);
+    saveLayoutToDB(json); // Persist to backend
+  };
+
+  const handleClearLayout = () => {
+    setLayoutJson(null);
+    deleteLayoutFromDB();
+  };
+
+  return (
+    <EditorDockLayout
+      layoutId="controlled-editor"
+      layoutJson={layoutJson}
+      onLayoutChange={handleLayoutChange}
+      clearLayout={handleClearLayout}
+    >
+      <EditorDockLayout.Main>
+        <Canvas />
+      </EditorDockLayout.Main>
+    </EditorDockLayout>
+  );
+}
+```
+
+### With Viewport Scoping
+
+```typescript
+export function ViewportEditor() {
+  const viewportId = 'viewport-1';
+
+  return (
+    <EditorDockLayout
+      layoutId="viewport-editor"
+      viewport={{
+        viewportId,
+        viewportType: 'dialogue',
+        viewportScope: 'editor',
+      }}
+    >
+      <EditorDockLayout.Main>
+        <DialogueViewport viewportId={viewportId} />
+      </EditorDockLayout.Main>
+
+      <EditorDockLayout.Right>
+        <ViewportSettings viewportId={viewportId} />
+      </EditorDockLayout.Right>
+    </EditorDockLayout>
+  );
+}
+```
+
+### Dynamic Panel Visibility
+
+```typescript
+export function DynamicPanelEditor() {
+  const [showAssistant, setShowAssistant] = useState(true);
+  const [showInspector, setShowInspector] = useState(true);
+
+  const handlePanelClosed = (slotId: string) => {
+    if (slotId === 'bottom') setShowAssistant(false);
+    if (slotId === 'right') setShowInspector(false);
+  };
+
+  return (
+    <EditorDockLayout
+      layoutId="dynamic-editor"
+      onPanelClosed={handlePanelClosed}
+    >
+      <EditorDockLayout.Main>
+        <Canvas />
+      </EditorDockLayout.Main>
+
+      {showInspector && (
+        <EditorDockLayout.Right>
+          <Inspector />
+        </EditorDockLayout.Right>
+      )}
+
+      {showAssistant && (
+        <EditorDockLayout.Bottom>
+          <Assistant />
+        </EditorDockLayout.Bottom>
+      )}
+    </EditorDockLayout>
+  );
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+- Always provide `layoutId` for persistence across sessions
+- Use slot components (`.Left`, `.Main`) for declarative layouts
+- Set `viewport` when using viewport-scoped settings
+- Use `RailPanelDescriptor[]` for multi-panel rails
+- Handle `onPanelClosed` to sync View menu state
+- Set appropriate `defaultSize` and `minSize` for panels
+- Use controlled mode (`layoutJson` + `onLayoutChange`) for server persistence
+
+### ❌ Don't
+
+- Don't mix props (left, main) and slot children in the same layout
+- Don't use percentage sizes outside 0-100 range
+- Don't forget to provide fallback content when panels are missing
+- Don't hardcode panel widths (use defaultSize percentages)
+- Don't change `layoutId` dynamically (causes layout reset)
+- Don't rely on `layoutJson` without validation (can be corrupted)
+
+---
+
+## Layout Persistence
+
+DockLayout automatically persists layout state:
+
+- **Uncontrolled mode**: Uses `localStorage` with key `dockview-${layoutId}`
+- **Controlled mode**: Use `layoutJson`, `onLayoutChange`, and `clearLayout` props
+
+The layout JSON includes:
+- Panel positions and sizes
+- Tab order within panel groups
+- Active tab selections
+- Collapsed/expanded states
+
+---
+
+## Viewport Integration
+
+Set `viewport` to enable viewport-scoped settings:
+
+```typescript
+<EditorDockLayout
+  viewport={{
+    viewportId: 'viewport-main',
+    viewportType: 'dialogue',
+    viewportScope: 'editor',
+  }}
+>
+  {/* Panels can read data-viewport-id, data-viewport-type, data-viewport-scope */}
+</EditorDockLayout>
+```
+
+Viewport attributes are set on the root `div` for CSS scoping.
+
+---
+
+## Related Components
+
+- [DockPanel](./dock-panel) - Individual panel component
+- [WorkspaceShell](./editor-shell) - Editor container
+- [SettingsPanel](./settings-panel) - Settings UI for panels
+- [PanelTabs](./panel-tabs) - Tab bar component
+
+---
+
+## Source Code
+
+**Location:** `packages/shared/src/shared/components/editor/DockLayout.tsx`
+
+**External Dependencies:**
+- `dockview` - Core dockview library for panel management
+- `zustand` - Slot content state management
+
+**Key Constants:**
+```typescript
+export const RIGHT_INSPECTOR_PANEL_ID = 'right-inspector';
+export const RIGHT_SETTINGS_PANEL_ID = 'right-settings';
+
+const DEFAULT_SIZES = {
+  leftDefault: 20,
+  leftMin: 10,
+  rightDefault: 25,
+  rightMin: 10,
+  bottomDefault: 25,
+  bottomMin: 10,
+};
+```

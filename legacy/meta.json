@@ -1,0 +1,31 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "---Getting started---",
+    "00-docs-index",
+    "how-to",
+    "---Architecture---",
+    "architecture",
+    "---AI and LangGraph---",
+    "ai",
+    "---Design and UI---",
+    "design",
+    "---Product and business---",
+    "product",
+    "business",
+    "roadmap",
+    "---For coding agents---",
+    "18-agent-artifacts-index",
+    "19-coding-agent-strategy",
+    "agent-artifacts",
+    "---Reference---",
+    "10-project-overview",
+    "11-tech-stack",
+    "12-workspace-design",
+    "13-code-organization",
+    "14-adding-domain-actions",
+    "15-ai-workspace-integration",
+    "16-copilotkit-workspace-integration",
+    "17-co-agents-and-multi-agent"
+  ]
+}

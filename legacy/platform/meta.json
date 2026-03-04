@@ -1,0 +1,10 @@
+{
+  "title": "Platform Documentation",
+  "pages": [
+    "README",
+    "components",
+    "tutorials",
+    "guides",
+    "reference"
+  ]
+}

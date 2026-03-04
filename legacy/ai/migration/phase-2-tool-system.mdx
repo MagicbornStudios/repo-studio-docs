@@ -1,0 +1,42 @@
+---
+title: Phase 2 - Tool system
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Phase 2: Tool system (Week 1–2)
+
+---
+
+## Tasks
+
+1. Implement tool registry and execution
+2. Create DomainAssistantContract interface in `packages/shared/src/shared/assistant/`
+3. Build useDomainAssistant hook
+4. Migrate 2–3 simple forge tools (`forge_getGraph`, `forge_createNode`)
+5. Test tool rendering in chat
+
+---
+
+## Coexistence pattern
+
+```typescript
+export function ForgeEditor() {
+  const assistantContract = useForgeAssistantContract(deps);
+  useDomainAssistant(assistantContract, { enabled: USE_ASSISTANT_UI });
+
+  const copilotContract = useForgeContract(deps);
+  useDomainCopilot(copilotContract, { toolsEnabled: !USE_ASSISTANT_UI });
+
+  return <EditorLayout>...</EditorLayout>;
+}
+```
+
+---
+
+## Critical files
+
+**Create:**
+
+- `packages/shared/src/shared/assistant/domain-contract.ts`
+- `packages/shared/src/shared/assistant/use-domain-assistant.ts`

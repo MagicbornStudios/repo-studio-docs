@@ -1,0 +1,72 @@
+---
+title: 09 - Video Editor walkthrough (Twick)
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# 09 - Video Editor walkthrough (Twick)
+
+This guide shows how **Video Editor** embeds Twick Studio inside the editor
+platform, using DockLayout for resizable panels and the same Copilot contract
+shape as other editors.
+
+## Goal
+
+- Render Twick Studio in the main panel.
+- Provide a right panel for tracks and a bottom panel for the timeline.
+- Keep AI tooling consistent with other editors (system contract + highlights).
+
+## 1. Editor shell + toolbar
+
+Video Editor uses the shared editor shell and slots.
+
+```tsx
+// apps/studio/components/editors/VideoEditor.tsx
+return (
+  <WorkspaceShell editorId="video" title="Video" domain="video">
+    <WorkspaceHeader>...</WorkspaceHeader>
+    <WorkspaceToolbar>...</WorkspaceToolbar>
+    <DockLayout ... />
+    <WorkspaceStatusBar>...</WorkspaceStatusBar>
+  </WorkspaceShell>
+);
+```
+
+## 2. DockLayout panels
+
+```tsx
+<DockLayout
+  main={
+    <DockPanel panelId="video-main" scrollable={false}>
+      <TwickStudio ... />
+    </DockPanel>
+  }
+  right={
+    <DockPanel panelId="video-right" title="Tracks">
+      <TwickTrackList ... />
+    </DockPanel>
+  }
+  bottom={
+    <DockPanel panelId="video-bottom" title="Timeline" scrollable={false}>
+      <TwickTimeline ... />
+    </DockPanel>
+  }
+  viewport={{ editorId: 'video-timeline', editorType: 'timeline' }}
+  layoutId="video-editor"
+/>
+```
+
+Expected behavior:
+- Panels are resizable and persist layout.
+- Video editor remains in the main viewport.
+
+## 3. Domain contract
+
+Video Editor uses `useVideoContract` and `useDomainCopilot` to register
+context/actions when the editor is active.
+
+Key file: `apps/studio/lib/domains/video/copilot.ts`.
+
+---
+
+**Next:** Back to [06 - Dialogue Editor walkthrough](06-forge-workspace-walkthrough.mdx)

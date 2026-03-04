@@ -1,0 +1,227 @@
+---
+title: Component library and private registry
+created: 2026-02-05
+updated: 2026-02-10
+---
+
+# Component library + private registry (Verdaccio)
+
+This repo is both **the Studio app** and the **source of publishable building blocks** for other teams. We publish only **foundation packages** (UI, editor shell, Copilot utilities). Domain packages stay private.
+
+---
+
+## What we publish (public surface)
+
+### `@forge/ui`
+- Shadcn/Radix atoms and form primitives.
+- No app or system (domain) dependencies.
+
+### `@forge/shared`
+- Editor shell, DockLayout primitives, and editor scaffolding.
+- WorkspaceApp + AppProviders for app-shell structure and provider wiring.
+- Copilot helpers (`useDomainCopilot`, action config types, generative UI).
+- App/editor/viewport contracts.
+- Assistant UI and tool UI components for Strategy editor.
+
+### `@forge/agent-engine`
+- Generic workflow runtime (steps + events + SSE helpers).
+- Public and system-agnostic; system workflows live in app/domain packages.
+
+### `@forge/dev-kit`
+- Convenience meta-package that re-exports `@forge/shared` and `@forge/agent-engine`.
+- UI atoms are available via `@forge/ui` (or the `ui` namespace export from dev-kit).
+
+### Not published (kept internal)
+- `@forge/domain-*` (system logic and app-specific UI).
+- `@forge/types` (Payload-generated types tied to this repo).
+
+---
+
+## Shadcn registries and components.json
+
+We have three `components.json` files (no config at repo root):
+
+- **packages/ui** - shared atoms and **shared registries**; components here are published as `@forge/ui`. Shared registries: `@lucide-animated`, `@billingsdk`.
+- **apps/studio** - Studio-only; uses `@forge/ui` for base UI; add app-only registries here if needed.
+- **apps/platform** - Platform-only customer app; has its own app-level registries and component tree.
+
+To add a new shared registry or install components from a registry, see [How-to 15 - Shadcn registries and UI components](../how-to/15-shadcn-registries-and-components.mdx).
+
+---
+
+## Package layout and build outputs
+
+Published packages are compiled to `dist/` and export:
+
+- `dist/index.esm.js` (ESM)
+- `dist/index.cjs.js` (CJS)
+- `dist/index.d.ts` (types)
+
+Each package has:
+
+- `exports` map for ESM/CJS/types
+- `publishConfig.registry` set to Verdaccio
+- `build` script using `tsup`
+
+---
+
+## Local registry: Verdaccio
+
+### Start Verdaccio
+
+```bash
+pnpm registry:start
+# or: verdaccio --config ./verdaccio.yaml
+```
+
+Verdaccio runs at: `http://localhost:4873`
+
+For a step-by-step how-to (launch, publish, consume from another repo), see [How-to 25 - Verdaccio and local registry](../how-to/25-verdaccio-local-registry.mdx).
+
+### Registry scope
+
+Repo root `.npmrc` is scoped:
+
+```ini
+@forge:registry=http://localhost:4873
+```
+
+This ensures only `@forge/*` packages go to the local registry.
+
+### Verdaccio config (repo-local)
+
+We keep a lightweight config at `verdaccio.yaml`:
+
+- Storage in `./verdaccio/storage`
+- Publishes allowed for local dev (login still required by npm CLI for scoped publishes)
+- Proxies public packages from npmjs
+
+---
+
+## Publish flow (local)
+
+From repo root:
+
+```bash
+pnpm registry:forge:build
+```
+
+Then publish (one time or after changes):
+
+```bash
+pnpm registry:forge:publish:local
+```
+
+> **Login is recommended for publish** (npm expects credentials for scoped packages). Use legacy auth:
+>
+> ```bash
+> npm adduser --registry http://localhost:4873 --auth-type=legacy
+> ```
+>
+> Non-interactive login:
+>
+> ```bash
+> pnpm dlx npm-cli-login -u forge -p forge -e forge@local.dev -r http://localhost:4873
+> ```
+>
+> If you hit `E409 Conflict`, the username already exists in `verdaccio/storage/htpasswd`. Either run `npm login --registry http://localhost:4873 --auth-type=legacy` or delete that file and re-add the user (see [How-to 25](../how-to/25-verdaccio-local-registry.mdx)).
+
+---
+
+## Consume from another repo
+
+In the consumer repo root:
+
+`.npmrc`
+```ini
+@forge:registry=http://localhost:4873
+```
+
+`package.json`
+```json
+{
+  "dependencies": {
+    "@forge/dev-kit": "^0.1.0"
+  }
+}
+```
+
+Install:
+
+```bash
+pnpm install
+```
+
+Usage:
+
+```ts
+import { WorkspaceShell, DockLayout } from '@forge/dev-kit';
+import { Button } from '@forge/ui';
+import { ForgeCopilotProvider, createForgeCopilotRuntime } from '@forge/dev-kit';
+```
+
+For DockLayout/editor chrome styles, import once in your CSS: `@import '@forge/dev-kit/styles/editor'` (or `@forge/shared/styles/editor`). Do not import dockview directly.
+
+### Local consumer example
+
+This repo includes a minimal consumer app at `examples/consumer/` that demonstrates:
+
+- WorkspaceApp layout
+- AppProviders + Copilot sidebar
+- CodebaseAgentStrategyEditor (assistant-ui + tool-ui)
+- `/api/copilotkit` using `createForgeCopilotRuntime`
+- `/api/assistant-chat` for the strategy editor
+
+---
+
+## AI out-of-the-box (OpenRouter)
+
+To use the Copilot helpers, consumers must provide:
+
+- **OpenRouter API key** (e.g. `OPENROUTER_API_KEY`) in their app runtime.
+- A CopilotKit runtime route or equivalent backend that calls OpenRouter.
+
+The contract is the same as this repo:
+
+1. Provide a CopilotKit provider (app shell).
+2. Register **system contracts** via `useDomainCopilot()` in each editor.
+3. Provide app-level actions using helpers like `createAppAction()`.
+
+### Next.js runtime wrapper
+
+`@forge/shared` exports a **Next.js-only** runtime wrapper and provider:
+
+- `createForgeCopilotRuntime(...)` - returns a `POST` handler for `/api/copilotkit`.
+- `ForgeCopilotProvider` - wraps `CopilotKit` + `CopilotSidebar` with minimal config props.
+
+This keeps adoption fast for Next apps without forcing a custom runtime.
+
+> **Studio note:** The Studio app keeps a custom `/api/copilotkit` route for model routing and fallbacks. The wrapper is meant for consumers who want the fastest integration path.
+
+---
+
+## Action helper prefixes (whitelabeled)
+
+We expose helpers to keep action naming consistent:
+
+- `createAppAction()` -> prefixes `app_`
+- `createDomainAction(domain)` -> prefixes `<domain>_` (system prefix)
+
+These live in `@forge/shared` and are exported alongside Copilot contracts.
+
+---
+
+## Versioning and compatibility
+
+- Start at `0.1.x` while the public surface is still settling.
+- Keep action config shapes backward compatible.
+- Avoid breaking editor shell props without a major bump.
+
+---
+
+## Agent guidance
+
+- **Only publish foundation packages** (`@forge/ui`, `@forge/shared`, `@forge/agent-engine`, `@forge/dev-kit`).
+- Keep `domain-*` private (system packages).
+- Avoid exporting app-specific code from shared.
+- Update this doc when the public surface or registry strategy changes.

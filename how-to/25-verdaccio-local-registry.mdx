@@ -1,0 +1,97 @@
+---
+title: 25 - Verdaccio and local registry
+---
+
+# 25 - Verdaccio and local registry
+
+Local npm registry for publishing `@forge/*` (and optionally vendored packages like `@forge/gsd`) to consumer repos without public npm.
+
+## Quick launch
+
+From repo root:
+
+```bash
+pnpm install
+pnpm registry:start
+```
+
+Verdaccio runs at **http://localhost:4873**. Config: [verdaccio.yaml](../../verdaccio.yaml).
+
+## Login (for publish)
+
+```bash
+npm adduser --registry http://localhost:4873 --auth-type=legacy
+```
+
+Non-interactive:
+
+```bash
+pnpm dlx npm-cli-login -u forge -p forge -e forge@local.dev -r http://localhost:4873
+```
+
+**E409 Conflict:** Username already in `verdaccio/storage/htpasswd`. Fix: `npm login --registry http://localhost:4873 --auth-type=legacy` or reset htpasswd (see doc).
+
+## Reset registry user
+
+```bash
+rm -f verdaccio/storage/htpasswd
+pnpm registry:start
+npm adduser --registry http://localhost:4873 --auth-type=legacy
+```
+
+## Publish flow
+
+1. Start Verdaccio
+2. Build: `pnpm registry:forge:build`
+3. Publish: `pnpm registry:forge:publish:local`
+
+## Consume from another repo
+
+1. **`.npmrc`** in consumer root:
+
+```ini
+@forge:registry=http://localhost:4873
+```
+
+2. **`package.json`**: add `"@forge/dev-kit": "^0.1.0"`
+3. **Install:** Verdaccio running, then `pnpm install`
+4. Import: `WorkspaceShell`, `DockLayout`, etc. from `@forge/dev-kit`
+
+## Consuming the Forge Loop (GSD + multi-loop)
+
+Planning and phase execution use **@forge/gsd** (GSD fork) from the local registry only. Install GSD for Codex, then use Codex with `$gsd-*` skills for phases (e.g. `$gsd-new-project`, `$gsd-plan-phase 1`). Set `FORGE_LOOP_ID` only when targeting a non-default loop (unset → default, `.planning/`).
+
+### 1. `.npmrc`
+
+In consumer repo root:
+
+```ini
+@forge:registry=http://localhost:4873
+```
+
+### 2. Install @forge/gsd and run installer
+
+```bash
+pnpm add -D @forge/gsd --registry http://localhost:4873
+pnpm exec get-shit-done-cc --codex --local
+```
+
+Or from forge-agent: run `pnpm gsd:install` (uses vendored GSD with Codex-only). In another repo, install `@forge/gsd` from Verdaccio and run its bin with `--codex --local` (and set `FORGE_GSD_CODEX_ONLY=1` for Codex-only).
+
+### 3. Optional: forge-loop and Repo Studio
+
+For `doctor`, `progress`, and `sync-legacy` (and multi-loop UI), add `@forge/forge-loop` and optionally `@forge/forge-env`, `@forge/repo-studio` from the same registry. Phase execution stays in Codex via GSD skills.
+
+### 4. Publisher: GSD and loop packages
+
+- **GSD:** From forge-agent root: `pnpm vendor:gsd:build` then `pnpm vendor:gsd:publish:local` to publish `@forge/gsd` to Verdaccio.
+- **Other @forge packages:** `pnpm registry:forge:publish:local` or `pnpm registry:forge:loop:publish` for forge-loop, forge-env, repo-studio.
+- **Consumer:** `pnpm update @forge/gsd @forge/forge-loop @forge/repo-studio` (or bump versions and `pnpm install`).
+
+**Next:** [26 - Styling debugging with Cursor](26-styling-debugging-with-cursor)
+
+<Callout variant="note" title="For coding agents">
+File refs: `verdaccio.yaml`, package.json scripts `registry:start`, `registry:forge:build`, `registry:forge:publish:local`, `registry:forge:loop:publish`
+Related: how-to/24-vendoring-third-party-code, how-to/05-building-an-editor, packages/forge-loop/README.md
+Do not: Publish to npm before local testing; E409 fix documented above
+</Callout>

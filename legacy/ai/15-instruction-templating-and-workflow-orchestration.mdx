@@ -1,0 +1,725 @@
+---
+title: Instruction Templating & Workflow Orchestration
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Instruction Templating & Workflow Orchestration
+
+**Problem:** Hardcoded instruction strings are brittle when types change. As workflows get complex, we need scalable patterns.
+
+**Goal:** Type-safe, auto-generated instructions + pluggable orchestration for complex multi-step workflows.
+
+---
+
+## Table of Contents
+
+1. [Current Issues](#current-issues)
+2. [Type-Driven Instruction Generation](#type-driven-instruction-generation)
+3. [Workflow Orchestration Options](#workflow-orchestration-options)
+4. [Recommended Architecture](#recommended-architecture)
+5. [Implementation Plan](#implementation-plan)
+
+---
+
+## Current Issues
+
+### Issue 1: Hardcoded Instructions
+
+**Current code:**
+```typescript
+// packages/domain-forge/src/assistant/index.ts
+getInstructions: () =>
+  'You are helping edit a graph (nodes and edges). This graph represents dialogue/narrative. ' +
+  'Available node types: CHARACTER, PLAYER, CONDITIONAL. ' +  // ❌ Hardcoded, out of sync if types change
+  'Use forge_* tools to modify the graph. Call forge_getGraph before creating edges to get node IDs. ' +
+  'For planning, use forge_createPlan to propose changes; the user can Apply or Request Changes. ' +
+  'When the user asks to create dialogue, use forge_createNode and forge_createEdge together.',
+```
+
+**Problems:**
+1. **Type drift:** If `FORGE_NODE_TYPE` adds `BRANCH` or removes `CONDITIONAL`, instructions don't update
+2. **Tool drift:** If we rename `forge_createNode` → `forge_addNode`, instructions break
+3. **Copy-paste errors:** Every domain has similar boilerplate
+4. **No validation:** Typos in tool names go unnoticed
+
+### Issue 2: No Workflow Orchestration
+
+**Current:** Every complex workflow is ad-hoc:
+- Plan → Execute → Review → Commit (custom implementation)
+- Multi-agent delegation (not implemented)
+- Sequential tool calls (manual in instructions)
+
+**Need:** Standardized patterns for:
+- Multi-step workflows with checkpoints
+- Conditional logic (if X fails, do Y)
+- Parallel execution (create 5 characters at once)
+- State persistence between steps
+
+---
+
+## Type-Driven Instruction Generation
+
+### Solution: Auto-Generate from Types + Tool Registry
+
+**Pattern:**
+```typescript
+// packages/shared/src/shared/assistant/instruction-builder.ts
+
+import type { DomainTool } from './domain-contract';
+
+interface InstructionTemplate {
+  domain: string;
+  purpose: string;
+  entityTypes: Record<string, string[]>;  // e.g., { nodeType: ['CHARACTER', 'PLAYER'] }
+  workflows: WorkflowPattern[];
+  constraints: string[];
+}
+
+class InstructionBuilder {
+  private template: InstructionTemplate;
+
+  constructor(template: InstructionTemplate) {
+    this.template = template;
+  }
+
+  // Generate instructions from types + tools
+  build(tools: DomainTool[]): string {
+    const sections = [
+      this.buildPurpose(),
+      this.buildEntityTypes(),
+      this.buildToolUsage(tools),
+      this.buildWorkflows(),
+      this.buildConstraints(),
+    ];
+
+    return sections.filter(Boolean).join('\n\n');
+  }
+
+  private buildPurpose(): string {
+    return `You are helping with ${this.template.purpose}.`;
+  }
+
+  private buildEntityTypes(): string {
+    const lines = Object.entries(this.template.entityTypes).map(
+      ([category, values]) =>
+        `- ${category}: ${values.join(', ')}`
+    );
+    return `Available entity types:\n${lines.join('\n')}`;
+  }
+
+  private buildToolUsage(tools: DomainTool[]): string {
+    const toolNames = tools.map(t => t.name).join(', ');
+    return `Use these tools: ${toolNames}`;
+  }
+
+  private buildWorkflows(): string {
+    return this.template.workflows
+      .map(w => `- ${w.name}: ${w.steps.join(' → ')}`)
+      .join('\n');
+  }
+
+  private buildConstraints(): string {
+    return this.template.constraints.join('\n');
+  }
+}
+```
+
+**Usage in Forge domain:**
+```typescript
+// packages/domain-forge/src/assistant/instruction-template.ts
+
+import { InstructionBuilder } from '@forge/shared/assistant/instruction-builder';
+import { FORGE_NODE_TYPE } from '@forge/types/graph';
+
+export const FORGE_INSTRUCTION_TEMPLATE = {
+  domain: 'forge',
+  purpose: 'editing a dialogue graph (nodes and edges representing narrative)',
+
+  // Auto-sync with types
+  entityTypes: {
+    nodeType: Object.values(FORGE_NODE_TYPE),  // ✅ Auto-updates when types change
+  },
+
+  workflows: [
+    {
+      name: 'Create connected dialogue',
+      steps: ['forge_createNode', 'forge_createEdge'],
+    },
+    {
+      name: 'Plan complex changes',
+      steps: ['forge_createPlan', 'user reviews', 'forge_executePlan'],
+    },
+  ],
+
+  constraints: [
+    'Call forge_getGraph before creating edges to get node IDs',
+    'For planning, use forge_createPlan to propose changes; the user can Apply or Request Changes',
+  ],
+};
+
+// In useForgeAssistantContract
+getInstructions: () => {
+  const builder = new InstructionBuilder(FORGE_INSTRUCTION_TEMPLATE);
+  return builder.build(createForgeAssistantTools(deps));  // ✅ Type-safe, auto-synced
+}
+```
+
+**Benefits:**
+1. ✅ **Type-safe:** Changes to `FORGE_NODE_TYPE` automatically update instructions
+2. ✅ **DRY:** Shared template structure across all domains
+3. ✅ **Validated:** Tool names pulled from actual tool registry
+4. ✅ **Maintainable:** Update in one place
+
+---
+
+## Workflow Orchestration Options
+
+### Option 1: LangGraph (LangChain)
+
+**What it is:** Graph-based workflow orchestration (state machine)
+
+**Pros:**
+- Mature ecosystem
+- Built-in checkpoints, memory, human-in-the-loop
+- Good TypeScript support
+- Streaming built-in
+
+**Cons:**
+- Heavy dependency (LangChain ecosystem)
+- Learning curve for graph-based thinking
+- Might be overkill for simple workflows
+
+**Example:**
+```typescript
+import { StateGraph } from '@langchain/langgraph';
+
+const workflow = new StateGraph({
+  channels: {
+    graph: null,
+    plan: null,
+    userApproved: false,
+  },
+});
+
+workflow.addNode('createPlan', async (state) => {
+  const plan = await createPlan(state.goal);
+  return { plan };
+});
+
+workflow.addNode('getUserApproval', async (state) => {
+  // Show PlanReviewCard, wait for user
+  const approved = await waitForUserApproval(state.plan);
+  return { userApproved: approved };
+});
+
+workflow.addNode('executePlan', async (state) => {
+  if (state.userApproved) {
+    await executePlan(state.plan);
+  }
+  return state;
+});
+
+workflow.addEdge('createPlan', 'getUserApproval');
+workflow.addConditionalEdges('getUserApproval', (state) =>
+  state.userApproved ? 'executePlan' : 'END'
+);
+```
+
+**Where it fits:**
+- **Location:** `packages/assistant-runtime/src/workflows/`
+- **Integration:** Replace ad-hoc plan workflow with LangGraph state machine
+- **Scope:** Complex multi-step, conditional workflows
+
+### Option 2: AI SDK Workflows (Vercel)
+
+**What it is:** Lightweight workflow abstraction built on AI SDK
+
+**Pros:**
+- Minimal, fits with existing AI SDK usage
+- Good for simple sequential workflows
+- TypeScript-first
+
+**Cons:**
+- Less mature than LangGraph
+- Limited conditional logic
+- No built-in persistence
+
+**Example:**
+```typescript
+import { createWorkflow } from 'ai/workflows';
+
+const planReviewWorkflow = createWorkflow({
+  steps: [
+    {
+      id: 'create-plan',
+      execute: async ({ goal }) => {
+        const plan = await createPlan(goal);
+        return { plan };
+      },
+    },
+    {
+      id: 'review-plan',
+      execute: async ({ plan }) => {
+        const approved = await showPlanReviewUI(plan);
+        return { approved };
+      },
+    },
+    {
+      id: 'execute-plan',
+      condition: ({ approved }) => approved,
+      execute: async ({ plan }) => {
+        await executePlan(plan);
+        return { success: true };
+      },
+    },
+  ],
+});
+```
+
+**Where it fits:**
+- **Location:** `packages/assistant-runtime/src/workflows/`
+- **Integration:** Minimal change to existing code
+- **Scope:** Simple sequential workflows
+
+### Option 3: Custom Workflow Engine (Current + Enhanced)
+
+**What it is:** Your existing `packages/agent-engine` with improvements
+
+**Pros:**
+- Full control
+- No external dependencies
+- Already integrated
+- Lightweight
+
+**Cons:**
+- Maintain ourselves
+- Limited features vs LangGraph
+
+**Current implementation:**
+```typescript
+// packages/agent-engine/src/workflow/executor.ts (simplified)
+export async function executeWorkflow(steps: WorkflowStep[]) {
+  for (const step of steps) {
+    await step.execute();
+  }
+}
+```
+
+**Enhanced version:**
+```typescript
+// packages/assistant-runtime/src/workflows/workflow-engine.ts
+
+interface WorkflowStep {
+  id: string;
+  execute: (context: WorkflowContext) => Promise<WorkflowStepResult>;
+  onError?: (error: Error) => 'retry' | 'skip' | 'abort';
+  condition?: (context: WorkflowContext) => boolean;
+}
+
+interface WorkflowContext {
+  state: Record<string, unknown>;
+  emit: (event: WorkflowEvent) => void;
+}
+
+class WorkflowEngine {
+  async execute(steps: WorkflowStep[], initialState = {}) {
+    const context: WorkflowContext = {
+      state: initialState,
+      emit: (event) => this.handleEvent(event),
+    };
+
+    for (const step of steps) {
+      // Check condition
+      if (step.condition && !step.condition(context)) {
+        continue;
+      }
+
+      // Execute step
+      try {
+        const result = await step.execute(context);
+        context.state = { ...context.state, ...result.state };
+      } catch (error) {
+        const action = step.onError?.(error) ?? 'abort';
+        if (action === 'abort') throw error;
+        if (action === 'retry') {
+          // Retry logic
+        }
+      }
+    }
+
+    return context.state;
+  }
+}
+```
+
+**Where it fits:**
+- **Location:** Enhance `packages/agent-engine/`
+- **Integration:** Minimal disruption
+- **Scope:** All workflows
+
+### Option 4: No Framework (Vanilla Async Functions)
+
+**What it is:** Plain TypeScript async functions with patterns
+
+**Pros:**
+- Zero dependencies
+- Maximum flexibility
+- Easy to understand
+
+**Cons:**
+- Reinvent patterns
+- No standardization
+
+**Example:**
+```typescript
+// packages/domain-forge/src/assistant/workflows.ts
+
+export async function planReviewCommitWorkflow(goal: string, deps: WorkflowDeps) {
+  // Step 1: Create plan
+  const plan = await createPlan(goal);
+
+  // Step 2: User review
+  const approved = await waitForUserApproval(plan);
+  if (!approved) {
+    return { success: false, reason: 'User rejected plan' };
+  }
+
+  // Step 3: Execute
+  await executePlan(plan);
+
+  // Step 4: Commit
+  await commitGraph();
+
+  return { success: true };
+}
+```
+
+**Where it fits:**
+- **Location:** Domain-specific workflow files
+- **Integration:** Current pattern
+- **Scope:** Simple workflows
+
+---
+
+## Recommended Architecture
+
+### For Forge Studio (2026)
+
+**Hybrid approach:**
+
+1. **Instruction Generation:** Type-driven templates (custom)
+2. **Simple Workflows:** Vanilla async functions
+3. **Complex Workflows:** LangGraph (when needed)
+
+**Rationale:**
+
+| Use Case | Tool | Why |
+|----------|------|-----|
+| **Instruction generation** | Custom InstructionBuilder | Lightweight, type-safe, fits existing patterns |
+| **Simple workflows** (plan-review-execute) | Vanilla async | No overhead, easy to debug |
+| **Complex workflows** (multi-agent, conditional) | LangGraph | Mature, handles complexity well |
+| **Future AI agents** | LangGraph + AI SDK | Industry standard for agentic workflows |
+
+### Where LangGraph Fits
+
+**Location in ecosystem:**
+```
+packages/
+├── assistant-runtime/
+│   ├── workflows/
+│   │   ├── langgraph/           # NEW: LangGraph workflows
+│   │   │   ├── graph-builder.ts
+│   │   │   ├── checkpoints.ts
+│   │   │   └── state.ts
+│   │   ├── simple/              # Vanilla async workflows
+│   │   │   └── plan-review.ts
+│   │   └── index.ts
+│   └── ...
+```
+
+**When to use LangGraph:**
+- Multi-agent orchestration (planner → writer → implementer → reviewer)
+- Complex conditional logic (if X fails, try Y, else Z)
+- Workflows requiring checkpoints (resume from failure)
+- Human-in-the-loop with state persistence
+
+**When to use vanilla:**
+- Linear workflows (step 1 → 2 → 3)
+- Simple conditions (if approved, execute)
+- Domain-specific patterns (forge-specific)
+
+---
+
+## Implementation Plan
+
+### Phase 1: Instruction Templating (Week 1)
+
+**Goal:** Remove hardcoded instructions
+
+**Tasks:**
+1. Create `InstructionBuilder` class
+2. Define `FORGE_INSTRUCTION_TEMPLATE` from types
+3. Update `useForgeAssistantContract.getInstructions()`
+4. Repeat for Character domain
+5. Document pattern in best practices
+
+**Files to create/modify:**
+- `packages/shared/src/shared/assistant/instruction-builder.ts` (new)
+- `packages/domain-forge/src/assistant/instruction-template.ts` (new)
+- `packages/domain-forge/src/assistant/index.ts` (modify)
+
+**Validation:**
+- Change `FORGE_NODE_TYPE` → instructions update automatically
+- Rename a tool → build error (type-safe)
+
+### Phase 2: Simple Workflow Standardization (Week 2)
+
+**Goal:** Consistent pattern for plan-review-execute
+
+**Tasks:**
+1. Extract plan workflow to `packages/assistant-runtime/src/workflows/simple/`
+2. Create reusable `createPlanReviewWorkflow()` factory
+3. Use in Forge, Character domains
+
+**Files:**
+- `packages/assistant-runtime/src/workflows/simple/plan-review.ts` (new)
+- Update domain tool implementations
+
+**Validation:**
+- Both Forge and Character use same workflow pattern
+- Easy to add new domains
+
+### Phase 3: LangGraph Integration (Week 3-4)
+
+**Goal:** Support for complex workflows
+
+**Tasks:**
+1. Add `@langchain/langgraph` dependency
+2. Create LangGraph wrapper in `packages/assistant-runtime/src/workflows/langgraph/`
+3. Implement multi-agent workflow (planner → writer → implementer)
+4. Build checkpoint persistence (resume workflows)
+
+**Files:**
+- `packages/assistant-runtime/package.json` (add dep)
+- `packages/assistant-runtime/src/workflows/langgraph/graph-builder.ts` (new)
+- `packages/assistant-runtime/src/workflows/langgraph/multi-agent.ts` (new)
+
+**Validation:**
+- Multi-agent quest creation workflow works end-to-end
+- Can resume workflow after user closes browser
+
+### Phase 4: Documentation & Best Practices (Week 4)
+
+**Goal:** Team can extend easily
+
+**Tasks:**
+1. Document instruction template pattern
+2. Create workflow decision tree (when to use what)
+3. Example: Add new domain with templates + workflows
+4. Update AI docs
+
+**Files:**
+- Update `docs/ai/08-best-practices.mdx`
+- Create `docs/ai/16-workflow-patterns.mdx`
+- Add examples to `docs/how-to/08-adding-ai-to-workspaces.md`
+
+---
+
+## Code Examples
+
+### Example 1: Type-Safe Instructions
+
+**Before (brittle):**
+```typescript
+getInstructions: () =>
+  'Available node types: CHARACTER, PLAYER, CONDITIONAL. ' +  // ❌ Hardcoded
+  'Use forge_createNode to add nodes.'  // ❌ Tool name hardcoded
+```
+
+**After (type-safe):**
+```typescript
+import { InstructionBuilder } from '@forge/shared/assistant/instruction-builder';
+import { FORGE_INSTRUCTION_TEMPLATE } from './instruction-template';
+
+getInstructions: () => {
+  const tools = createForgeAssistantTools(deps);
+  const builder = new InstructionBuilder(FORGE_INSTRUCTION_TEMPLATE);
+  return builder.build(tools);  // ✅ Auto-generated from types
+}
+```
+
+**Generated output:**
+```
+You are helping with editing a dialogue graph (nodes and edges representing narrative).
+
+Available entity types:
+- nodeType: CHARACTER, PLAYER, CONDITIONAL
+
+Use these tools: forge_getGraph, forge_createNode, forge_updateNode, forge_deleteNode, forge_createEdge, forge_createPlan
+
+Workflows:
+- Create connected dialogue: forge_createNode → forge_createEdge
+- Plan complex changes: forge_createPlan → user reviews → forge_executePlan
+
+Call forge_getGraph before creating edges to get node IDs
+For planning, use forge_createPlan to propose changes; the user can Apply or Request Changes
+```
+
+### Example 2: LangGraph Multi-Agent Workflow
+
+**Use case:** "Create a merchant quest line"
+
+```typescript
+// packages/assistant-runtime/src/workflows/langgraph/multi-agent-quest.ts
+
+import { StateGraph, END } from '@langchain/langgraph';
+
+interface QuestState {
+  goal: string;
+  questStructure?: QuestStructure;
+  dialogue?: DialogueNode[];
+  graphNodes?: ForgeNode[];
+  approved: boolean;
+}
+
+export function createMultiAgentQuestWorkflow() {
+  const workflow = new StateGraph<QuestState>({
+    channels: {
+      goal: null,
+      questStructure: null,
+      dialogue: null,
+      graphNodes: null,
+      approved: false,
+    },
+  });
+
+  // Step 1: Planner agent creates quest structure
+  workflow.addNode('plan', async (state) => {
+    const planner = selectModel('deepseek/deepseek-reasoner');  // Reasoning model
+    const structure = await planner.createQuestStructure(state.goal);
+    return { questStructure: structure };
+  });
+
+  // Step 2: Writer agent creates dialogue
+  workflow.addNode('write', async (state) => {
+    const writer = selectModel('anthropic/claude-3.5-sonnet');  // Creative model
+    const dialogue = await writer.generateDialogue(state.questStructure);
+    return { dialogue };
+  });
+
+  // Step 3: Implementer agent builds graph
+  workflow.addNode('implement', async (state) => {
+    const implementer = selectModel('openai/gpt-4o-mini');  // Fast, cheap
+    const nodes = await implementer.createGraphNodes(state.dialogue);
+    return { graphNodes: nodes };
+  });
+
+  // Step 4: User review
+  workflow.addNode('review', async (state) => {
+    const approved = await showQuestReviewUI(state);
+    return { approved };
+  });
+
+  // Step 5: Commit
+  workflow.addNode('commit', async (state) => {
+    await commitToGraph(state.graphNodes);
+    return state;
+  });
+
+  // Define flow
+  workflow.addEdge('plan', 'write');
+  workflow.addEdge('write', 'implement');
+  workflow.addEdge('implement', 'review');
+  workflow.addConditionalEdges('review', (state) =>
+    state.approved ? 'commit' : END
+  );
+
+  return workflow.compile();
+}
+
+// Usage
+const workflow = createMultiAgentQuestWorkflow();
+const result = await workflow.invoke({ goal: 'Create a merchant quest line' });
+```
+
+**Cost comparison:**
+- **Single Sonnet agent:** $0.15
+- **Multi-agent (planner + writer + implementer):** $0.02 (7.5x cheaper)
+
+---
+
+## Alternatives to LangGraph
+
+### 1. **LangChain (full framework)**
+
+**When:** You want the entire ecosystem (chains, agents, memory, etc.)
+
+**Downside:** Heavy, lots to learn
+
+### 2. **Temporal.io**
+
+**When:** You need distributed, durable workflows (microservices scale)
+
+**Downside:** Infrastructure overhead, overkill for client-side workflows
+
+### 3. **XState (state machines)**
+
+**When:** You have complex UI state + workflow state
+
+**Downside:** Not AI-specific, different mental model
+
+### 4. **AI SDK Agents (Vercel)**
+
+**When:** You want minimal abstraction on top of AI SDK
+
+**Downside:** Less mature than LangGraph
+
+### 5. **Roll your own**
+
+**When:** Workflows are simple and domain-specific
+
+**Downside:** Reinventing patterns
+
+---
+
+## Decision Matrix
+
+| Criteria | LangGraph | AI SDK Workflows | Custom Engine | Vanilla |
+|----------|-----------|------------------|---------------|---------|
+| **Learning curve** | Medium | Low | Low | Lowest |
+| **Features** | High | Medium | Custom | Minimal |
+| **Maintenance** | External | External | Internal | Internal |
+| **TypeScript support** | Good | Excellent | Full control | Full control |
+| **Ecosystem** | Large | Growing | N/A | N/A |
+| **Performance** | Good | Good | Optimized | Optimized |
+| **Best for** | Complex agentic | Simple sequential | Full control | Trivial |
+
+---
+
+## Recommendations
+
+### Immediate (This Week)
+
+1. ✅ **Implement InstructionBuilder** — Solve brittleness now
+2. ✅ **Standardize plan-review workflow** — Reusable pattern
+
+### Short-term (This Month)
+
+3. ✅ **Add LangGraph for multi-agent** — Future-proof for complex workflows
+4. ✅ **Document workflow decision tree** — Team knows when to use what
+
+### Long-term (This Quarter)
+
+5. ⏳ **Checkpoint persistence** — Resume workflows across sessions
+6. ⏳ **Workflow marketplace** — Share custom workflows
+
+---
+
+## References
+
+- [LangGraph Docs](https://langchain-ai.github.io/langgraph/)
+- [AI SDK Workflows](https://sdk.vercel.ai/docs/ai-sdk-core/workflows)
+- [Model Strategy](./10-model-strategy.mdx) — Multi-model routing
+- [Agent System](./05-agent-system.mdx) — Agent delegation
+- [Cost Optimization](./13-cost-optimization.mdx) — Multi-agent savings

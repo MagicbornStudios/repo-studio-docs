@@ -1,0 +1,400 @@
+---
+title: AI Systems Roadmap
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# AI Systems Roadmap
+
+Strategic roadmap for AI capabilities, infrastructure, and optimizations in Forge Studio.
+
+## Current State (Q1 2026)
+
+### ✅ Implemented
+
+**Runtime & Infrastructure:**
+- Assistant UI integration with OpenRouter
+- Domain contract system (Forge, Character, Writer)
+- Tool registration and execution
+- Streaming responses
+- Plan-review-execute-confirm workflow
+- MCP server foundation
+
+**Capabilities:**
+- Dialogue graph operations (create, update, delete nodes/edges)
+- Character creation and management
+- Image generation (via OpenRouter)
+- Structured output
+- Voice synthesis (ElevenLabs)
+- Plan generation and execution
+
+**Models:**
+- OpenRouter integration with 200+ models
+- Two provider slots (copilot, assistantUi)
+- Basic model persistence
+
+### 🚧 In Progress
+
+- Assistant UI migration (replacing CopilotKit)
+- Agent registry system
+- Tool metadata and complexity classification
+- MCP editor apps (Forge, Character)
+
+### ❌ Not Started
+
+- Multi-model routing
+- Prompt caching
+- Cost optimization
+- Observability/metrics
+- Multimodal operations (vision, audio input)
+- Multi-agent orchestration
+
+## Roadmap Structure
+
+This roadmap is organized into **Phases** (quarterly goals) and **Tracks** (parallel workstreams).
+
+### Tracks
+
+1. **Model Intelligence** — Routing, optimization, caching
+2. **Capabilities** — New AI features (vision, audio, etc.)
+3. **Infrastructure** — Runtime, agents, observability
+4. **Domain Expansion** — New editors, tools, workflows
+
+---
+
+## Phase 1: Foundation (Q1 2026) — ✅ CURRENT
+
+**Goal:** Establish Assistant UI foundation and domain contracts
+
+### Track: Infrastructure
+
+- [x] Create `@forge/assistant-runtime` package
+- [x] Implement OpenRouter adapter
+- [x] Build `AssistantProvider` and `AssistantChat` components
+- [x] Create `/api/assistant` endpoint
+- [x] Domain contract interface (`DomainAssistantContract`)
+- [ ] Tool registry system
+- [ ] Agent registry system
+- [ ] Migration coexistence (CopilotKit + Assistant UI)
+
+### Track: Domain Expansion
+
+- [x] Forge domain tools (10+ operations)
+- [x] Character domain tools (8+ operations)
+- [ ] Writer domain tools
+- [ ] Storylet-specific tools (merchants, NPCs)
+
+### Track: Capabilities
+
+- [x] Streaming responses
+- [x] Plan workflow
+- [x] Image generation
+- [x] Voice synthesis
+- [ ] Plan review UI components
+
+### Success Metrics
+
+- ✅ All editors have Assistant UI integration
+- ✅ Tool execution latency < 500ms (P95)
+- ⏳ Cost per operation tracked
+- ⏳ User can toggle between CopilotKit and Assistant UI
+
+---
+
+## Phase 2: Model Intelligence (Q2 2026)
+
+**Goal:** Implement smart model routing and cost optimization
+
+### Track: Model Intelligence
+
+- [ ] **Tool complexity classification**
+  - Classify all tools as trivial/simple/complex/creative
+  - Add metadata to tool definitions
+  - Create classification guidelines for new tools
+
+- [ ] **Multi-model routing**
+  - Implement `selectModelForOperation()`
+  - Create model tier registry (premium/standard/reasoning/free)
+  - Add domain-specific model collections
+  - Build fallback chains per tier
+
+- [ ] **Prompt caching (Anthropic)**
+  - Identify cacheable contexts (world descriptions, project settings)
+  - Implement cache_control in system prompts
+  - Track cache hit rates
+  - Measure cost savings
+
+- [ ] **User model preferences**
+  - UI for tier-based model selection
+  - Auto-routing toggle
+  - Cost preference slider (cost/balanced/quality)
+  - Manual override option
+
+- [ ] **Batched operations**
+  - `character_createBatch` for multiple characters
+  - `forge_createNodeBatch` for bulk node creation
+  - Shared context optimization
+  - Batch execution UI (progress tracking)
+
+### Track: Infrastructure
+
+- [ ] **Observability**
+  - Cost tracking per tool/domain
+  - Latency metrics (P50/P95/P99)
+  - Model utilization dashboard
+  - Cache hit rate monitoring
+  - User satisfaction tracking (regeneration rate)
+
+- [ ] **Request optimization**
+  - Deduplication for rapid repeated calls
+  - Speculative context prefetching
+  - Streaming threshold detection (adaptive streaming)
+
+### Track: Capabilities
+
+- [ ] **Storylet model collections**
+  - Merchant dialogue model + tone
+  - Combat bark model (fast, terse)
+  - Lore/mystery model (descriptive)
+  - Generic NPC model (budget)
+
+### Success Metrics
+
+- Cost per operation reduced by 70%
+- P95 latency < 300ms for trivial operations
+- Cache hit rate > 60% for character batch creation
+- User cost visibility in settings dashboard
+
+---
+
+## Phase 3: Multimodal & Advanced (Q3 2026)
+
+**Goal:** Add vision, audio input, and multi-agent capabilities
+
+### Track: Capabilities
+
+- [ ] **Vision integration**
+  - Model registry: Add `supportsVision` flag
+  - Image upload in chat UI
+  - `character_createFromImage` tool
+  - `forge_analyzeSceneImage` tool
+  - Concept art → character generation workflow
+
+- [ ] **Audio input**
+  - Speech-to-text integration (Whisper)
+  - Voice-first dialogue authoring
+  - Full loop: Speech → STT → LLM → TTS
+  - Voice command for graph operations
+
+- [ ] **Video generation (future)**
+  - Scene visualization from dialogue
+  - Character animation preview
+  - Model: Sora or equivalent
+
+### Track: Infrastructure
+
+- [ ] **Multi-agent orchestration**
+  - Agent swarm pattern (planner/writer/implementer/reviewer)
+  - Agent delegation logic
+  - Inter-agent communication protocol
+  - Shared workspace state
+
+- [ ] **Local edge models**
+  - WASM model runtime in browser
+  - Trivial operation routing to local models
+  - Latency: 10ms vs 500ms
+  - Models: `@huggingface/gte-small` for validation
+
+### Track: Model Intelligence
+
+- [ ] **Component-specific models**
+  - PlanReviewCard → `deepseek-reasoner`
+  - CharacterCreatedCard → `claude-3.5-sonnet`
+  - NodeCreatedCard → `gpt-4o-mini`
+  - Render-time model selection
+
+- [ ] **Intelligent fallback strategies**
+  - Rate limit → cheaper model
+  - Timeout → faster model
+  - Context length exceeded → larger context model
+  - Content policy → different provider
+
+### Success Metrics
+
+- Vision-capable tools available in Character editor
+- Voice-first dialogue authoring workflow functional
+- Multi-agent cost < 20% of single-agent equivalent
+- Local model usage for 30% of trivial operations
+
+---
+
+## Phase 4: Scale & Optimization (Q4 2026)
+
+**Goal:** Production-grade reliability, performance, and cost management
+
+### Track: Infrastructure
+
+- [ ] **Production observability**
+  - Real-time cost alerts (budget thresholds)
+  - Anomaly detection (unusual token usage)
+  - Model health monitoring
+  - Auto-scaling based on demand
+
+- [ ] **Advanced caching**
+  - Redis cache for common contexts
+  - Semantic cache (similar queries → cached responses)
+  - Embeddings-based cache key matching
+  - Cache warming for popular operations
+
+- [ ] **Request queue & prioritization**
+  - Priority queue (critical > interactive > background)
+  - Rate limiting per user tier
+  - Burst handling
+  - Queue depth monitoring
+
+### Track: Model Intelligence
+
+- [ ] **Reinforcement from user feedback**
+  - Track thumbs up/down per model
+  - A/B testing model variants
+  - Automatic model selection tuning
+  - Per-user model preferences learning
+
+- [ ] **Cost prediction**
+  - Estimate cost before execution
+  - User budget enforcement
+  - Monthly spending caps
+  - Cost breakdown reports
+
+### Track: Capabilities
+
+- [ ] **Advanced workflows**
+  - Multi-turn dialogues with state
+  - Branching narrative generation
+  - Character relationship evolution
+  - World-building assistants
+
+### Success Metrics
+
+- 99.9% uptime for AI endpoints
+- < 1% error rate
+- Cost per user < $2/month (median)
+- User satisfaction > 85%
+
+---
+
+## Phase 5: Platform & Ecosystem (2027+)
+
+**Goal:** Extensibility, third-party integrations, marketplace
+
+### Track: Capabilities
+
+- [ ] **Custom AI tools**
+  - User-defined tool registry
+  - Shareable tool templates
+  - Tool marketplace
+  - Community-contributed tools
+
+- [ ] **Fine-tuned models**
+  - Domain-specific fine-tunes (dialogue styles)
+  - Project-specific character voices
+  - Storylet pattern learning
+  - Private model hosting option
+
+- [ ] **External integrations**
+  - Import from Twine/Ink
+  - Export to game engines (Unity, Unreal)
+  - API for third-party tools
+  - Zapier/Make integration
+
+### Track: Infrastructure
+
+- [ ] **Distributed agents**
+  - Cloud-based agent execution
+  - Parallel agent workflows
+  - Result aggregation
+  - Fault tolerance
+
+- [ ] **Advanced MCP**
+  - Editor-as-MCP-app for all editors
+  - MCP tool discovery
+  - Remote MCP servers
+  - MCP marketplace
+
+---
+
+## Cross-Cutting Concerns
+
+### Security
+
+- [ ] Prompt injection detection
+- [ ] Output validation and sanitization
+- [ ] Rate limiting per user/tier
+- [ ] API key rotation
+- [ ] Model output filtering (NSFW, PII)
+
+### Performance
+
+- [ ] CDN for model results caching
+- [ ] Edge deployment for low-latency regions
+- [ ] Precomputed embeddings for common operations
+- [ ] WebAssembly acceleration
+
+### Compliance
+
+- [ ] GDPR compliance (user data in prompts)
+- [ ] Model output attribution
+- [ ] Usage logging and audit trails
+- [ ] Terms of service for AI features
+
+---
+
+## Dependencies & Risks
+
+### External Dependencies
+
+| Dependency | Risk | Mitigation |
+|------------|------|------------|
+| OpenRouter uptime | High | Multi-provider fallback |
+| Model availability | Medium | Cached model registry, fallbacks |
+| ElevenLabs API | Medium | Alternative TTS providers |
+| Anthropic caching API | Low | Graceful degradation to non-cached |
+
+### Technical Debt
+
+- CopilotKit removal (Phase 1) — 2 weeks effort
+- Model registry refactor for multimodal (Phase 3) — 1 week
+- Zustand store migration for multi-agent (Phase 3) — 1 week
+
+### Resource Constraints
+
+- **Compute:** OpenRouter credits ($500/month budget Q1 → $2000/month Q2)
+- **Engineering:** 1 FTE on AI infrastructure
+- **Design:** UX for model selection, cost visibility
+
+---
+
+## Success Criteria (Annual)
+
+By end of 2026:
+
+1. **Cost efficiency:** 75% reduction vs naive single-model approach
+2. **Latency:** P95 < 200ms for interactive operations
+3. **Quality:** > 85% user satisfaction (thumbs up rate)
+4. **Coverage:** All editors have 10+ AI-powered tools
+5. **Adoption:** 80% of users use AI features weekly
+6. **Revenue:** AI features drive 30% upgrade to Pro tier
+
+---
+
+## Related Roadmaps
+
+- [Product Roadmap](../roadmap/product.mdx) — User-facing features
+- [Technical Roadmap](../roadmap/technical.mdx) — Infrastructure improvements
+- [Editor Platform Roadmap](../roadmap/editor-platform.mdx) — Editor system evolution
+
+## References
+
+- [Model Strategy](./10-model-strategy.mdx)
+- [AI Architecture](./01-architecture-overview.mdx)
+- [Cost Optimization](./13-cost-optimization.mdx)

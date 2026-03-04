@@ -1,0 +1,73 @@
+---
+title: 05 - Building an editor
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# 05 - Building an editor
+
+Step-by-step: add a editor id, shell + slots, main content, inspector, toolbar
+actions, then wire the system contract. At each step we note what the AI can do.
+
+## Step 1: Add editor id and tab
+
+- In `apps/studio/lib/app-shell/store.ts`, add your editor id to `EditorId`
+  (e.g. `'my-editor'`).
+- In `apps/studio/lib/app-shell/editor-metadata.ts`, add label and editor summary.
+- In `apps/studio/components/AppShell.tsx`, add a tab and render branch:
+  `{activeWorkspaceId === 'my-editor' && <MyEditor />}`.
+
+**AI at this stage:** Shell can switch to your editor via `switchEditor`; no system
+context yet.
+
+## Step 2: Shell + slots
+
+Create `MyEditor.tsx`. Compose `WorkspaceShell`, `WorkspaceHeader`, `WorkspaceToolbar`,
+`DockLayout` (with a placeholder `main`), `WorkspaceStatusBar`, `WorkspaceOverlaySurface`.
+No data binding yet.
+
+**AI at this stage:** Same as step 1; editor is just layout.
+
+## Step 3: Main slot content
+
+Put your editor or main UI in `DockLayout`'s `main` prop. If you need selection
+state, hold it in local state or a small store; expose it later for the
+inspector and the Copilot contract.
+
+**AI at this stage:** No system contract yet; AI cannot read or change editor state.
+
+## Step 4: Inspector (optional)
+
+Use `DockLayout`'s `right` slot with a `DockPanel` that wraps
+Inspector (`WorkspaceInspector`). Pass `selection` and `sections` (or children). Selection
+shape is shared: see `packages/shared/src/shared/workspace/selection.ts`.
+
+**AI at this stage:** Still no contract; AI does not see selection or system state.
+
+## Step 5: Toolbar actions and system contract
+
+- Implement a system contract: `getContextSnapshot()`, `getInstructions()`,
+  `createActions()`, `getSuggestions()`, `onAIHighlight`, `clearAIHighlights`.
+  See `packages/shared/src/shared/copilot/types.ts` (`DomainCopilotContract`).
+- In your editor, call `useMyContract(deps)` then `useDomainCopilot(myContract, { toolsEnabled })`.
+  Register toolbar actions (e.g. Save) that call your store or mutations.
+
+**AI at this stage:** AI can read context (selection, system state) and run
+actions (create/update/delete, save). No plan-execute-review yet unless you add it.
+
+## Step 6: Plan-commit (optional)
+
+If your editor supports plan-execute-review-commit: add a plan API
+(e.g. `POST /api/my/plan`), actions like `my_createPlan` and `my_executePlan`,
+and `WorkspaceReviewBar` between Toolbar and DockLayout. Render the plan in chat with
+`PlanCard` + `PlanActionBar` (see ForgePlanCard) so the user can Apply/Dismiss
+before executing. Wire `visible` to `(isDirty && pendingFromPlan)`, `onRevert`
+to refetch, `onAccept` to clear pending. State stays in your store.
+
+**AI at this stage:** AI can create a plan, execute it, user reviews with
+Revert/Accept, then commit (save).
+
+Reference implementation: DialogueEditor and the dialogue system (`packages/domain-forge`); see
+[06 - DialogueEditor walkthrough](06-forge-workspace-walkthrough.mdx).
+
+**Next:** [06 - DialogueEditor walkthrough](06-forge-workspace-walkthrough.mdx)

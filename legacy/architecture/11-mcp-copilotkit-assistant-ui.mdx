@@ -1,0 +1,70 @@
+---
+title: MCP vs CopilotKit and assistant-ui
+created: 2026-02-09
+updated: 2026-02-09
+---
+
+# MCP vs CopilotKit and assistant-ui
+
+Studio will be **MCP-driven and chat-first** so external hosts (Cursor, Claude, ChatGPT, Atlas, Perplexity, browser assistants) can drive authoring and publish. We also keep **in-Studio** chat via CopilotKit and assistant-ui. This doc records **caveats** and **possible solutions** so implementation can proceed without re-deciding. See [07 - Editors as MCP Apps](07-modes-as-mcp-apps.mdx) and [12 - MCP hosts and chat-first](12-mcp-hosts-and-chat-first.mdx).
+
+---
+
+## Two control planes
+
+**Today:**
+
+- **In-browser** — CopilotKit (domain actions, context) + assistant-ui (Strategy chat, tool rendering). The agent runs in our runtime; actions execute in the client. See [03 - CopilotKit and agents](03-copilotkit-and-agents.mdx) and [08 - CopilotKit vs assistant-ui](08-copilotkit-vs-assistant-ui.mdx).
+
+**Future:**
+
+- **External** — MCP host (Cursor, Claude, etc.) calls Studio MCP Server tools. The host's agent invokes tools; our server executes them (possibly headless or with a session).
+
+**Caveat:** The same logical action (e.g. create node, publish) might need to exist in **both** CopilotKit (in-browser) and as an **MCP tool** (external). That creates dual maintenance and drift risk: two surfaces, two code paths, inconsistent behavior or naming.
+
+---
+
+## Possible solutions (recorded, not mandated)
+
+### Unified tool backend
+
+Domain logic (create node, publish, update listing, etc.) lives in a **shared layer**. CopilotKit actions and MCP tools **both** call into that layer. One implementation, two surfaces. When we add or change a capability, we update the shared layer once; CopilotKit and MCP expose it. Reduces drift and duplicate logic.
+
+### MCP-as-transport for headless Studio
+
+When the user is in Cursor or Claude Desktop, the MCP server might run in the background or in a lightweight process. Tool calls execute against a **session** or **project context** (auth required). Design questions: How does the MCP server know "current project"? When there is no open browser tab, we need a way to resolve identity and project (e.g. default project for the user, or project ID passed per request). Document session/identity and project resolution as part of the MCP server design.
+
+### CopilotKit and assistant-ui remain for in-Studio chat
+
+MCP does **not** replace in-browser chat; it **adds** external control. We maintain both:
+
+- **In-Studio experience** — CopilotKit + assistant-ui; user has Studio open in the browser; actions run in the client.
+- **External host experience** — MCP; user is in Cursor/Claude/etc.; tools run on Studio MCP Server (or relay to a running Studio).
+
+**Compatibility:** Model routing, tool naming, and context shape should stay consistent where possible so prompts and instructions work in both environments. That simplifies docs and user mental model.
+
+---
+
+## Auth and identity
+
+**Caveat:** The MCP host (e.g. Cursor) is not the browser. The user may be logged in to Studio in the browser, but the MCP server runs in a different process (or on a different machine). How does the MCP server know who the user is and what they can do?
+
+**Options (open design points):**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **API key / token** | Simple; MCP server accepts a token per request or in config. | User must create and manage a key; key could leak. |
+| **Session token** | Reuse existing auth; token from Studio login. | Token lifecycle; refresh; how does Cursor get the token? |
+| **MCP only when Studio is running** | Cursor plugin or local MCP server that talks to local Studio; Studio is the source of auth. | User must have Studio open (or a local bridge) for Cursor to use it. |
+| **Hosted MCP server with login** | User logs in once to our MCP endpoint; server maintains session. | We host and secure the MCP server; more infra. |
+
+Document these as open; pick one or a hybrid when implementing. See [12 - MCP hosts and chat-first](12-mcp-hosts-and-chat-first.mdx) for per-host setup notes.
+
+---
+
+## References
+
+- [07 - Editors as MCP Apps](07-modes-as-mcp-apps.mdx) — Studio app tools, editor registration.
+- [08 - CopilotKit vs assistant-ui](08-copilotkit-vs-assistant-ui.mdx) — In-Studio AI stack.
+- [12 - MCP hosts and chat-first](12-mcp-hosts-and-chat-first.mdx) — Host matrix and setup.
+- [AI architecture](../ai/00-index.mdx) — Assistant UI migration, domain contracts, MCP integration.

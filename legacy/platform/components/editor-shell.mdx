@@ -1,0 +1,338 @@
+---
+title: WorkspaceShell
+created: 2026-02-11
+updated: 2026-02-11
+icon: "🏠"
+---
+
+# 🏠 WorkspaceShell
+
+**Root container for all editors with theming and layout skeleton**
+
+The WorkspaceShell is the foundational component for every editor. It provides theming, data attributes for CSS scoping, and a slot-based composition system for organizing editor UI.
+
+---
+
+## Usage
+
+```typescript
+import { WorkspaceShell } from '@forge/shared/components/editor';
+
+export function MyEditor() {
+  return (
+    <WorkspaceShell
+      editorId="my-editor"
+      title="My Editor"
+      subtitle="document-name.txt"
+      domain="my-domain"
+      theme="dark"
+      density="comfortable"
+    >
+      <WorkspaceShell.Toolbar>
+        {/* Toolbar content */}
+      </WorkspaceShell.Toolbar>
+
+      <WorkspaceShell.Layout>
+        {/* Main layout */}
+      </WorkspaceShell.Layout>
+
+      <WorkspaceShell.StatusBar>
+        Ready
+      </WorkspaceShell.StatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Props
+
+<div className="overflow-x-auto">
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="border-b">
+        <th className="text-left p-2">Prop</th>
+        <th className="text-left p-2">Type</th>
+        <th className="text-left p-2">Default</th>
+        <th className="text-left p-2">Description</th>
+      </tr>
+    </thead>
+    <tbody className="text-muted-foreground">
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">editorId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Unique editor identifier ('dialogue', 'character')</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">title</td>
+        <td className="p-2 font-mono text-xs">string</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Display title for the editor</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">subtitle</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Active document/context name</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">domain</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Domain for CSS scoping (data-domain attribute)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">theme</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Theme override ('light', 'dark')</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">density</td>
+        <td className="p-2 font-mono text-xs">'compact' | 'comfortable' | string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">UI density setting</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">className</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Additional CSS classes</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">children</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Slot components or legacy children</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+---
+
+## Slot Components
+
+WorkspaceShell uses a slot-based composition system for predictable ordering:
+
+### Available Slots
+
+| Slot | Purpose | Order |
+|------|---------|-------|
+| `WorkspaceShell.Header` | Optional header section | 1 |
+| `WorkspaceShell.Toolbar` | Main toolbar | 2 |
+| `WorkspaceShell.Settings` | Settings panel (shares row with toolbar) | 2 |
+| `WorkspaceShell.Layout` | Main layout area | 3 |
+| `WorkspaceShell.StatusBar` | Bottom status bar | 4 |
+| `WorkspaceShell.Overlay` | Modal overlay surface | Float |
+
+### Slot Rendering
+
+When using slots, they render in a fixed order regardless of JSX order:
+
+```typescript
+<WorkspaceShell {...props}>
+  {/* These render in: Toolbar → Layout → StatusBar order */}
+  <WorkspaceShell.StatusBar>Status</WorkspaceShell.StatusBar>
+  <WorkspaceShell.Layout>Layout</WorkspaceShell.Layout>
+  <WorkspaceShell.Toolbar>Toolbar</WorkspaceShell.Toolbar>
+</WorkspaceShell>
+```
+
+---
+
+## Data Attributes
+
+WorkspaceShell sets the following data attributes for CSS scoping:
+
+```html
+<div
+  data-editor-id="dialogue"
+  data-domain="dialogue"
+  data-theme="dark"
+  data-density="comfortable"
+>
+  <!-- Editor content -->
+</div>
+```
+
+Use these for scoped styling:
+
+```css
+[data-editor-id="dialogue"] .my-component {
+  /* Dialogue editor specific styles */
+}
+
+[data-theme="dark"] .my-component {
+  /* Dark theme styles */
+}
+
+[data-density="compact"] .toolbar {
+  height: 32px;
+}
+```
+
+---
+
+## Examples
+
+### Basic Editor
+
+```typescript
+export function BasicEditor() {
+  return (
+    <WorkspaceShell editorId="basic" title="Basic Editor">
+      <WorkspaceShell.Toolbar>
+        <WorkspaceToolbar>
+          <WorkspaceToolbar.Left>
+            <Button size="sm">New</Button>
+          </WorkspaceToolbar.Left>
+        </WorkspaceToolbar>
+      </WorkspaceShell.Toolbar>
+
+      <WorkspaceShell.Layout>
+        <div className="p-4">
+          <p>Editor content goes here</p>
+        </div>
+      </WorkspaceShell.Layout>
+
+      <WorkspaceShell.StatusBar>
+        <span className="text-xs text-muted-foreground">Ready</span>
+      </WorkspaceShell.StatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+### With Settings Integration
+
+```typescript
+export function EditorWithSettings() {
+  const theme = useSettingsStore((s) =>
+    s.getSettingValue('ui.theme', { editorId: 'my-editor' })
+  ) as string | undefined;
+
+  const density = useSettingsStore((s) =>
+    s.getSettingValue('ui.density', { editorId: 'my-editor' })
+  ) as 'compact' | 'comfortable' | undefined;
+
+  return (
+    <WorkspaceShell
+      editorId="my-editor"
+      title="My Editor"
+      theme={theme}
+      density={density}
+    >
+      {/* ... */}
+    </WorkspaceShell>
+  );
+}
+```
+
+### Full-Featured Editor
+
+```typescript
+export function FullEditor() {
+  const [activeFile, setActiveFile] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+
+  return (
+    <WorkspaceShell
+      editorId="full"
+      title="Full-Featured Editor"
+      subtitle={activeFile || undefined}
+      domain="full"
+    >
+      <WorkspaceShell.Toolbar>
+        <WorkspaceToolbar>
+          <WorkspaceToolbar.Left>
+            <WorkspaceToolbar.Menubar menus={menubarMenus} />
+            <WorkspaceToolbar.Separator />
+            <Button size="sm" variant="outline">
+              <FilePlus size={14} className="mr-1" />
+              New
+            </Button>
+          </WorkspaceToolbar.Left>
+
+          <WorkspaceToolbar.Right>
+            <Badge variant="secondary">{activeFile ? 'Editing' : 'Ready'}</Badge>
+          </WorkspaceToolbar.Right>
+        </WorkspaceToolbar>
+      </WorkspaceShell.Toolbar>
+
+      <WorkspaceShell.Layout>
+        <EditorDockLayout layoutId="full-editor">
+          <EditorDockLayout.Main>
+            <EditorDockPanel id="main" title="Editor">
+              <MainViewport />
+            </EditorDockPanel>
+          </EditorDockLayout.Main>
+        </EditorDockLayout>
+      </WorkspaceShell.Layout>
+
+      <WorkspaceShell.StatusBar>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span>{activeFile || 'No file open'}</span>
+          <Separator orientation="vertical" className="h-3" />
+          <span>Ready</span>
+        </div>
+      </WorkspaceShell.StatusBar>
+
+      <WorkspaceShell.Overlay>
+        {showSettings && (
+          <SettingsDialog onClose={() => setShowSettings(false)} />
+        )}
+      </WorkspaceShell.Overlay>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+- Always provide `editorId` for settings and analytics
+- Use slots (`WorkspaceShell.Toolbar`, etc.) for predictable ordering
+- Connect theme and density to settings store
+- Set `domain` for CSS scoping when needed
+- Use `subtitle` to show active document/context
+
+### ❌ Don't
+
+- Don't render multiple WorkspaceShells in the same component
+- Don't mix slot and non-slot children (use one pattern)
+- Don't forget to provide `title` (required for accessibility)
+- Don't override flex layout styles (WorkspaceShell uses flex column)
+
+---
+
+## Related Components
+
+- [WorkspaceToolbar](./editor-toolbar) - Main toolbar component
+- [DockLayout](./dock-layout) - Layout manager for panels
+- [WorkspaceStatusBar](./editor-status-bar) - Status display
+- [WorkspaceOverlaySurface](./editor-overlay) - Modal system
+
+---
+
+## Source Code
+
+**Location:** `packages/shared/src/shared/components/editor/WorkspaceShell.tsx`
+
+```typescript
+export interface WorkspaceShellProps {
+  editorId?: string;
+  title: string;
+  subtitle?: string;
+  domain?: string;
+  theme?: string;
+  density?: 'compact' | 'comfortable' | string;
+  className?: string;
+  children?: React.ReactNode;
+}
+```

@@ -1,0 +1,42 @@
+---
+title: Phase 1 - Foundation
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Phase 1: Foundation (Week 1)
+
+---
+
+## Tasks
+
+1. Create `@forge/assistant-runtime` package
+2. Implement OpenRouter adapter (no Responses V2 checking)
+3. Create `/api/assistant` route (or extend `/api/assistant-chat`)
+4. Build AssistantProvider and AssistantChat components
+5. Test basic streaming and tool execution
+
+---
+
+## Test
+
+Simple test page with Assistant UI panel.
+
+---
+
+## Critical files
+
+**Create:**
+
+- `packages/assistant-runtime/src/runtime/forge-runtime.ts` — OpenRouter adapter
+- `packages/assistant-runtime/src/components/AssistantProvider.tsx`
+- `packages/assistant-runtime/src/components/AssistantChat.tsx`
+
+**Modify:**
+
+- `apps/studio/package.json` — Add `@assistant-ui/react` dependency
+
+**Reference:**
+
+- [apps/studio/app/api/assistant-chat/route.ts](../../../apps/studio/app/api/assistant-chat/route.ts) — Existing chat route pattern
+- [apps/studio/app/api/copilotkit/handler.ts](../../../apps/studio/app/api/copilotkit/handler.ts) — OpenRouter config pattern

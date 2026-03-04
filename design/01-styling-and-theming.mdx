@@ -1,0 +1,152 @@
+---
+title: Styling and theming
+created: 2026-02-04
+updated: 2026-02-10
+---
+
+# Styling and theming
+
+## Visual direction
+
+- **Design language**: We aim for **professional, modern, and soft-but-strong** — Spotify for visual tone, Unreal/Unity for structure. Clean hierarchy, one primary accent, no old/blocky or squishy look. See [03 - Design language](03-design-language.mdx) for the one-pager.
+- **Shadcn-first**: Base shadcn tokens (`--background`, `--foreground`, `--border`, `--radius-*`, `--shadow-*`) power **every** UI surface. No ad-hoc colors, radii, or shadows in editor chrome.
+- **Unreal-style compactness**: dense, editor-first layouts; we keep density tokens and align visuals to the design language (radius, type, soft depth).
+- **Declarative shadcn**: use shadcn UI primitives (DropdownMenu, Select, Sheet, Card, Button, etc.) instead of hand-rolled UI; default appearance should look like shadcn docs.
+- **Editor theming**: app theme is the base (driven by `ui.theme` via `AppThemeProvider`), editors may override via `WorkspaceShell theme`.
+- **Atomic design**: atoms live in `packages/ui/src/components/ui/*` (shadcn). Build molecules and organisms from those primitives.
+
+## UI rules
+
+- Prefer semantic tokens (`--background`, `--foreground`, `--border`) from `packages/shared/src/shared/styles/themes.css`.
+- Avoid single-purpose UI components per editor; extend shared components and document the slot.
+- **App bar** (editor tab bar): project context, editor access (+ Dialogue / Video / Character / Strategy), theme switcher, current user, app settings. Data/work on the left; platform/identity (theme, user, settings) on the right.
+- Standard toolbar layout (per-editor): File menu + Project select + Settings (plus system actions).
+
+### Buttons and menus
+
+- Prefer `outline` or `default` variant for toolbar and menu triggers; avoid ghost-only for primary actions so controls don’t read as flat grey.
+- Use tokenized padding (`--panel-padding`) for card headers and content so sections (e.g. AI Workflow) are not flush to borders.
+- **Icons + loaders**: Use Lucide React only. Standard size is `--icon-size` (12px) with optional `--icon-size-lg` (14px) for emphasis (e.g. send). Spinners use `Loader2` with `animate-spin`.
+
+## Compact editor style guide (Unreal-inspired)
+
+This is the **system of record** for density, borders, and cohesion across all editor surfaces. The goal is a professional, heavy‑tooling UI that stays readable at high density.
+
+### Principles
+
+- **Density by default**: editor surfaces run compact; marketing/landing pages are free to remain comfortable.
+- **Design language overrides**: We prefer the direction in [03 - Design language](03-design-language.mdx): professional and soft-but-strong, shadcn-first radius and type. Use semantic tokens and soft depth; panel/tab active state by border or accent line, not heavy shadow.
+- **Context without redundancy**: if the project name appears in the app header, do not repeat it in panels or sidebars.
+- **One primary label per surface**: top left editor title is the only H1. Panels use compact titles only.
+- **Tokens over ad‑hoc**: spacing, border, shadow, and typography must use tokens.
+
+### Density system
+
+We drive density through CSS variables and `data-density`:
+
+- **Default**: `compact`
+- **Setting**: `ui.density` (app defaults) + per‑editor overrides (editor settings)
+- **Override**: `WorkspaceShell` can set `data-density` directly
+
+**Icon and radius:** Standard icon size is **12px** (`size-3` or `var(--icon-size)`); optional `--icon-size-sm: 10px` for tight spots and `--icon-size-lg: 14px` for emphasis. Radius scale is modest (Spotify-like): `--radius-sm: 4px`, `--radius-md: 5px`, `--radius-lg: 6px`, `--radius-xl: 8px`, `--radius: 6px`. See [03 - Design language](03-design-language.mdx).
+
+**Themes:** Only two themes — **dark** and **light** — Spotify-inspired (near-black/white base, one green accent). `data-theme` applies only `light` or `dark`; no other theme blocks.
+
+<ShowcaseLink href="components/showcase/atoms#theme-density" label="View theme & density in Catalog">
+  Live demos for theme switcher and compact vs comfortable density.
+</ShowcaseLink>
+
+**Borders:** Prefer minimal full borders; use full borders only where it makes sense (e.g. inputs, dropdowns, modals). For cards and list items, prefer background separation or a single-edge accent; see [03 - Design language](03-design-language.mdx).
+
+**Primary tokens (compact)** in `packages/shared/src/shared/styles/themes.css`:
+
+- `--control-height: 1.75rem`
+- `--control-height-sm: 1.5rem`
+- `--control-padding-x: 0.625rem`
+- `--control-padding-y: 0.25rem`
+- `--control-gap: 0.375rem`
+- `--panel-padding: 0.625rem`
+- `--toolbar-height: 2.5rem`
+- `--header-height: 2.75rem`
+- `--tab-height: 2rem`
+- `--status-height: 1.75rem`
+- `--menu-item-padding-x`, `--menu-item-padding-y` — padding for dropdown/menu items (Item, SubTrigger, Label, etc.)
+- `--menu-content-padding` — padding for dropdown content container
+- `--badge-padding-x`, `--badge-padding-y` — padding for tag/badge pills
+
+Dropdown and context menus in `packages/ui` use these tokens so all menus get consistent, theme-driven padding.
+
+**Comfortable overrides** live under `[data-density='comfortable']`.
+
+### Borders and grouping
+
+- **Primary grouping** uses `border-border` and `bg-card` (panels, sidebars).
+- **Avoid double borders**: if a panel contains cards, cards should use `shadow-xs` or no border.
+- **Separators are sparse**: only between major sections, not every row.
+
+### Typography + tracking
+
+- Default label size is `12px` (`text-xs`) with tight leading (`leading-tight`). Meta labels and helper text can drop to 10–11px.
+- Letter spacing is set globally with `--tracking-normal` and `letter-spacing` on `body`.
+
+### Shadows
+
+- Default shadows are **soft and subtle** (low blur, no hard offset block). Use `shadow-[var(--shadow-xs)]`, `shadow-[var(--shadow-sm)]`, or `shadow-none` for surfaces.
+
+- Glows are used only for focus/selection where needed and kept subtle (e.g. 2px ring); panel/tab active state uses **border or accent line**, not heavy box-shadow.
+
+### Context accents
+
+- Domain accents and focus rings are defined in `packages/shared/src/shared/styles/contexts.css`.
+- `--context-accent`, `--ring`, and `--sidebar-*` stay aligned to preserve hover/focus clarity.
+- Panel and layout tab active state use `--context-accent` as a border (e.g. bottom edge); resizable panel separators can be themed when inside `[data-domain]` if needed.
+
+**Editor color context:** Each editor sets `data-domain` via `WorkspaceShell` (e.g. `domain="dialogue"`). All panels and sections inside the shell inherit `--context-accent` (and related tokens). Use `--context-accent` for section headers, list category accents, and active/selected state so UI stays in-domain. Optional `data-context-node-type` on a subtree refines the accent (e.g. dialogue node types). **Context override:** Section components (e.g. `SectionHeader`) can accept an optional `context` prop that wraps the section in `data-domain={context}` so that section uses a different accent; overridable by users. See editor README: `packages/shared/src/shared/components/workspace/README.md`.
+
+### Token system (layers and when to use which)
+
+We use **four token layers**. Cascade order: `:root` → `[data-density]` → `[data-theme]` → `[data-domain]`. Theme layer applies only `light` or `dark` (Spotify-based palettes).
+
+1. **Shadcn semantic** — `--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--muted`, `--sidebar*`, etc. All overridden by `data-theme`. Single source: `themes.css`; do not redefine in `globals.css`.
+2. **Sizing / density** — `--control-height`, `--panel-padding`, `--tab-height`, `--menu-item-padding-x/y`, `--menu-content-padding`, etc. Overridden by `[data-density='compact']` or `[data-density='comfortable']` in `themes.css`.
+3. **Graph** — `--graph-canvas`, `--graph-node-*`, `--graph-edge-*`, `--graph-sidebar-bg`. Overridden by `data-theme`. Use only in graph UI (React Flow viewport, nodes, edges).
+4. **Context** — `--context-accent` (and under `[data-domain]`, `--primary` / `--ring` are overridden from `--domain-*`). Source: `contexts.css`. Set `data-domain` and optionally `data-context-node-type` on the graph or panel; use `var(--context-accent)` or `ring` for highlights and borders.
+
+**When to use which:**
+
+- **Body / main canvas** → `bg-background` / `text-foreground`.
+- **Sidebar** → `bg-sidebar` / `text-sidebar-foreground` (and `sidebar-accent` for hover). Do not use `bg-background` or `text-foreground` inside the sidebar.
+- **Popovers / dropdowns** → `bg-popover` / `text-popover-foreground`.
+- **Cards / panels** → `bg-card` / `text-card-foreground`.
+- **Controls** (inputs, buttons) → `--control-*` tokens plus semantic colors (e.g. `border-input`, `bg-background` for inputs).
+- **Graph** → `--graph-*` only in graph UI; React Flow overrides apply these to `.react-flow__*` classes.
+
+**Graph node styling:** Custom nodes (e.g. CharacterNode, PlayerNode, ConditionalNode) use `data-node-type` and `--graph-node-{type}-*` tokens (bg, border, header, text, selected). Selection highlight is an inset box-shadow on the node, not the wrapper. Add `className="dialogue-graph-editor"` to GraphEditor for Dialogue graphs so `.dialogue-graph-editor [data-choice-index]` etc. apply. Edges use `--graph-edge-default`, `--graph-edge-default-hover`; animated edges use React Flow's built-in dash animation. To add a new node type: (1) add tokens to themes.css (`--graph-node-{type}-bg/border/header/text/selected`), (2) add `data-node-type` to the node component, (3) use the tokens in the node's styles.
+
+**Context-aware UI:** Set `data-domain` (e.g. `dialogue`, `forge`, `video`) on the editor or panel; use `--context-accent` and `--ring` for active tab, panel header accent, selected node border. Prefer reusing these over new tokens.
+
+### File map
+
+- **themes.css** — Colors, density overrides, and per-theme `[data-theme='X']` overrides. Source of truth for semantic and graph tokens.
+- **contexts.css** — Domain/context accents; `--context-accent`, `--primary`, `--ring` under `[data-domain]`.
+- **graph.css** — React Flow viewport/node/edge overrides; Dialogue graph choice edges (`.dialogue-graph-editor`); node selection via inset box-shadow on custom nodes.
+- **scrollbar.css** — React Flow controls styling and scrollbar utilities.
+- **globals.css** — Tailwind `@theme` (maps our vars to Tailwind) and base layer only. No color redefinitions.
+
+### Code references (source of truth)
+
+- Theme tokens: `packages/shared/src/shared/styles/themes.css`
+- Context accents: `packages/shared/src/shared/styles/contexts.css`
+- Editor chrome sizing: `packages/shared/src/shared/components/workspace/WorkspaceToolbar.tsx`, `packages/shared/src/shared/components/workspace/WorkspaceHeader.tsx`, `packages/shared/src/shared/components/workspace/DockPanel.tsx`
+- Shadcn primitives: `packages/ui/src/components/ui/button.tsx`, `packages/ui/src/components/ui/input.tsx`, `packages/ui/src/components/ui/tabs.tsx`, `packages/ui/src/components/ui/card.tsx`
+
+## Accessibility
+
+- Preserve focus rings and keyboard navigation (shadcn defaults).
+- Use `aria-label` for icon-only controls.
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/styles/themes.css`, `packages/ui/`, `packages/shared/src/shared/styles/contexts.css`
+Related: agent-artifacts/core/styling-and-ui-consistency, how-to/26-styling-debugging-with-cursor
+Do not: Use ad-hoc px/py; use design tokens; run screenshot automation
+</Callout>

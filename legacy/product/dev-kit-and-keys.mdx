@@ -1,0 +1,51 @@
+---
+title: Dev-kit and API keys
+created: 2026-02-08
+updated: 2026-02-11
+---
+
+# Dev-kit and API keys
+
+How we expect users to use the dev-kit and what keys/integrations they need. See [MVP and first revenue](mvp-and-revenue.mdx) for product context. **MVP** = Studio in the cloud (Vercel + Payload); Strategy editor and Video editor are not in MVP.
+
+---
+
+## Dev-kit contents
+
+We are building **editor components for AI** (shared shell, Strategy editor, Copilot runtime, assistant-ui, tool-ui, etc.). The dev-kit re-exports `@forge/shared`, `@forge/agent-engine`, and `@forge/ui` for consumers.
+
+- **Package:** [packages/dev-kit/src/index.ts](../../packages/dev-kit/src/index.ts) — `export * from '@forge/shared'`, `export * from '@forge/agent-engine'`, `export as ui from '@forge/ui'`.
+- **Consumer example:** [examples/consumer](../../examples/consumer) — minimal Next app using `@forge/dev-kit` and `CodebaseAgentStrategyEditor` with `/api/assistant-chat`.
+
+---
+
+## First-class support
+
+- **OpenRouter** — consumers need an **OpenRouter API key** for chat and models when self-hosting or bringing their own key. We use OpenRouter for first-class multi-model support; see [06 - Model routing and OpenRouter](../architecture/06-model-routing-and-openrouter.mdx).
+
+---
+
+## Advanced support (optional)
+
+- **ELEVENLABS_API_KEY** — voice/audio generation (e.g. character voice in Character editor).
+- **OpenAPI key for Sora** — video generation when we integrate.
+
+---
+
+## Standard (cloud) users
+
+Users with **no concept of an API key** use **our cloud Studio** and a **subscription**; we cover AI costs. They author heavily on our infra. No keys required for the standard tier.
+
+---
+
+## Building editors for the platform
+
+Developers can build **editors** (or apps) with the dev kit and submit them for **community listing** (installable, no official payouts) or **official integration** (approved into Studio suite with a defined revenue split while official). Submissions use **web tech only**; we want first-class narrative support and preferred integrations (Babylon.js, Kaplay, Phaser, media/video editing). Submission is via GitHub repo (private; we fork for paid users). See [Business: Developer program and editor ecosystem](../business/developer-program-and-editors.mdx) for approved editors, data contracts, and community vs official.
+
+---
+
+## Expected usage
+
+- **Embed** the Strategy editor or full Studio shell in their app (via dev-kit).
+- Or **use our cloud** (Studio in the browser; subscription).
+- **Minimal setup** when self-hosting: env keys (e.g. `OPENROUTER_API_KEY`), API route for assistant-chat, optional ElevenLabs/Sora for media. See [examples/consumer README](../../examples/consumer/README.md) and how-to docs (e.g. [08 - Adding AI to workspaces](../how-to/08-adding-ai-to-workspaces.mdx)).

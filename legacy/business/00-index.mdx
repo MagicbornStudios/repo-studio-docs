@@ -1,0 +1,44 @@
+---
+title: Business (revenue and platform)
+created: 2026-02-08
+updated: 2026-02-11
+---
+
+# Business: revenue and platform
+
+Formal business rules for the Studio platform: revenue model, payments, listings, clones, and creator financial visibility. For MVP definition and hero moments see [Product: MVP and first revenue](../product/mvp-and-revenue.mdx).
+
+---
+
+## Contents
+
+| Doc | Summary |
+|-----|--------|
+| [Revenue and Stripe](revenue-and-stripe.mdx) | Revenue model (platform + creator), Stripe Connect onboarding, hosted Checkout, org-scoped revenue surfaces, and financial reporting boundaries. |
+| [Listings and clones](listings-and-clones.mdx) | Listing creation rules, free vs paid clone flows, clone modes, clone scope, media references, and license semantics. |
+| [Developer program and editor ecosystem](developer-program-and-editors.mdx) | Approved editors, data contracts, community vs official apps, submission, and split policy while official. |
+| [Ecosystem and import strategy](ecosystem-and-import-strategy.mdx) | GamePlayer runtime (PixiVN + JSON), adapters (Yarn first, then RenPy/Ink/Twine), and creator acquisition strategy. |
+
+---
+
+## Platform business verticals (current)
+
+| Vertical | Current scope | Status | Source docs |
+|-----|-----|-----|-----|
+| Marketplace listings and clone commerce | Catalog, listing metadata, free/paid clone flows, licenses, clone-again semantics | Implemented (MVP baseline) | [Listings and clones](listings-and-clones.mdx), [Roadmap](../roadmap/product.mdx) |
+| Creator revenue and payouts | Stripe Connect onboarding, checkout + webhook settlement, creator revenue views | Implemented (MVP baseline) | [Revenue and Stripe](revenue-and-stripe.mdx) |
+| Org-scoped creator operations | Active organization, org-owned projects/listings/licenses, org-scoped dashboard data | Implemented (MVP baseline) | [Decisions](../agent-artifacts/core/decisions.md), [Task registry](../agent-artifacts/core/task-registry.md) |
+| AI usage financial visibility | Persisted usage ledger and org-scoped usage summary/trends in dashboard | Implemented (MVP baseline) | [Revenue and Stripe](revenue-and-stripe.mdx), [Roadmap](../roadmap/product.mdx) |
+| Playable build hosting and distribution | Publish/host pipeline for build artifacts and hosted runtime URLs | In progress (follow-up) | [Roadmap](../roadmap/product.mdx), [STATUS](../agent-artifacts/core/STATUS.md) |
+| Developer ecosystem payouts | Official editor program split and lifecycle policy | Planned after MVP | [Developer program and editor ecosystem](developer-program-and-editors.mdx) |
+
+---
+
+## Summary
+
+- **First revenue** = paid clone: buyers pay the price the creator sets to clone a project (or template, or Strategy core). Listing creation is free.
+- **Stripe Connect from day one** so creators get paid directly; platform takes a cut. We use Stripe hosted Checkout and Stripe invoicing defaults; no custom card UI.
+- **Clone** = full project copy (settings, characters, graphs, pages, etc.) with media references until the clone owner replaces them. A **license** record enables clone-again.
+- **Organization context is first-class** for creator data, payouts, and dashboard reporting.
+- **AI usage visibility is billing-grade** through persisted `ai-usage-events` records; PostHog remains analytics-only.
+- **Developer program** (after MVP): developers can submit editors/apps (web tech, dev kit); approved editors receive a revenue split while in the official suite; community apps are listable and installable without payouts.

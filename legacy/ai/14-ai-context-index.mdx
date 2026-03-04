@@ -1,0 +1,268 @@
+---
+title: AI Context Index
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# AI Context Index
+
+Cross-reference index for all AI-related documentation across the codebase.
+
+## AI Docs (Primary)
+
+**Location:** `docs/ai/`
+
+**Purpose:** Dedicated AI system documentation - architecture, strategy, optimization
+
+| Doc | Focus | Audience |
+|-----|-------|----------|
+| [00 - Index](./00-index.mdx) | Overview, vision, how it works | All |
+| [01 - Architecture](./01-architecture-overview.mdx) | Package structure, data flow | Developers |
+| [02 - Domain integration](./02-domain-integration.mdx) | DomainAssistantContract | Developers |
+| [03 - Domains (Forge, Character)](./03-domains-forge-character.mdx) | Implementation examples | Developers |
+| [04 - Runtime and components](./04-runtime-and-components.mdx) | API routes, UI components | Developers |
+| [05 - Agent system](./05-agent-system.mdx) | Agent registry, delegation | Developers |
+| [06 - MCP integration](./06-mcp-integration.mdx) | MCP server, external control | Developers |
+| [10 - Model strategy](./10-model-strategy.mdx) | Model selection, routing | **Staff Engineers** |
+| [11 - AI roadmap](./11-ai-roadmap.mdx) | Quarterly phases, priorities | **Product/Engineering** |
+| [12 - Technical considerations](./12-technical-considerations.mdx) | Registry, performance, security | **Staff Engineers** |
+| [13 - Cost optimization](./13-cost-optimization.mdx) | Caching, batching, savings | **Staff Engineers** |
+| [20 - Complete system architecture](./20-complete-system-architecture.mdx) | Current implementation status | **All** |
+| [21 - Agent conversation flows](./21-agent-conversation-flows.mdx) | Complete examples with flows | **Developers** |
+
+---
+
+## Architecture Docs
+
+**Location:** `docs/architecture/`
+
+**Purpose:** System-level architecture including AI integration points
+
+| Doc | AI Content | Why Read |
+|-----|-----------|----------|
+| [03 - CopilotKit and agents](../architecture/03-copilotkit-and-agents.mdx) | Current CopilotKit architecture, flow, actions, highlights | Understanding legacy system |
+| [06 - Model routing](../architecture/06-model-routing-and-openrouter.mdx) | OpenRouter integration, provider slots, model persistence | Current model selection |
+| [08 - CopilotKit vs assistant-ui](../architecture/08-copilotkit-vs-assistant-ui.mdx) | Two AI stacks, when to use which | Migration context |
+| [11 - MCP vs CopilotKit](../architecture/11-mcp-copilotkit-assistant-ui.mdx) | Two control planes, auth | External control strategy |
+| [12 - MCP hosts](../architecture/12-mcp-hosts-and-chat-first.mdx) | Using Studio from Cursor/Claude | MCP client integration |
+
+---
+
+## How-To Guides
+
+**Location:** `docs/how-to/`
+
+**Purpose:** Practical guides for implementing AI features
+
+| Doc | AI Content | Use When |
+|-----|-----------|----------|
+| [07 - Copilot](../how-to/07-copilot.md) | Context, actions, suggestions | Adding AI to existing editor |
+| [08 - Adding AI to editors](../how-to/08-adding-ai-to-workspaces.md) | System actions, app-level actions | Step-by-step AI integration |
+| [22 - AI generation components](../how-to/22-ai-generation-components.mdx) | GenerateMediaModal, hooks | Building AI-powered UI |
+
+---
+
+## Main Docs
+
+**Location:** `docs/`
+
+**Purpose:** High-level AI integration patterns
+
+| Doc | AI Content | Use When |
+|-----|-----------|----------|
+| [15 - AI workspace integration](../15-ai-workspace-integration.mdx) | Context, actions, highlights, per-system checklist | Quick reference |
+| [16 - CopilotKit workspace integration](../16-copilotkit-workspace-integration.mdx) | Legacy CopilotKit patterns | Maintaining old code |
+| [17 - Co-agents](../17-co-agents-and-multi-agent.mdx) | Multi-agent patterns | Building agent swarms |
+
+---
+
+## Roadmaps
+
+**Location:** `docs/roadmap/`
+
+**Purpose:** Product and technical roadmaps with AI features
+
+| Doc | AI Content | Use When |
+|-----|-----------|----------|
+| [Product roadmap](../roadmap/product.mdx) | User-facing AI features | Product planning |
+| [AI roadmap](./11-ai-roadmap.mdx) | **AI-specific roadmap** | **AI infrastructure planning** |
+
+---
+
+## Agent Artifacts
+
+**Location:** `docs/agent-artifacts/`
+
+**Purpose:** Living docs for agent workflows (STATUS, decisions, errors)
+
+| Doc | AI Content | Use When |
+|-----|-----------|----------|
+| [STATUS](../agent-artifacts/core/STATUS.md) | Current work, AI feature status | Checking current state |
+| [decisions](../agent-artifacts/core/decisions.md) | AI architecture decisions (model routing, caching) | Understanding why |
+| [errors-and-attempts](../agent-artifacts/core/errors-and-attempts.md) | AI implementation failures, fixes | Avoiding repeated mistakes |
+| [enhanced-features-backlog](../agent-artifacts/core/enhanced-features-backlog.md) | AI feature proposals | Finding next AI feature to build |
+
+---
+
+## Code References
+
+### Packages
+
+**AI Runtime:**
+- `packages/assistant-runtime/` — Assistant UI runtime, agent system (planned)
+- `packages/shared/src/shared/assistant/` — Domain integration (planned)
+- `packages/shared/src/shared/copilot/` — CopilotKit integration (legacy)
+
+**Domains:**
+- `packages/domain-forge/src/assistant/` — Forge AI tools (planned)
+- `packages/domain-forge/src/copilot/` — Forge CopilotKit actions (legacy)
+- `packages/domain-character/src/assistant/` — Character AI tools (planned)
+- `packages/domain-character/src/copilot/` — Character CopilotKit actions (legacy)
+
+**MCP:**
+- `packages/mcp-studio/` — MCP server implementation (planned)
+
+### Apps
+
+**API Routes:**
+- `apps/studio/app/api/assistant/route.ts` — Assistant UI endpoint (planned)
+- `apps/studio/app/api/copilotkit/route.ts` — CopilotKit endpoint (legacy)
+- `apps/studio/app/api/forge/plan/route.ts` — Plan generation
+- `apps/studio/app/api/image-generate/route.ts` — Image generation
+- `apps/studio/app/api/structured-output/route.ts` — Structured output
+
+**Model Routing:**
+- `apps/studio/lib/model-router/` — Model selection, persistence, compatibility
+- `apps/studio/lib/openrouter-models.ts` — OpenRouter model registry
+
+**Components:**
+- `apps/studio/components/copilot/` — CopilotKit UI (legacy)
+- `apps/studio/components/model-switcher/` — Model selection UI
+
+---
+
+## Reading Paths
+
+### I want to understand the current AI system
+1. [Architecture: CopilotKit and agents](../architecture/03-copilotkit-and-agents.mdx)
+2. [Architecture: Model routing](../architecture/06-model-routing-and-openrouter.mdx)
+3. [How-to: Adding AI to editors](../how-to/08-adding-ai-to-workspaces.md)
+
+### I want to implement the new Assistant UI system
+1. [AI: 00 - Index](./00-index.mdx) (vision)
+2. [AI: 01 - Architecture](./01-architecture-overview.mdx) (package structure)
+3. [AI: 02 - Domain integration](./02-domain-integration.mdx) (contracts)
+4. [AI: 03 - Domains (Forge, Character)](./03-domains-forge-character.mdx) (examples)
+5. [AI: 04 - Runtime](./04-runtime-and-components.mdx) (implementation)
+
+### I want to optimize AI costs
+1. **[AI: 10 - Model strategy](./10-model-strategy.mdx)** ⭐ Start here
+2. [AI: 13 - Cost optimization](./13-cost-optimization.mdx)
+3. [AI: 12 - Technical considerations](./12-technical-considerations.mdx) (observability)
+
+### I want to plan AI features
+1. **[AI: 11 - AI roadmap](./11-ai-roadmap.mdx)** ⭐ Start here
+2. [Roadmap: Product](../roadmap/product.mdx) (user-facing features)
+3. [Agent artifacts: enhanced-features-backlog](../agent-artifacts/core/enhanced-features-backlog.md) (proposals)
+
+### I want to build an MCP integration
+1. [AI: 06 - MCP integration](./06-mcp-integration.mdx)
+2. [Architecture: Editors as MCP Apps](../architecture/07-modes-as-mcp-apps.mdx)
+3. [Architecture: MCP hosts](../architecture/12-mcp-hosts-and-chat-first.mdx)
+
+### I want to understand multi-agent systems
+1. [AI: 05 - Agent system](./05-agent-system.mdx)
+2. [Main: Co-agents](../17-co-agents-and-multi-agent.mdx)
+3. [AI: 10 - Model strategy](./10-model-strategy.mdx) (agent swarm section)
+
+---
+
+## Quick Answers
+
+**Q: How do I add a new AI tool to an editor?**
+→ [How-to: Adding AI to editors](../how-to/08-adding-ai-to-workspaces.md)
+
+**Q: How do I choose which model to use?**
+→ [AI: Model strategy](./10-model-strategy.mdx)
+
+**Q: How do I reduce AI costs?**
+→ [AI: Cost optimization](./13-cost-optimization.mdx)
+
+**Q: What's the difference between CopilotKit and Assistant UI?**
+→ [Architecture: CopilotKit vs assistant-ui](../architecture/08-copilotkit-vs-assistant-ui.mdx)
+
+**Q: How do I implement prompt caching?**
+→ [AI: Cost optimization § Technique 2](./13-cost-optimization.mdx#technique-2-prompt-caching-anthropic)
+
+**Q: What's on the AI roadmap?**
+→ [AI: AI roadmap](./11-ai-roadmap.mdx)
+
+**Q: How do I make Studio controllable from Cursor/Claude?**
+→ [AI: MCP integration](./06-mcp-integration.mdx)
+
+**Q: How do I track AI costs?**
+→ [AI: Technical considerations § Observability](./12-technical-considerations.mdx#observability)
+
+---
+
+## External References
+
+**Assistant UI Documentation:**
+- [assistant-ui.com/docs](https://www.assistant-ui.com/docs)
+- [LocalRuntime](https://www.assistant-ui.com/docs/runtimes/custom/local)
+- [makeAssistantTool](https://www.assistant-ui.com/docs/copilots/make-assistant-tool)
+
+**OpenRouter:**
+- [OpenRouter API](https://openrouter.ai/docs)
+- [Model pricing](https://openrouter.ai/models)
+
+**Model Providers:**
+- [Anthropic docs](https://docs.anthropic.com/)
+- [Anthropic prompt caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
+- [OpenAI docs](https://platform.openai.com/docs)
+- [DeepSeek API](https://platform.deepseek.com/)
+
+**MCP:**
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [MCP SDK](https://github.com/modelcontextprotocol/sdk)
+
+---
+
+## Working Examples
+
+**Location:** `docs/ai/examples/`
+
+### Complete Workflows
+
+| Example | What It Shows |
+|---------|--------------|
+| [Story Builder Workflow](./examples/story-builder-workflow.md) | Complete vanilla workflow: Characters → Dialogue graph with connected nodes |
+| [Workflow Complexity Guide](./examples/workflow-complexity-guide.md) | When to use vanilla vs LangGraph, decision tree, cost comparison |
+| [Agent Conversation Flows](./21-agent-conversation-flows.mdx) | 5 complete flows showing agent coordination, cross-editor data, LangGraph checkpoints |
+
+**Use these as templates when building new workflows.**
+
+---
+
+## For Coding Agents
+
+When working on AI features, always check:
+
+1. **[AI: 00 - Index](./00-index.mdx)** — Vision and principles
+2. **[AI: 11 - AI roadmap](./11-ai-roadmap.mdx)** — What's planned
+3. **[Agent artifacts: STATUS](../agent-artifacts/core/STATUS.md)** — Current state
+4. **[Agent artifacts: decisions](../agent-artifacts/core/decisions.md)** — Why we chose this approach
+5. **[Agent artifacts: errors-and-attempts](../agent-artifacts/core/errors-and-attempts.md)** — Don't repeat failures
+6. **[Examples](./examples/)** — Working code for common workflows
+
+**Key principle:** Preserve domain logic. AI integration is additive, not invasive.
+
+---
+
+## Maintenance
+
+When you add/move/rename AI docs:
+- [ ] Update this index
+- [ ] Update [AI: 00-index.mdx](./00-index.mdx)
+- [ ] Update [docs/00-docs-index.mdx](../00-docs-index.mdx)
+- [ ] Update [agent-artifacts/core/decisions.md](../agent-artifacts/core/decisions.md) if architectural

@@ -1,0 +1,25 @@
+{
+  "title": "Core",
+  "pages": [
+    "STATUS",
+    "decisions",
+    "errors-and-attempts",
+    "task-registry",
+    "standard-practices",
+    "tool-usage",
+    "styling-and-ui-consistency",
+    "enhanced-features-backlog",
+    "technical-debt-roadmap",
+    "compacting-and-archiving",
+    "debugging-zustand-devtools",
+    "knip-findings",
+    "task-breakdown-creator-dashboard",
+    "task-breakdown-dev-kit-single-entrypoint",
+    "task-breakdown-dock-rails",
+    "task-breakdown-editor-declarative-registries",
+    "task-breakdown-mcp-studio-editors",
+    "task-breakdown-platform-monetization",
+    "task-breakdown-system",
+    "task-breakdown-ui-polish"
+  ]
+}

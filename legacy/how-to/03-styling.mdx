@@ -1,0 +1,31 @@
+---
+title: 03 – Styling and theming
+
+created: 2026-02-04
+updated: 2026-02-04
+---
+
+# 03 – Styling and theming
+
+Design tokens, editor themes, and where UI atoms live.
+
+## Design tokens
+
+Semantic tokens live in `packages/shared/src/shared/styles/themes.css`: `--background`, `--foreground`, `--border`, `--muted`, etc. Prefer these over raw colors so themes apply consistently.
+
+## App and editor theme
+
+- **App theme**: Driven by `ui.theme` (settings) and `AppThemeProvider`; sets `<html data-theme="...">`. See `apps/studio/components/providers/AppThemeProvider.tsx`.
+- **Editor override**: `WorkspaceShell` accepts optional `theme`; sets `data-theme` on the editor root so a single editor can use a different theme (e.g. Video uses `darcula`).
+
+## UI atoms
+
+All shared primitives come from `packages/ui` and are imported as `@forge/ui/button`, `@forge/ui/card`, `@forge/ui/dialog`, etc. Add new atoms via `npx shadcn@latest add <name>` in the UI package. Editor components use these; do not hand-roll equivalents.
+
+See [design/01-styling-and-theming.mdx](../design/01-styling-and-theming.mdx) for full rules.
+
+## What the AI can do at this stage
+
+None — styling only. No agent or actions.
+
+**Next:** [04 – Data and state](04-data-and-state.md)

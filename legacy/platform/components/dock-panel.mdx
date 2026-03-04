@@ -1,0 +1,459 @@
+---
+title: DockPanel
+created: 2026-02-11
+updated: 2026-02-11
+icon: "📦"
+---
+
+# 📦 DockPanel
+
+**Individual panel component for DockLayout with tabs, scrolling, and lock overlay**
+
+DockPanel (EditorDockPanel) is a single region within a DockLayout. It provides a title bar, optional tabs, scrollable content area, and lock overlay for AI editing sessions.
+
+---
+
+## Usage
+
+```typescript
+import { EditorDockPanel } from '@forge/shared/components/editor';
+
+export function Inspector() {
+  return (
+    <EditorDockPanel
+      panelId="inspector"
+      title="Inspector"
+      icon={<ScanSearch />}
+      scrollable
+    >
+      <PropertyEditor />
+    </EditorDockPanel>
+  );
+}
+```
+
+---
+
+## Props
+
+<div className="overflow-x-auto">
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="border-b">
+        <th className="text-left p-2">Prop</th>
+        <th className="text-left p-2">Type</th>
+        <th className="text-left p-2">Default</th>
+        <th className="text-left p-2">Description</th>
+      </tr>
+    </thead>
+    <tbody className="text-muted-foreground">
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">panelId</td>
+        <td className="p-2 font-mono text-xs">string</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Unique panel identifier for settings and persistence</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">title</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Panel title displayed in header bar</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">icon</td>
+        <td className="p-2 font-mono text-xs">ReactNode?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Icon rendered before title</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">tabs</td>
+        <td className="p-2 font-mono text-xs">PanelTabDef[]?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Tab definitions (renders PanelTabs internally)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">defaultTabId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Default active tab (when tabs provided)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">activeTabId</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Controlled active tab ID</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">onTabChange</td>
+        <td className="p-2 font-mono text-xs">(id: string) => void</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Called when active tab changes</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">headerActions</td>
+        <td className="p-2 font-mono text-xs">ReactNode?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Actions rendered in header (gear, close, etc.)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">hideTitleBar</td>
+        <td className="p-2 font-mono text-xs">boolean?</td>
+        <td className="p-2">false</td>
+        <td className="p-2">Hides title bar (when identity shown elsewhere)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">scrollable</td>
+        <td className="p-2 font-mono text-xs">boolean?</td>
+        <td className="p-2">true</td>
+        <td className="p-2">Wraps content in ScrollArea</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">locked</td>
+        <td className="p-2 font-mono text-xs">boolean?</td>
+        <td className="p-2">false</td>
+        <td className="p-2">Shows LockedOverlay when true</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">lockedProps</td>
+        <td className="p-2 font-mono text-xs">Partial&lt;LockedOverlayProps&gt;?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Props for LockedOverlay component</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">children</td>
+        <td className="p-2 font-mono text-xs">ReactNode</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Panel content (ignored when tabs provided)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">className</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Additional CSS classes</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+---
+
+## TypeScript Definitions
+
+```typescript
+export interface PanelTabDef {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  content: React.ReactNode;
+  accentColor?: string;
+  closable?: boolean;
+}
+
+export interface LockedOverlayProps {
+  title?: string;
+  description?: string;
+  // ... additional props from @forge/ui/locked-overlay
+}
+```
+
+---
+
+## Examples
+
+### Simple Panel
+
+```typescript
+export function SimpleInspector() {
+  return (
+    <EditorDockPanel
+      panelId="inspector"
+      title="Inspector"
+      icon={<Settings size={14} />}
+    >
+      <div className="space-y-4">
+        <PropertyField label="Name" value="MyNode" />
+        <PropertyField label="Type" value="Dialogue" />
+      </div>
+    </EditorDockPanel>
+  );
+}
+```
+
+### Panel with Header Actions
+
+```typescript
+export function PanelWithActions() {
+  return (
+    <EditorDockPanel
+      panelId="library"
+      title="Library"
+      icon={<BookOpen size={14} />}
+      headerActions={
+        <>
+          <Button size="sm" variant="ghost">
+            <Plus size={14} />
+          </Button>
+          <Button size="sm" variant="ghost">
+            <MoreHorizontal size={14} />
+          </Button>
+        </>
+      }
+    >
+      <AssetGrid />
+    </EditorDockPanel>
+  );
+}
+```
+
+### Tabbed Panel
+
+```typescript
+export function TabbedNavigator() {
+  const tabs: PanelTabDef[] = [
+    {
+      id: 'graphs',
+      label: 'Graphs',
+      icon: <BookOpen size={12} />,
+      content: <GraphList />,
+    },
+    {
+      id: 'nodes',
+      label: 'Nodes',
+      icon: <Boxes size={12} />,
+      content: <NodePalette />,
+    },
+    {
+      id: 'search',
+      label: 'Search',
+      icon: <Search size={12} />,
+      content: <SearchPanel />,
+    },
+  ];
+
+  return (
+    <EditorDockPanel
+      panelId="navigator"
+      tabs={tabs}
+      defaultTabId="graphs"
+    />
+  );
+}
+```
+
+### Panel with Controlled Tabs
+
+```typescript
+export function ControlledTabPanel() {
+  const [activeTab, setActiveTab] = useState('properties');
+
+  const tabs: PanelTabDef[] = [
+    { id: 'properties', label: 'Properties', content: <PropertiesPanel /> },
+    { id: 'data', label: 'Data', content: <DataPanel /> },
+    { id: 'events', label: 'Events', content: <EventsPanel /> },
+  ];
+
+  return (
+    <EditorDockPanel
+      panelId="inspector"
+      title="Inspector"
+      tabs={tabs}
+      activeTabId={activeTab}
+      onTabChange={setActiveTab}
+    />
+  );
+}
+```
+
+### Locked Panel During AI Edit
+
+```typescript
+export function AIEditablePanel() {
+  const [isAIEditing, setIsAIEditing] = useState(false);
+
+  return (
+    <EditorDockPanel
+      panelId="canvas"
+      title="Canvas"
+      locked={isAIEditing}
+      lockedProps={{
+        title: 'AI Agent Working',
+        description: 'Applying changes to your dialogue...',
+      }}
+    >
+      <DialogueCanvas />
+    </EditorDockPanel>
+  );
+}
+```
+
+### Non-Scrollable Panel for Viewports
+
+```typescript
+export function ViewportPanel() {
+  return (
+    <EditorDockPanel
+      panelId="viewport"
+      title="Scene"
+      scrollable={false} // Viewport manages its own scroll
+    >
+      <ReactFlowViewport />
+    </EditorDockPanel>
+  );
+}
+```
+
+### Panel Without Title Bar
+
+```typescript
+export function MinimalPanel() {
+  return (
+    <EditorDockPanel
+      panelId="main"
+      hideTitleBar // Identity shown in outer chrome
+    >
+      <FullscreenCanvas />
+    </EditorDockPanel>
+  );
+}
+```
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+- Always provide unique `panelId` for settings scoping
+- Use `scrollable={false}` for canvas/viewport panels
+- Set `locked={true}` during AI patch application
+- Provide `icon` and `title` for visual hierarchy
+- Use `tabs` for multi-view panels (Inspector, Settings)
+- Hide title bar (`hideTitleBar`) when identity shown elsewhere
+- Add header actions for panel-specific operations
+
+### ❌ Don't
+
+- Don't use the same `panelId` across multiple panels
+- Don't wrap scrollable viewports in scrollable panels
+- Don't render heavy content in hidden tabs (use lazy loading)
+- Don't forget to unlock panel after AI edit completes
+- Don't mix `tabs` and `children` (tabs takes precedence)
+- Don't use title bar for complex layouts (use toolbar instead)
+
+---
+
+## Title Bar Layout
+
+The title bar renders when `hideTitleBar={false}` and any of `title`, `icon`, or `headerActions` are provided:
+
+```
+┌─────────────────────────────────────────┐
+│ [icon] Title          [headerActions]   │
+├─────────────────────────────────────────┤
+│                                         │
+│           Panel Content                 │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+Title bar features:
+- Fixed height (`var(--tab-height)`)
+- Border bottom with context accent color
+- Left-aligned icon + title
+- Right-aligned header actions
+- Truncates title when space constrained
+
+---
+
+## Tab Integration
+
+When `tabs` are provided, DockPanel renders `PanelTabs` internally:
+
+```typescript
+<EditorDockPanel
+  panelId="navigator"
+  tabs={[
+    { id: 'graphs', label: 'Graphs', icon: <BookOpen />, content: <GraphList /> },
+    { id: 'nodes', label: 'Nodes', icon: <Boxes />, content: <NodePalette /> },
+  ]}
+/>
+```
+
+This is equivalent to:
+
+```typescript
+<EditorDockPanel panelId="navigator" hideTitleBar>
+  <PanelTabs
+    tabs={[
+      { id: 'graphs', label: 'Graphs', icon: <BookOpen />, content: <GraphList /> },
+      { id: 'nodes', label: 'Nodes', icon: <Boxes />, content: <NodePalette /> },
+    ]}
+  />
+</EditorDockPanel>
+```
+
+---
+
+## Locked Overlay
+
+Set `locked={true}` to show a `LockedOverlay` during AI operations:
+
+```typescript
+<EditorDockPanel
+  panelId="editor"
+  locked={isAIApplyingPatch}
+  lockedProps={{
+    title: 'AI Agent Active',
+    description: 'Generating dialogue nodes...',
+  }}
+>
+  <DialogueEditor />
+</EditorDockPanel>
+```
+
+The overlay prevents user interaction and displays a loading state.
+
+---
+
+## Scrolling Behavior
+
+- **`scrollable={true}`** (default): Wraps content in `ScrollArea` with padding
+- **`scrollable={false}`**: Content fills panel with no wrapper (use for React Flow, canvas)
+
+```typescript
+// Scrollable panel (default)
+<EditorDockPanel panelId="settings" scrollable>
+  <SettingsForm /> {/* Content can overflow */}
+</EditorDockPanel>
+
+// Non-scrollable panel (viewport manages scroll)
+<EditorDockPanel panelId="canvas" scrollable={false}>
+  <ReactFlowCanvas /> {/* Viewport has internal scroll */}
+</EditorDockPanel>
+```
+
+---
+
+## Related Components
+
+- [DockLayout](./dock-layout) - Layout manager container
+- [PanelTabs](./panel-tabs) - Tab bar component
+- [LockedOverlay](../ui/locked-overlay) - Lock overlay component
+- [ScrollArea](../ui/scroll-area) - Scrollable container
+
+---
+
+## Source Code
+
+**Location:** `packages/shared/src/shared/components/editor/DockPanel.tsx`
+
+**External Dependencies:**
+- `@forge/ui/locked-overlay` - Lock overlay during AI edits
+- `@forge/ui/scroll-area` - Scrollable container for content
+
+**Data Attributes:**
+```typescript
+<div data-panel-id={panelId}>
+  {/* Panel content */}
+</div>
+```

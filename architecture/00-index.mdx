@@ -1,0 +1,24 @@
+---
+title: Architecture
+---
+
+# Architecture
+
+Editor platform, components, model routing, MCP, Assistant UI, dialogue.
+
+## Index
+
+| # | Doc | Summary |
+|---|-----|---------|
+| [01](01-editor-platform) | Editor platform | WorkspaceApp, WorkspaceShell, DockLayout, naming migration |
+| [02](02-component-library) | Component library | @forge/ui, @forge/shared, @forge/dev-kit, Verdaccio |
+| [03](03-model-routing-openrouter) | Model routing | OpenRouter, model slots, runtime matrix |
+| [04](04-editors-as-mcp-apps) | Editors as MCP apps | MCP app descriptor, app tools, registration |
+| [05](05-assistant-ui-architecture) | Assistant UI | Chat UI, domain tools, no CopilotKit |
+| [06](06-dialogue-yarn-spinner) | Dialogue and Yarn Spinner | Graph types, node types, domain |
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/components/workspace/`, `apps/studio/components/`, `verdaccio.yaml`
+Related: how-to/02-editor-shell, how-to/05-building-an-editor, ai/02-domain-integration
+Do not: Reference CopilotKit; use Assistant UI and domain contracts
+</Callout>

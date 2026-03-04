@@ -1,0 +1,41 @@
+---
+title: 02 - Component library
+---
+
+# 02 - Component library + Verdaccio
+
+Publishable blocks: @forge/ui, @forge/shared, @forge/agent-engine, @forge/dev-kit.
+
+## Published packages
+
+| Package | Contents |
+|---------|----------|
+| @forge/ui | Shadcn/Radix atoms, no domain deps |
+| @forge/shared | Editor shell, DockLayout, Assistant helpers, domain contracts |
+| @forge/agent-engine | Workflow runtime (steps, events, SSE) |
+| @forge/dev-kit | Re-exports shared + agent-engine |
+
+**Not published:** @forge/domain-* (internal), @forge/types.
+
+## Verdaccio
+
+```bash
+pnpm registry:start
+```
+
+Config: `verdaccio.yaml`. See [how-to/25-verdaccio](../how-to/25-verdaccio-local-registry).
+
+## Build + publish
+
+```bash
+pnpm registry:forge:build
+pnpm registry:forge:publish:local
+```
+
+**Next:** [03 - Model routing and OpenRouter](03-model-routing-openrouter)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/ui/`, `packages/shared/`, `verdaccio.yaml`, `pnpm-workspace.yaml`
+Related: how-to/24-vendoring-third-party-code, how-to/25-verdaccio-local-registry
+Do not: Publish domain packages; use yarn (use pnpm)
+</Callout>

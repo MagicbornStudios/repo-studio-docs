@@ -1,0 +1,155 @@
+---
+title: Components reference
+created: 2026-02-12
+updated: 2026-02-12
+---
+
+# Components reference
+
+Canonical catalog of AI-related components. **Tool UI** and **Assistant UI** are **chat components**—they render inside the conversational thread, not in editor panels. Editor panels (GraphPanel, Inspector, etc.) are separate.
+
+---
+
+## Chat components clarification
+
+- **Chat components** = render inside the Thread (messages, tool results, attachments).
+- **Editor panels** = GraphPanel, Inspector, Settings—part of the dock layout, not chat.
+- Tool UI components appear when the model returns a tool result (e.g. `render_plan`, `render_image`). Assistant UI provides the Thread, Composer, and message primitives.
+
+Reference: [tool-ui.com](https://www.tool-ui.com).
+
+---
+
+## Assistant UI components
+
+Location: [packages/shared/src/shared/components/assistant-ui/](../../packages/shared/src/shared/components/assistant-ui/)
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Thread | thread.tsx | Main chat UI (viewport, messages, composer, suggestions) |
+| ThreadList | thread-list.tsx | Thread switcher/archive |
+| ToolFallback, ToolFallbackRoot, etc. | tool-fallback.tsx | Fallback when tool has no registered renderer |
+| ToolGroup, ToolGroupRoot, etc. | tool-group.tsx | Collapsible tool result groups |
+| MarkdownText | markdown-text.tsx | Renders assistant messages as markdown |
+| TooltipIconButton | tooltip-icon-button.tsx | Icon buttons with title fallback |
+| ComposerAttachments, UserMessageAttachments | attachment.tsx | Attachments in composer/user messages |
+| CodebaseAgentStrategyEditor | CodebaseAgentStrategyEditor.tsx | Full chat editor with ThreadList, Thread, ToolUIRegistry |
+| AssistantDevToolsBridge | devtools-bridge.tsx | Wires assistant-ui devtools |
+
+**Where used:** DialogueAssistantPanel ([apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx](../../apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx)), CodebaseAgentStrategyEditor (Strategy editor, consumer example).
+
+---
+
+## Tool UI components
+
+Location: [packages/shared/src/shared/components/tool-ui/](../../packages/shared/src/shared/components/tool-ui/). Wired via [assistant-tools.tsx](../../packages/shared/src/shared/components/tool-ui/assistant-tools.tsx) (ToolUIRegistry).
+
+### Progress (tool-ui.com)
+
+| Tool name | Component | When to use |
+|-----------|-----------|-------------|
+| render_plan | Plan | Step-by-step workflows with Apply/Request Changes. [tool-ui.com Plan](https://www.tool-ui.com/docs/plan) |
+| render_progress_tracker | ProgressTracker | Real-time multi-step execution (building, deploying). [tool-ui.com Progress Tracker](https://www.tool-ui.com/docs/progress-tracker) |
+
+### Input / guided flows
+
+| Tool name | Component | When to use |
+|-----------|-----------|-------------|
+| render_question_flow | QuestionFlow | Multi-step guided questions (character creation, import setup). [tool-ui.com Question Flow](https://www.tool-ui.com/docs/question-flow) |
+| render_option_list | OptionList | Selectable options |
+| render_parameter_slider | ParameterSlider | Numeric tuning |
+| render_preferences_panel | PreferencesPanel | Toggleable settings |
+
+### Media
+
+| Tool name | Component | When to use |
+|-----------|-----------|-------------|
+| render_image | Image | Character portraits, generated media. [tool-ui.com Image](https://www.tool-ui.com/docs/image) |
+| render_image_gallery | ImageGallery | Multiple images |
+| render_video | Video | Video playback with poster. [tool-ui.com Video](https://www.tool-ui.com/docs/video) |
+| render_audio | Audio | Audio playback. Use **ElevenLabs** for generation; tool-ui Audio for playback in chat |
+
+### Confirmation
+
+| Tool name | Component | When to use |
+|-----------|-----------|-------------|
+| render_approval_card | ApprovalCard | Confirm/cancel actions |
+| render_order_summary | OrderSummary | Order summary card |
+
+### Artifacts / display
+
+| Tool name | Component | When to use |
+|-----------|-----------|-------------|
+| render_code_block | CodeBlock | Syntax-highlighted code |
+| render_data_table | DataTable | Structured data |
+| render_terminal | Terminal | Command/output display |
+| render_chart | Chart | Charts with series |
+| render_citation | Citation | Citation summary |
+| render_stats_display | StatsDisplay | Metrics |
+| render_message_draft | MessageDraft | Draft preview |
+| render_link_preview | LinkPreview | Link cards |
+
+---
+
+## ToolUIRegistry and wiring
+
+`ToolUIRegistry` mounts `makeAssistantTool` for each tool-ui component. `ForgePlanToolUI` (makeAssistantToolUI) renders Plan for `forge_createPlan` results; mount with `ForgePlanExecuteProvider` when `executePlan` is available. When the model returns a tool result, the result is parsed via the component's schema and rendered. DialogueAssistantPanel and CodebaseAgentStrategyEditor mount `<ToolUIRegistry />` inside `AssistantRuntimeProvider`.
+
+---
+
+## Copilot generative-ui (pre-migration)
+
+Location: [packages/shared/src/shared/copilot/generative-ui/](../../packages/shared/src/shared/copilot/generative-ui/)
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| PlanCard, PlanActionBar | PlanCard.tsx | Plan display with Apply/Dismiss (CopilotKit) |
+| ForgePlanCard | apps/studio/components/copilot/ForgePlanCard.tsx | Forge-specific plan renderer (CopilotKit) |
+| ConfirmationCard | ConfirmationCard.tsx | Confirmation UI |
+| DiffPreview | DiffPreview.tsx | Generic before/after comparison |
+
+Post-migration: Use tool-ui Plan with responseActions; DiffPreview or domain-specific panels for diff.
+
+---
+
+## Diff components
+
+| Component | Domain | Purpose |
+|-----------|--------|---------|
+| DiffPreview | Generic | Before/after comparison. [packages/shared/src/shared/copilot/generative-ui/DiffPreview.tsx](../../packages/shared/src/shared/copilot/generative-ui/DiffPreview.tsx) |
+| GraphDiffPanel | Forge | Current vs proposed ops summary (e.g. "Add 3 nodes, 2 edges"). To create. |
+| LexicalDiffPanel | Writer | Block-level before/after. To create. |
+
+---
+
+## Usage patterns
+
+### DialogueAssistantPanel
+
+[apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx](../../apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx)
+
+- AssistantRuntimeProvider + AssistantChatTransport + Thread + ToolUIRegistry
+- Used in Dialogue and Character editors (right-rail Chat panel)
+- Composer slots: composerLeading, composerTrailing (ModelSwitcher, etc.)
+
+### CodebaseAgentStrategyEditor
+
+[packages/shared/src/shared/components/assistant-ui/CodebaseAgentStrategyEditor.tsx](../../packages/shared/src/shared/components/assistant-ui/CodebaseAgentStrategyEditor.tsx)
+
+- Full layout with ThreadList, Thread, optional Tools panel
+- Used in Strategy editor and consumer example
+
+---
+
+## Audio: ElevenLabs
+
+- **Generation:** ElevenLabs for character voices, TTS. APIs: `/api/elevenlabs/voices`, `/api/elevenlabs/speech`
+- **Playback in chat:** tool-ui Audio or custom player with generated URL
+- **Tools:** `character_generateVoice`, `writer_readAloud` → return audio URL → render with tool-ui Audio
+
+---
+
+## Next
+
+- [08 - Best practices](08-best-practices.mdx) — Diff strategy, component alignment
+- [04 - Runtime and components](04-runtime-and-components.mdx) — API route, DialogueAssistantPanel

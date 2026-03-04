@@ -1,0 +1,40 @@
+---
+title: AI integration
+---
+
+# Tutorial: AI integration
+
+Add Assistant UI chat to your editor via `DomainAssistantContract`.
+
+## Contract
+
+```ts
+interface DomainAssistantContract {
+  domain: string;
+  getContextSnapshot(): DomainContextSnapshot;
+  getInstructions(): string;
+  createTools(): DomainTool[];
+  getSuggestions(): Array<{ title: string; message: string }>;
+  onHighlight(entities: Record<string, string[]>): void;
+  clearHighlights(): void;
+}
+```
+
+## Steps
+
+1. **Define contract** — Factory hook: `getContextSnapshot`, `getInstructions`, `createTools`, etc.
+2. **Wire in editor** — `useDomainAssistant(contract, { enabled })` + `<DomainToolsRenderer contract={contract} />`
+3. **Mount chat panel** — Render chat UI (e.g. `DialogueAssistantPanel` style) with `contract` and `toolsEnabled`
+4. **Tools** — Each tool: `name`, `description`, `parameters`, `execute`, optional `render`
+
+## Example
+
+See [how-to/07-assistant-and-ai](../how-to/07-assistant-and-ai) and [ai/02-domain-integration](../ai/02-domain-integration). Reference: `packages/domain-forge/src/assistant/`, `packages/domain-character/src/assistant/`.
+
+**Next:** Back to [00-index](00-index)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/assistant/`, `packages/domain-forge/src/assistant/`
+Related: ai/02-domain-integration, how-to/08-adding-ai-to-editors
+Do not: Use CopilotKit; use Assistant UI and domain contracts
+</Callout>

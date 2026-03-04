@@ -1,0 +1,29 @@
+---
+title: Theming
+---
+
+# Theming
+
+Design tokens, `data-theme`, `data-density`. See [design/01-styling-and-theming](../design/01-styling-and-theming).
+
+## Tokens
+
+- `--control-height`, `--control-gap`, `--panel-padding`, `--tab-height`
+- `--background`, `--foreground`, `--border`, `--radius-*`
+
+## Density
+
+- Default: `compact`
+- Override: `WorkspaceShell` sets `data-density`; `[data-density='comfortable']` for relaxed
+
+## Themes
+
+`data-theme="light"` or `data-theme="dark"`. Base from shadcn; one primary accent.
+
+**Next:** [Performance](performance)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/styles/themes.css`, `packages/ui/`
+Related: design/01-styling-and-theming, agent-artifacts/core/styling-and-ui-consistency
+Do not: Use ad-hoc px/py; use token-based values
+</Callout>

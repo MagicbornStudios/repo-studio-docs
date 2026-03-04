@@ -1,0 +1,551 @@
+---
+title: AI System Overview
+created: 2026-02-11
+updated: 2026-02-11
+icon: "🤖"
+---
+
+# 🤖 AI System Overview
+
+**AI-powered workflows for creative tools**
+
+Forge provides deep integration with AI systems to augment your editors with intelligent assistants, automated workflows, and multi-agent coordination.
+
+---
+
+## Current Status
+
+### ✅ Production Ready
+
+**Studio & Editor Components**
+- WorkspaceShell, DockLayout, Toolbar, Inspector, Settings
+- Complete component API with TypeScript safety
+- Hierarchical settings system with UI-first design
+- Selection-driven inspector panels
+- Modal and overlay systems
+
+### 🚧 Active Development
+
+**AI Workflows & Integration**
+- Domain contract system (interface defined, implementations in progress)
+- Tool execution with custom rendering
+- Plan-review-execute workflows
+- Multi-agent coordination patterns
+- LangGraph integration for complex workflows
+
+### 📋 Planned Features
+
+See our [Roadmap](../roadmap.mdx) for upcoming AI features.
+
+---
+
+## What We're Building
+
+Forge isn't just another chatbot wrapper. We're building a comprehensive AI integration layer that treats AI as a **first-class citizen** in the editor experience.
+
+### 🎯 Vision
+
+- **Domain-Specific Agents** - AI that understands your editor's context and domain
+- **Tool-Augmented Workflows** - AI can execute operations, not just chat
+- **Plan-Review-Execute** - User approval gates for multi-step operations
+- **Multi-Agent Coordination** - Agents collaborate across editors and domains
+- **Cost Optimization** - Intelligent model routing and prompt caching
+
+---
+
+## Architecture
+
+### Domain Contracts
+
+AI agents are defined using **Domain Contracts** - a structured interface that describes:
+
+```typescript
+interface DomainAssistantContract {
+  domain: string;                          // 'character', 'forge', 'writer'
+  getInstructions(): string;               // Agent system prompt
+  createTools(): DomainTool[];             // Available operations
+  getContextSnapshot(): DomainContextSnapshot;  // Current editor state
+  getSuggestions(): Suggestion[];          // Quick action suggestions
+  onHighlight(entities: Record<string, string[]>): void;  // Visual feedback
+  clearHighlights(): void;
+}
+```
+
+### Example: Forge Domain Contract
+
+```typescript
+export function useForgeAssistantContract(deps: ForgeDeps): DomainAssistantContract {
+  return {
+    domain: 'forge',
+
+    getInstructions: () =>
+      'You are helping edit a graph (nodes and edges). ' +
+      'This graph represents dialogue/narrative. ' +
+      'Available node types: CHARACTER, PLAYER, CONDITIONAL. ' +
+      'Use forge_* tools to modify the graph.',
+
+    createTools: () => [
+      {
+        name: 'forge_createNode',
+        description: 'Create a new dialogue node',
+        parameters: { /* ... */ },
+        execute: async (args) => {
+          // Create node in graph
+          // Return result
+        },
+        render: (result) => (
+          <NodeCreatedCard nodeId={result.nodeId} />
+        ),
+      },
+      // More tools...
+    ],
+
+    getContextSnapshot: () => ({
+      domain: 'forge',
+      data: {
+        graph: {
+          id: currentGraph.id,
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+        },
+      },
+    }),
+
+    onHighlight: (entities) => {
+      // Highlight nodes in graph
+    },
+  };
+}
+```
+
+---
+
+## AI Workflows
+
+### 1. Simple Tool Execution
+
+User asks for a single operation:
+
+```
+User: "Create a character node for Dr. Chen"
+
+[FORGE AGENT]
+→ Calls forge_createNode
+→ Highlights new node in graph
+→ Returns success card in chat
+```
+
+### 2. Plan-Review-Execute
+
+User asks for complex multi-step operation:
+
+```
+User: "Create a branching dialogue with 3 choices"
+
+[FORGE AGENT]
+→ Creates plan with 5 steps
+→ Shows PlanReviewCard in chat
+
+User: [Clicks "Approve"]
+
+[FORGE AGENT]
+→ Executes each step
+→ Shows progress
+→ Highlights created nodes
+→ Returns summary
+```
+
+### 3. Multi-Agent Coordination
+
+User request spans multiple domains:
+
+```
+User: "Create a character and use them in a dialogue"
+
+[APP AGENT ORCHESTRATOR]
+→ Delegates to CHARACTER AGENT
+  → Creates character in database
+  → Returns character ID
+
+→ Delegates to FORGE AGENT
+  → Creates dialogue node
+  → References character by ID
+  → Highlights node in graph
+
+→ Returns unified summary
+```
+
+---
+
+## Tool System
+
+Tools are the bridge between AI and your editor. Each tool:
+
+1. **Defines parameters** - TypeScript-safe schema
+2. **Executes operations** - Modifies editor state
+3. **Returns results** - Structured data
+4. **Renders UI** - Custom React components in chat
+
+### Tool Definition
+
+```typescript
+interface DomainTool {
+  domain: string;                    // 'forge', 'character', etc.
+  name: string;                      // 'forge_createNode'
+  description: string;               // For AI model
+  parameters: JSONSchema;            // Tool arguments
+  execute: (args, context) => Promise<unknown>;
+  render?: (result) => ReactNode;    // Optional custom UI
+}
+```
+
+### Tool Example
+
+```typescript
+{
+  domain: 'forge',
+  name: 'forge_createNode',
+  description: 'Create a new dialogue node in the graph',
+
+  parameters: {
+    type: 'object',
+    properties: {
+      nodeType: {
+        type: 'string',
+        enum: ['CHARACTER', 'PLAYER', 'CONDITIONAL'],
+      },
+      label: { type: 'string' },
+      content: { type: 'string' },
+      characterId: { type: 'string' },  // Cross-domain reference
+    },
+    required: ['nodeType', 'label'],
+  },
+
+  execute: async (args, context) => {
+    const nodeId = generateId();
+
+    // Apply operation to graph
+    context.applyOperations([{
+      type: 'createNode',
+      nodeType: args.nodeType,
+      data: {
+        label: args.label,
+        content: args.content,
+        characterId: args.characterId,  // Reference to character DB
+      },
+      id: nodeId,
+    }]);
+
+    // Highlight in UI
+    context.onHighlight({ 'forge.node': [nodeId] });
+
+    return {
+      success: true,
+      nodeId,
+      message: `Created ${args.nodeType} node`,
+    };
+  },
+
+  render: (result) => (
+    <div className="rounded-lg border bg-card p-3">
+      <p className="font-medium text-sm">Node Created</p>
+      <p className="text-xs text-muted-foreground mt-1">
+        {result.message}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        ID: <code>{result.nodeId}</code>
+      </p>
+    </div>
+  ),
+}
+```
+
+---
+
+## Model Routing
+
+Forge uses intelligent model routing to optimize cost and quality:
+
+### Complexity-Based Routing
+
+```typescript
+// Trivial operations → Fast, cheap models
+"Create a node" → gpt-4o-mini ($0.15/1M tokens)
+
+// Simple operations → Balanced models
+"Create 3 nodes with dialogue" → gpt-4o ($2.50/1M tokens)
+
+// Complex operations → Powerful models
+"Design a branching storylet" → claude-3.5-sonnet ($3/1M tokens)
+
+// Creative operations → Best quality
+"Write dialogue in character voice" → claude-3.5-sonnet
+```
+
+### Cost Optimization Techniques
+
+- **Prompt Caching** - Cache domain instructions (81% cost reduction)
+- **Batching** - Process multiple operations in one call (80% savings)
+- **Model Selection** - Route by complexity (75-90% savings)
+- **Context Management** - Minimize input tokens
+
+**Example Impact:**
+- Naive approach: $135/month
+- Optimized approach: $13.80/month
+- **90% cost reduction**
+
+See [Cost Optimization](../../ai/13-cost-optimization.mdx) for details.
+
+---
+
+## Integration Patterns
+
+### 1. Add AI to Existing Editor
+
+```typescript
+import { useForgeAssistantContract } from '@/domain-forge/assistant';
+
+export function MyEditor() {
+  const assistantContract = useForgeAssistantContract({
+    applyOperations: (ops) => {
+      // Apply ops to your editor state
+    },
+    onHighlight: (entities) => {
+      // Highlight entities in UI
+    },
+  });
+
+  return (
+    <WorkspaceShell editorId="my-editor">
+      {/* ... editor UI ... */}
+
+      <AssistantPanel contract={assistantContract} />
+    </WorkspaceShell>
+  );
+}
+```
+
+### 2. Create Custom Domain
+
+```typescript
+export function useMyDomainContract(): DomainAssistantContract {
+  return {
+    domain: 'my-domain',
+
+    getInstructions: () => `
+      You help users with ${domain} tasks.
+      Available operations: ...
+      Context: ...
+    `,
+
+    createTools: () => [
+      {
+        name: 'my_domain_action',
+        description: '...',
+        parameters: { /* ... */ },
+        execute: async (args) => {
+          // Your domain logic
+        },
+      },
+    ],
+
+    getContextSnapshot: () => ({
+      domain: 'my-domain',
+      data: {
+        // Your editor state
+      },
+    }),
+  };
+}
+```
+
+### 3. Cross-Domain Operations
+
+```typescript
+// Character domain creates entity
+const character = await characterAgent.execute('character_create', {
+  name: 'Dr. Chen',
+});
+
+// Forge domain references entity
+await forgeAgent.execute('forge_createNode', {
+  nodeType: 'CHARACTER',
+  characterId: character.id,  // Cross-domain reference
+  speaker: character.name,
+});
+```
+
+---
+
+## Workflows & LangGraph
+
+For complex multi-step workflows with checkpoints:
+
+### When to Use LangGraph
+
+- **Plan iteration** - User can modify plans before execution
+- **Checkpoints** - Resume workflows across sessions
+- **Multi-agent** - Coordinate between multiple AI agents
+- **State machines** - Complex conditional flows
+
+### Example: Plan Workflow
+
+```typescript
+// 1. Create plan
+const plan = await createPlan({
+  goal: "Create branching dialogue",
+  context: graphSnapshot,
+});
+// Checkpoint saved: checkpoint_001
+
+// 2. User modifies plan
+const modifiedPlan = await modifyPlan(plan.checkpointId, {
+  modifications: "Add a fourth choice branch",
+});
+// Checkpoint saved: checkpoint_002
+
+// 3. Execute plan
+const result = await executePlan(modifiedPlan.checkpointId);
+// Checkpoint saved: checkpoint_003 (completed)
+```
+
+---
+
+## Current Implementation Status
+
+### ✅ Completed
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| Domain Contract Interface | ✅ Stable | `packages/shared/src/shared/assistant/domain-contract.ts` |
+| Forge Domain | ✅ Active | `packages/domain-forge/src/assistant/` |
+| Assistant UI Integration | ✅ Active | `apps/studio/app/api/assistant-chat/route.ts` |
+| Tool Rendering | ✅ Active | Custom render functions per tool |
+| Context Snapshots | ✅ Active | Per-domain snapshot providers |
+
+### 🚧 In Progress
+
+| Component | Status | Next Steps |
+|-----------|--------|------------|
+| Character Domain Tools | 🚧 Partial | Implement tool functions |
+| Writer Domain | 🚧 Planning | Create domain package |
+| LangGraph Integration | 🚧 Design | Checkpoint persistence with IndexedDB |
+| Multi-Agent Orchestration | 🚧 Design | APP AGENT coordinator |
+| MCP Integration | 📋 Planned | Model Context Protocol support |
+
+See [Complete System Architecture](../../ai/20-complete-system-architecture.mdx) for full details.
+
+---
+
+## API Reference
+
+### Domain Contract Methods
+
+```typescript
+// Get agent instructions (system prompt)
+contract.getInstructions(): string
+
+// Get available tools
+contract.createTools(): DomainTool[]
+
+// Get current editor context
+contract.getContextSnapshot(): DomainContextSnapshot
+
+// Get quick action suggestions
+contract.getSuggestions(): Suggestion[]
+
+// Highlight entities in UI
+contract.onHighlight(entities: Record<string, string[]>): void
+
+// Clear highlights
+contract.clearHighlights(): void
+```
+
+### Tool Execution
+
+```typescript
+// Execute a tool
+const result = await tool.execute(args, context);
+
+// Render result in chat
+const ui = tool.render?.(result) || <JSONDisplay data={result} />;
+```
+
+---
+
+## Examples & Guides
+
+### Conversation Flows
+
+See complete examples with multi-agent coordination:
+
+- [Agent Conversation Flows](../../ai/21-agent-conversation-flows.mdx)
+- [Story Builder Workflow](../../ai/examples/story-builder-workflow.md)
+- [Workflow Complexity Guide](../../ai/examples/workflow-complexity-guide.md)
+
+### Implementation Guides
+
+- [AI Roadmap](../../ai/11-ai-roadmap.mdx) - Quarterly development phases
+- [Model Strategy](../../ai/10-model-strategy.mdx) - Multi-model routing
+- [Technical Considerations](../../ai/12-technical-considerations.mdx) - Architecture decisions
+- [Cost Optimization](../../ai/13-cost-optimization.mdx) - 90%+ cost reduction techniques
+
+---
+
+## Future Vision
+
+### Q2 2026
+- ✅ Complete Character domain implementation
+- ✅ Writer domain with Notion-style pages
+- ✅ LangGraph checkpoint persistence
+- ✅ Multi-agent coordination
+
+### Q3 2026
+- 🎨 Multimodal AI (vision, audio, image generation)
+- 🔗 MCP integration for editor apps
+- 🎯 Advanced model routing with suitability scores
+- 📊 Analytics and cost tracking
+
+### Q4 2026
+- ⚡ Real-time collaboration with AI
+- 🌐 Distributed agent systems
+- 🔌 Plugin ecosystem for custom domains
+- 📚 Community agent marketplace
+
+---
+
+## Get Started
+
+Ready to add AI to your editor?
+
+1. **Understand Domain Contracts** - Read [Domain Contracts Guide](../developer-guide/domain-contracts)
+2. **Create Tools** - See [Tool System Guide](../developer-guide/tool-system)
+3. **Implement Workflows** - Check [Custom Workflows](../developer-guide/custom-workflows)
+4. **Optimize Costs** - Review [Cost Optimization](../../ai/13-cost-optimization.mdx)
+
+---
+
+## Status Summary
+
+<div className="rounded-lg border p-4 my-6">
+  <h3 className="font-semibold mb-2">🏗️ What's Solid</h3>
+  <p className="text-sm text-muted-foreground mb-3">
+    Our studio components, settings system, and editor infrastructure are production-ready.
+    These APIs are stable and fully documented.
+  </p>
+
+  <h3 className="font-semibold mb-2">🚧 What's Evolving</h3>
+  <p className="text-sm text-muted-foreground">
+    Our AI integration layer is actively being developed. We're fleshing out domain implementations,
+    workflow kits, and multi-agent patterns. The interfaces are stable, but implementations are
+    being refined based on real-world usage.
+  </p>
+</div>
+
+We're transparent about our development status because we believe in building in public.
+Our component APIs are crystal clear and production-ready. Our AI system is being built
+with the same level of care and will reach that same level of polish.
+
+---
+
+**Ready to build AI-powered editors?** Start with our [Developer Guide](../developer-guide/00-index.mdx) →

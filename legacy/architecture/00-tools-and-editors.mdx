@@ -1,0 +1,63 @@
+---
+title: Tools, Editors, and Systems (Unreal-aligned terminology)
+created: 2026-02-07
+updated: 2026-02-07
+---
+
+# Tools, Editors, and Systems
+
+We align Forge Agent's product language with Unreal Engine's terminology:
+
+- **Tools** are specific task affordances (place nodes, paint terrain, inspect properties).
+- **Editors** are collections of tools for a complex outcome (Dialogue Editor, Video Editor).
+- **Systems** are underlying capabilities and domain packages (Dialogue system, Video system).
+
+This keeps UI, code, and documentation consistent with Unreal's mental model and makes
+it easier to reason about feature scope.
+
+---
+
+## Mapping table (Old -> New)
+
+| Legacy term | New term | Meaning in Forge |
+| --- | --- | --- |
+| **Workspace** / **Mode** (top-level) | **Editor** | Switchable top-level unit (Dialogue, Video, Character, Strategy). |
+| **Editor** (viewport scope) | **Viewport** | The primary surface inside an editor (React Flow, Twick, Lexical). |
+| **Domain package** | **System** | Implementation packages like `domain-forge`, `domain-video`. |
+| **Toolbar items / panels** | **Tools** | Actions and panels inside an editor. |
+
+**Rule:** "Mode" is now reserved for **in-editor state** (select/paint/inspect),
+not for top-level units.
+
+---
+
+## Code-level alignment
+
+| Area | Unreal term | Forge implementation |
+| --- | --- | --- |
+| App container | Editor host | `WorkspaceApp` + `AppShell` tabs |
+| Editor root | Editor | `WorkspaceShell` |
+| Tool surfaces | Tools | `WorkspaceHeader`, `WorkspaceToolbar`, `DockPanel`, `PanelTabs` |
+| Viewport | Viewport | `DockLayout` + `ViewportMeta` (`data-viewport-*`) |
+| Systems | Systems | `packages/domain-*` |
+
+---
+
+## Example: Dialogue Editor
+
+- **Editor:** Dialogue Editor (`WorkspaceShell` with `domain="dialogue"`).
+- **Tools:** node palette, minimap, inspector, AI plan review bar.
+- **Viewport:** React Flow graph surface (`ViewportMeta` with `viewportType="react-flow"`).
+- **System:** `packages/domain-forge` (graph model, operations, copilot contracts).
+- **Modes (internal state):** select, connect, paint, inspect.
+
+---
+
+## Naming rules for new work
+
+- Use **Editor** for top-level units (Dialogue Editor, Video Editor).
+- Use **Viewport** for the main surface inside an editor.
+- Use **System** for domain packages.
+- Use **Mode** only for transient in-editor states or tools.
+
+See [05 - Editor platform](05-editor-platform.mdx) for component details.

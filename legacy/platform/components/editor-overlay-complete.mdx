@@ -1,0 +1,828 @@
+---
+title: WorkspaceOverlaySurface - Complete Guide
+description: Modal system for creating overlays, dialogs, drawers, and popovers in editors
+---
+
+# WorkspaceOverlaySurface - Complete Guide
+
+The **WorkspaceOverlaySurface** component provides a declarative modal system for editors. It replaces complex modal registries with a simple, type-safe API for rendering modals, drawers, and popovers.
+
+## Table of Contents
+
+1. [Core Architecture](#core-architecture)
+2. [Overlay Types](#overlay-types)
+3. [Component API](#component-api)
+4. [Real Examples](#real-examples)
+5. [State Management](#state-management)
+6. [Dismissal Patterns](#dismissal-patterns)
+7. [Advanced Patterns](#advanced-patterns)
+
+---
+
+## Core Architecture
+
+### System Overview
+
+```
+┌────────────────────────────────────────────────────┐
+│            WorkspaceOverlaySurface                     │
+├────────────────────────────────────────────────────┤
+│                                                     │
+│  1. Declarative Overlay Specs (one place)          │
+│       ├─► id: 'create-node'                        │
+│       ├─► type: 'modal'                            │
+│       ├─► title: 'Create Node'                     │
+│       ├─► size: 'md'                               │
+│       └─► render: ({ payload, onDismiss }) => ...  │
+│                                                     │
+│  2. Active Overlay from Editor State               │
+│       ├─► id: 'create-node'                        │
+│       └─► payload: { x: 100, y: 200 }              │
+│                                                     │
+│  3. Match & Render                                 │
+│       └─► Find spec by id → Render in Dialog       │
+│                                                     │
+└────────────────────────────────────────────────────┘
+```
+
+### Key Features
+
+- **Declarative**: Define all overlays in one place
+- **Type-safe**: Full TypeScript support for payload types
+- **No registry**: Overlays scoped to editor, not global
+- **Automatic dismissal**: ESC key and click-outside handling
+- **Size variants**: sm, md, lg, full
+- **Flexible rendering**: Full control over overlay content
+
+---
+
+## Overlay Types
+
+### OverlaySpec Interface
+
+From `C:\Users\benja\Documents\forge-agent\packages\shared\src\shared\workspace\overlays.ts`:
+
+```typescript
+export type OverlaySize = 'sm' | 'md' | 'lg' | 'full';
+
+export interface OverlaySpec<P = Record<string, unknown>> {
+  /** Unique overlay identifier */
+  id: string;
+
+  /** Type determines rendering strategy */
+  type: 'modal' | 'drawer' | 'popover';
+
+  /** Optional title for overlay header */
+  title?: string;
+
+  /** Size variant */
+  size?: OverlaySize;
+
+  /**
+   * Render the overlay content.
+   * Receives payload from active overlay and onDismiss callback.
+   */
+  render: (props: {
+    payload?: P;
+    onDismiss: () => void;
+  }) => ReactNode;
+}
+```
+
+### ActiveOverlay Interface
+
+```typescript
+/**
+ * Currently active overlay from editor state.
+ * Contains overlay id and optional typed payload.
+ */
+export interface ActiveOverlay<P = Record<string, unknown>> {
+  id: string;
+  payload?: P;
+}
+```
+
+### Size Classes
+
+```typescript
+const sizeClasses: Record<OverlaySize, string> = {
+  sm: 'max-w-md',      // ~28rem (448px)
+  md: 'max-w-xl',      // ~36rem (576px)
+  lg: 'max-w-2xl',     // ~42rem (672px)
+  full: 'w-[90vw] max-h-[90vh]',  // Near fullscreen
+};
+```
+
+---
+
+## Component API
+
+### WorkspaceOverlaySurface Props
+
+```typescript
+export interface WorkspaceOverlaySurfaceProps {
+  /** Declarative overlay definitions */
+  overlays: OverlaySpec[];
+
+  /** Current active overlay from editor state */
+  activeOverlay: ActiveOverlay | null;
+
+  /** Dismiss callback (clears active overlay in editor state) */
+  onDismiss: () => void;
+
+  className?: string;
+}
+```
+
+### Basic Usage
+
+```tsx
+import { WorkspaceOverlaySurface } from '@forge/shared';
+import type { OverlaySpec, ActiveOverlay } from '@forge/shared';
+
+function MyEditor() {
+  const [activeOverlay, setActiveOverlay] = useState<ActiveOverlay | null>(null);
+
+  const overlays: OverlaySpec[] = [
+    {
+      id: 'create-node',
+      type: 'modal',
+      title: 'Create Node',
+      size: 'md',
+      render: ({ onDismiss }) => (
+        <CreateNodeForm
+          onSubmit={(node) => {
+            createNode(node);
+            onDismiss();
+          }}
+          onCancel={onDismiss}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <WorkspaceShell>
+      <EditorCanvas />
+
+      <WorkspaceOverlaySurface
+        overlays={overlays}
+        activeOverlay={activeOverlay}
+        onDismiss={() => setActiveOverlay(null)}
+      />
+
+      <Button onClick={() => setActiveOverlay({ id: 'create-node' })}>
+        Create Node
+      </Button>
+    </WorkspaceShell>
+  );
+}
+```
+
+---
+
+## Real Examples
+
+### DialogueEditor Overlays
+
+From `C:\Users\benja\Documents\forge-agent\apps\studio\components\editors\DialogueEditor.tsx`:
+
+```tsx
+const CREATE_NODE_OVERLAY_ID = 'create-node';
+
+function DialogueEditor() {
+  const [activeOverlay, setActiveOverlay] = useState<ActiveOverlay | null>(null);
+  const [graph, setGraph] = useState<ForgeGraphDoc | null>(null);
+
+  const overlays: OverlaySpec[] = [
+    {
+      id: CREATE_NODE_OVERLAY_ID,
+      type: 'modal',
+      title: 'Create Node',
+      size: 'md',
+      render: ({ payload, onDismiss }) => {
+        const position = payload as { x: number; y: number } | undefined;
+
+        return (
+          <CreateNodeModal
+            graphId={graph?.id}
+            position={position}
+            onSubmit={(nodeType) => {
+              createNode(nodeType, position);
+              onDismiss();
+              toast.success('Node created');
+            }}
+            onCancel={onDismiss}
+          />
+        );
+      },
+    },
+  ];
+
+  const handleRequestCreateNode = useCallback(
+    (position?: { x: number; y: number }) => {
+      setActiveOverlay({
+        id: CREATE_NODE_OVERLAY_ID,
+        payload: position,
+      });
+    },
+    []
+  );
+
+  return (
+    <WorkspaceShell>
+      <GraphEditor onRequestCreateNode={handleRequestCreateNode} />
+
+      <WorkspaceOverlaySurface
+        overlays={overlays}
+        activeOverlay={activeOverlay}
+        onDismiss={() => setActiveOverlay(null)}
+      />
+    </WorkspaceShell>
+  );
+}
+```
+
+### CreateNodeModal Component
+
+```tsx
+interface CreateNodeModalProps {
+  graphId: number | undefined;
+  position?: { x: number; y: number };
+  onSubmit: (nodeType: ForgeNodeType) => void;
+  onCancel: () => void;
+}
+
+function CreateNodeModal({
+  graphId,
+  position,
+  onSubmit,
+  onCancel
+}: CreateNodeModalProps) {
+  const [selectedType, setSelectedType] = useState<ForgeNodeType>('dialogue');
+
+  const nodeTypes: Array<{ value: ForgeNodeType; label: string; icon: React.ReactNode }> = [
+    { value: 'dialogue', label: 'Dialogue', icon: <MessageSquare size={20} /> },
+    { value: 'branch', label: 'Branch', icon: <GitBranch size={20} /> },
+    { value: 'action', label: 'Action', icon: <Zap size={20} /> },
+  ];
+
+  return (
+    <div className="space-y-4 p-6">
+      <div className="grid grid-cols-3 gap-3">
+        {nodeTypes.map((type) => (
+          <button
+            key={type.value}
+            onClick={() => setSelectedType(type.value)}
+            className={cn(
+              'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors',
+              selectedType === type.value
+                ? 'border-primary bg-primary/10'
+                : 'border-border hover:border-primary/50'
+            )}
+          >
+            {type.icon}
+            <span className="text-sm font-medium">{type.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {position && (
+        <p className="text-xs text-muted-foreground">
+          Position: ({position.x.toFixed(0)}, {position.y.toFixed(0)})
+        </p>
+      )}
+
+      <div className="flex gap-2 justify-end">
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={() => onSubmit(selectedType)}>
+          Create
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### Character Edit Drawer
+
+```tsx
+const overlays: OverlaySpec[] = [
+  {
+    id: 'edit-character',
+    type: 'modal',  // Could also be 'drawer'
+    title: 'Edit Character',
+    size: 'lg',
+    render: ({ payload, onDismiss }) => {
+      const characterId = payload?.characterId as string | undefined;
+      if (!characterId) return null;
+
+      return (
+        <CharacterEditForm
+          characterId={characterId}
+          onSave={(data) => {
+            updateCharacter(characterId, data);
+            onDismiss();
+            toast.success('Character updated');
+          }}
+          onCancel={onDismiss}
+        />
+      );
+    },
+  },
+];
+
+// Open the drawer
+<Button
+  onClick={() =>
+    setActiveOverlay({
+      id: 'edit-character',
+      payload: { characterId: 'char-123' }
+    })
+  }
+>
+  Edit Character
+</Button>
+```
+
+---
+
+### Confirm Delete Modal
+
+```tsx
+const overlays: OverlaySpec[] = [
+  {
+    id: 'confirm-delete',
+    type: 'modal',
+    title: 'Confirm Deletion',
+    size: 'sm',
+    render: ({ payload, onDismiss }) => {
+      const { entityType, entityId, entityName } = payload as {
+        entityType: string;
+        entityId: string;
+        entityName: string;
+      };
+
+      return (
+        <div className="space-y-4 p-6">
+          <Alert variant="destructive">
+            <AlertTriangle size={16} />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This action cannot be undone. This will permanently delete the{' '}
+              {entityType} <strong>{entityName}</strong>.
+            </AlertDescription>
+          </Alert>
+
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={onDismiss}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                deleteEntity(entityType, entityId);
+                onDismiss();
+                toast.success('Deleted');
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      );
+    },
+  },
+];
+
+// Trigger confirmation
+<Button
+  variant="destructive"
+  onClick={() =>
+    setActiveOverlay({
+      id: 'confirm-delete',
+      payload: {
+        entityType: 'node',
+        entityId: node.id,
+        entityName: node.label
+      }
+    })
+  }
+>
+  Delete Node
+</Button>
+```
+
+---
+
+### Settings Modal
+
+```tsx
+const overlays: OverlaySpec[] = [
+  {
+    id: 'editor-settings',
+    type: 'modal',
+    title: 'Editor Settings',
+    size: 'lg',
+    render: ({ onDismiss }) => (
+      <div className="space-y-6">
+        <SettingsPanel
+          scope="editor"
+          sections={editorSettingsSections}
+          editorId="dialogue"
+        />
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="ghost" onClick={onDismiss}>
+            Close
+          </Button>
+          <Button onClick={() => {
+            saveSettings();
+            onDismiss();
+            toast.success('Settings saved');
+          }}>
+            Save
+          </Button>
+        </div>
+      </div>
+    ),
+  },
+];
+```
+
+---
+
+## State Management
+
+### Editor State Pattern
+
+**Best practice**: Store active overlay in editor state (Zustand store or React state).
+
+```tsx
+interface EditorState {
+  activeOverlay: ActiveOverlay | null;
+  showOverlay: (id: string, payload?: unknown) => void;
+  dismissOverlay: () => void;
+}
+
+const useEditorStore = create<EditorState>((set) => ({
+  activeOverlay: null,
+  showOverlay: (id, payload) =>
+    set({ activeOverlay: { id, payload } }),
+  dismissOverlay: () =>
+    set({ activeOverlay: null }),
+}));
+
+function MyEditor() {
+  const activeOverlay = useEditorStore((s) => s.activeOverlay);
+  const dismissOverlay = useEditorStore((s) => s.dismissOverlay);
+
+  return (
+    <WorkspaceOverlaySurface
+      overlays={overlays}
+      activeOverlay={activeOverlay}
+      onDismiss={dismissOverlay}
+    />
+  );
+}
+```
+
+---
+
+### Type-Safe Payloads
+
+```typescript
+// Define payload types
+interface CreateNodePayload {
+  position: { x: number; y: number };
+  sourceNodeId?: string;
+}
+
+interface EditNodePayload {
+  nodeId: string;
+}
+
+// Overlay specs with typed payloads
+const overlays: OverlaySpec[] = [
+  {
+    id: 'create-node',
+    type: 'modal',
+    title: 'Create Node',
+    size: 'md',
+    render: ({ payload, onDismiss }) => {
+      const data = payload as CreateNodePayload | undefined;
+
+      return (
+        <CreateNodeForm
+          position={data?.position}
+          sourceNodeId={data?.sourceNodeId}
+          onSubmit={(node) => {
+            createNode(node);
+            onDismiss();
+          }}
+        />
+      );
+    },
+  },
+  {
+    id: 'edit-node',
+    type: 'modal',
+    title: 'Edit Node',
+    size: 'md',
+    render: ({ payload, onDismiss }) => {
+      const data = payload as EditNodePayload | undefined;
+      if (!data?.nodeId) return null;
+
+      return (
+        <EditNodeForm
+          nodeId={data.nodeId}
+          onSave={() => onDismiss()}
+        />
+      );
+    },
+  },
+];
+
+// Type-safe trigger functions
+const showCreateNode = (payload: CreateNodePayload) => {
+  setActiveOverlay({ id: 'create-node', payload });
+};
+
+const showEditNode = (payload: EditNodePayload) => {
+  setActiveOverlay({ id: 'edit-node', payload });
+};
+```
+
+---
+
+## Dismissal Patterns
+
+### Automatic Dismissal
+
+The component automatically handles:
+- **ESC key**: Calls `onDismiss()`
+- **Click outside**: Calls `onDismiss()`
+- **Close button**: Built-in X button in `DialogContent`
+
+### Manual Dismissal
+
+```tsx
+render: ({ onDismiss }) => (
+  <div>
+    <Button onClick={onDismiss}>Cancel</Button>
+    <Button
+      onClick={() => {
+        saveData();
+        onDismiss();
+      }}
+    >
+      Save
+    </Button>
+  </div>
+)
+```
+
+### Conditional Dismissal
+
+```tsx
+render: ({ onDismiss }) => {
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const handleClose = () => {
+    if (hasUnsavedChanges) {
+      if (confirm('Discard unsaved changes?')) {
+        onDismiss();
+      }
+    } else {
+      onDismiss();
+    }
+  };
+
+  return (
+    <div>
+      <Form onChange={() => setHasUnsavedChanges(true)}>
+        {/* Form fields */}
+      </Form>
+
+      <Button onClick={handleClose}>Close</Button>
+    </div>
+  );
+}
+```
+
+### Prevent Dismissal
+
+```tsx
+const [isProcessing, setIsProcessing] = useState(false);
+
+const handleDismiss = () => {
+  if (!isProcessing) {
+    onDismiss();
+  }
+};
+
+<WorkspaceOverlaySurface
+  overlays={overlays}
+  activeOverlay={activeOverlay}
+  onDismiss={handleDismiss}
+/>
+```
+
+---
+
+## Advanced Patterns
+
+### Chained Overlays
+
+```tsx
+const overlays: OverlaySpec[] = [
+  {
+    id: 'select-template',
+    type: 'modal',
+    title: 'Select Template',
+    size: 'md',
+    render: ({ onDismiss }) => (
+      <TemplateList
+        onSelect={(template) => {
+          onDismiss();
+          // Open next overlay
+          setActiveOverlay({
+            id: 'configure-template',
+            payload: { template }
+          });
+        }}
+      />
+    ),
+  },
+  {
+    id: 'configure-template',
+    type: 'modal',
+    title: 'Configure Template',
+    size: 'lg',
+    render: ({ payload, onDismiss }) => {
+      const template = (payload as any)?.template;
+
+      return (
+        <TemplateConfigForm
+          template={template}
+          onSubmit={(config) => {
+            createFromTemplate(template, config);
+            onDismiss();
+          }}
+        />
+      );
+    },
+  },
+];
+```
+
+---
+
+### Multi-Step Wizards
+
+```tsx
+{
+  id: 'onboarding-wizard',
+  type: 'modal',
+  title: 'Onboarding',
+  size: 'lg',
+  render: ({ onDismiss }) => {
+    const [step, setStep] = useState(1);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={cn(
+                'h-2 flex-1 rounded',
+                s <= step ? 'bg-primary' : 'bg-muted'
+              )}
+            />
+          ))}
+        </div>
+
+        {step === 1 && <Step1 onNext={() => setStep(2)} />}
+        {step === 2 && <Step2 onNext={() => setStep(3)} onBack={() => setStep(1)} />}
+        {step === 3 && <Step3 onFinish={onDismiss} onBack={() => setStep(2)} />}
+      </div>
+    );
+  },
+}
+```
+
+---
+
+### Dynamic Overlays
+
+```tsx
+const overlays: OverlaySpec[] = [
+  {
+    id: 'dynamic-form',
+    type: 'modal',
+    size: 'md',
+    render: ({ payload, onDismiss }) => {
+      const config = payload as {
+        title: string;
+        fields: Array<{ name: string; type: string; label: string }>;
+      } | undefined;
+
+      if (!config) return null;
+
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">{config.title}</h2>
+
+          <Form>
+            {config.fields.map((field) => (
+              <div key={field.name}>
+                <label>{field.label}</label>
+                {field.type === 'text' && <Input name={field.name} />}
+                {field.type === 'textarea' && <Textarea name={field.name} />}
+                {field.type === 'number' && <Input type="number" name={field.name} />}
+              </div>
+            ))}
+          </Form>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={onDismiss}>Cancel</Button>
+            <Button type="submit">Submit</Button>
+          </div>
+        </div>
+      );
+    },
+  },
+];
+
+// Usage
+setActiveOverlay({
+  id: 'dynamic-form',
+  payload: {
+    title: 'Add Character',
+    fields: [
+      { name: 'name', type: 'text', label: 'Name' },
+      { name: 'age', type: 'number', label: 'Age' },
+      { name: 'bio', type: 'textarea', label: 'Biography' },
+    ],
+  },
+});
+```
+
+---
+
+### Fullscreen Overlays
+
+```tsx
+{
+  id: 'preview-mode',
+  type: 'modal',
+  size: 'full',
+  render: ({ payload, onDismiss }) => {
+    const content = payload?.content as string | undefined;
+
+    return (
+      <div className="h-[90vh] flex flex-col">
+        <div className="flex-1 overflow-auto p-8">
+          <MarkdownPreview content={content} />
+        </div>
+
+        <div className="border-t p-4 flex justify-between">
+          <Button variant="ghost" onClick={onDismiss}>
+            <X size={16} />
+            Close
+          </Button>
+          <Button onClick={() => exportContent(content)}>
+            <Download size={16} />
+            Export
+          </Button>
+        </div>
+      </div>
+    );
+  },
+}
+```
+
+---
+
+## Summary
+
+The **WorkspaceOverlaySurface** provides:
+
+✅ **Declarative API** - Define overlays in one place
+✅ **Type-safe payloads** - Full TypeScript support
+✅ **No global registry** - Overlays scoped to editor
+✅ **Automatic dismissal** - ESC and click-outside handling
+✅ **Size variants** - sm, md, lg, full
+✅ **Flexible rendering** - Complete control over content
+✅ **Chaining support** - Multi-step flows
+✅ **Dynamic content** - Runtime-generated overlays
+
+**Next Steps:**
+- [PanelTabs Guide](./panel-tabs-complete.mdx)
+- [Settings System Guide](./settings-system-complete.mdx)
+- [Component Patterns](../guides/patterns.mdx)

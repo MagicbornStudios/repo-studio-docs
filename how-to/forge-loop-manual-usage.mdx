@@ -1,0 +1,65 @@
+---
+title: Forge Loop manual usage
+created: 2026-02-13
+updated: 2026-02-13
+---
+
+# Forge Loop manual usage
+
+Use this when a human is driving the loop directly without autonomous agent execution.
+
+## One cycle
+
+1. Initialize once:
+```bash
+pnpm forge-loop:new-project -- --profile forge-loop
+```
+
+2. Pick phase and lock boundary:
+```bash
+pnpm forge-loop:discuss-phase -- 1
+```
+
+3. Generate plans:
+```bash
+pnpm forge-loop:plan-phase -- 1
+```
+
+4. Execute tasks:
+```bash
+pnpm forge-loop:execute-phase -- 1
+```
+
+5. Verify outcomes:
+```bash
+pnpm forge-loop:verify-work -- 1 --strict
+```
+
+If you run headless automation, gate env first:
+```bash
+pnpm forge-env:doctor -- --mode headless --strict
+pnpm forge-repo-studio open --view env --mode headless
+```
+
+6. Check routing:
+```bash
+pnpm forge-loop:progress
+```
+
+7. Sync legacy snapshots when needed:
+```bash
+pnpm forge-loop:sync-legacy
+```
+
+## What you should edit
+
+- `.planning/PROJECT.md` for product intent updates.
+- `.planning/REQUIREMENTS.md` for requirement deltas.
+- `.planning/ROADMAP.md` for phase sequencing.
+- `.planning/phases/*` for phase-level context/plans/summaries.
+- `.planning/DECISIONS.md` and `.planning/ERRORS.md` for loop continuity.
+
+## Safety checks
+
+- Run `pnpm forge-loop:doctor` before major loop runs.
+- If strict verification fails, create gap plan and rerun the same phase.

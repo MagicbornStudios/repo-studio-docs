@@ -1,0 +1,93 @@
+---
+title: Workspace to Editor migration
+created: 2026-02-07
+updated: 2026-02-07
+---
+
+# Workspace to Editor migration
+
+This guide maps old Workspace naming to the new Editor platform primitives and provides a checklist to migrate existing editors.
+
+## Naming map
+
+| Old name | New name | Purpose |
+|---|---|---|
+| `AppSpace` | `WorkspaceApp` | App frame, tabs, and content slots. |
+| `WorkspaceShell` | `WorkspaceShell` | Editor root (layout + data attributes). |
+| `WorkspaceHeader` | `WorkspaceHeader` | Header slots. |
+| `WorkspaceToolbar` | `WorkspaceToolbar` | Toolbar slots, groups, buttons. |
+| `WorkspaceLayoutGrid` | `DockLayout` | Resizable dock layout. |
+| `WorkspaceStatusBar` | `WorkspaceStatusBar` | Status bar. |
+| `WorkspaceOverlaySurface` | `WorkspaceOverlaySurface` | Overlay host. |
+| `WorkspaceReviewBar` | `WorkspaceReviewBar` | Plan review bar. |
+| `WorkspaceButton` | `WorkspaceButton` | Tooltip-enabled button. |
+| `WorkspaceTooltip` | `WorkspaceTooltip` | Tooltip wrapper. |
+| `WorkspaceSidebar` | `DockSidebar` | Sidebar wrapper in dock panels. |
+| `WorkspaceTabGroup` / `GraphSidebar` | `PanelTabs` | Tabs inside a dock panel. |
+| `WorkspaceEditor` | `ViewportMeta` | Metadata wrapper for editor surfaces. |
+
+## Editor renames
+
+| Old editor | New editor | Notes |
+|---|---|---|
+| ForgeWorkspace | DialogueEditor | YarnSpinner dialogue editor; `data-domain="dialogue"`. |
+| VideoWorkspace | VideoEditor | Twick timeline editor. |
+| CharacterWorkspace | CharacterEditor | Character graph editor. |
+| AppShellWorkspaceId | EditorId | Use `EditorId` and `useEditorStore`. |
+
+## Compatibility
+
+Migration is complete. Import editor UI and types from `@forge/shared` only. Use Editor* names (WorkspaceShell, WorkspaceInspector, WorkspaceButton, etc.). The workspace component export has been removed; types (Selection, InspectorSection, etc.) remain on `@forge/shared`. Use `apps/studio/lib/app-shell/editor-metadata.ts` for editor labels and viewport IDs.
+
+## Migration checklist
+
+1. Update imports from `@forge/shared/components/workspace` or `@forge/shared/workspace` to `@forge/shared`. Use Editor* component names (e.g. `WorkspaceButton`, `WorkspaceInspector`).
+2. Replace `WorkspaceLayoutGrid` with `DockLayout` and move left/right/bottom panels into `DockPanel` wrappers.
+3. Replace sidebars with `DockPanel` + `PanelTabs`.
+4. Wrap the main editor surface in `ViewportMeta` and set `viewport={{ viewportId, viewportType }}` on `DockLayout`.
+5. Ensure `WorkspaceShell` has the correct editor id (`editorId` prop), `domain`, and `theme` props.
+6. Replace `WorkspaceReviewBar` with `WorkspaceReviewBar` between toolbar and layout.
+7. Replace `WorkspaceOverlaySurface` with `WorkspaceOverlaySurface` at the bottom of the shell.
+8. Update settings keys for panel visibility and editor lock:
+   - `editor.locked`
+   - `panel.visible.<panelId>`
+9. Update any app-level references to `EditorId` and use `useEditorStore`.
+
+## Example
+
+```tsx
+import {
+  WorkspaceShell,
+  WorkspaceHeader,
+  WorkspaceToolbar,
+  WorkspaceStatusBar,
+  WorkspaceReviewBar,
+  WorkspaceOverlaySurface,
+  DockLayout,
+  DockPanel,
+  PanelTabs,
+} from '@forge/shared/components/editor';
+
+export function DialogueEditor() {
+  return (
+    <WorkspaceShell editorId="dialogue" title="Dialogue" domain="dialogue">
+      <WorkspaceHeader>...</WorkspaceHeader>
+      <WorkspaceToolbar>...</WorkspaceToolbar>
+      <WorkspaceReviewBar visible={false} />
+      <DockLayout
+        left={<DockPanel panelId="dialogue-left" tabs={[]} />}
+        main={<DockPanel panelId="dialogue-main" scrollable={false}>...</DockPanel>}
+        right={<DockPanel panelId="dialogue-right">...</DockPanel>}
+        viewport={{ viewportId: 'dialogue-graph', viewportType: 'react-flow' }}
+        layoutId="dialogue-editor"
+      />
+      <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+      <WorkspaceOverlaySurface overlays={[]} activeOverlay={null} onDismiss={() => {}} />
+    </WorkspaceShell>
+  );
+}
+```
+
+## Data domains
+
+`data-domain="dialogue"` maps to the same theme tokens as Forge. Backend project `domain` values are still `forge` for continuity; the UI domain string is separate.

@@ -1,0 +1,76 @@
+---
+title: Tech stack
+created: 2026-02-04
+updated: 2026-02-11
+---
+
+# Tech stack and "why we use it" / "why we do not"
+
+Reference for agents and humans. Update when adding or removing major choices.
+
+---
+
+## Stack (Studio + Platform)
+
+| Area | Choice | Why we use it |
+|------|--------|----------------|
+| Framework | Next.js (App Router) | SSR + API routes in one runtime for both apps. |
+| Runtime target | Next `15.5.9` + React 19 | Shared monorepo runtime and dependency parity. |
+| Server CMS/DB | Payload + SQLite (local) / Postgres (cloud) | Type-safe schema; SQLite default for local; Postgres (e.g. Supabase) when `DATABASE_URI` is set for preview/production. |
+| API boundary | Studio API as source of truth | Platform/browser calls Studio endpoints only; no direct Payload browser access. |
+| Client server-state | TanStack Query | Caching, deduping, loading/error, invalidation; one server-state model. |
+| Client UI/draft state | Zustand | Draft/editor state and local UI state (app shell, org selector, filters). |
+| Forms | React Hook Form + Zod | Typed validation and predictable form behavior in dashboard and settings flows. |
+| Persistence (client) | localStorage (versioned keys) | App shell route, last document ids, and local UX preferences. |
+| AI/chat | CopilotKit + OpenRouter (+ OpenAI SDK adapter) | Agent UX and model routing with provider fallback strategy. |
+| Analytics vs billing usage | PostHog + `ai-usage-events` ledger | PostHog for behavior; persisted usage ledger for billing-grade cost visibility. |
+| Storage + entitlement metering | `storage-usage-events` + org billing fields | Org-scoped quota tracking, warning/limit enforcement, and upgrade flows. |
+| Styling | Tailwind + shadcn (`packages/ui`) | Shared primitives; platform keeps app-local style layers. |
+| Shared editor kit | packages/shared (WorkspaceShell, DockLayout) | Single layout/contract for Dialogue, Video, Character, Strategy. |
+
+### AI and media providers
+
+- **OpenRouter** (text, image): Chat, streaming, structured output, plan, image generation. We use OpenAI SDK + baseURL; see [06 - Model routing and OpenRouter](architecture/06-model-routing-and-openrouter.mdx).
+- **ElevenLabs** (audio TTS): Character voices, preview. Configure `ELEVENLABS_API_KEY`.
+- **Video**: Planned; OpenAI Sora (or equivalent) when we add it. OpenRouter does not offer video.
+
+---
+
+## Platform architecture notes
+
+- **Customer platform app:** `apps/platform` uses Vercel-style dashboard shell for `/dashboard/*` and public routes for landing/docs/login.
+- **Canonical account IA:** `/dashboard/*` is canonical; `/account/*` and `/billing` are compatibility redirects.
+- **Organization context first:** platform and creator APIs are org-scoped (`/api/me/orgs`, `/api/me/orgs/active`, `/api/me/*?orgId=`).
+- **Style isolation:** platform styles stay in `apps/platform/src/styles/*` and route-scoped css; Studio editor globals are not imported into platform.
+- **CORS boundary:** Studio owns credentialed CORS for platform requests (`apps/studio/lib/server/cors.ts`, Studio middleware, payload cors/csrf config).
+
+---
+
+## Why we do not
+
+- **No raw fetch for server-state.** Collection CRUD goes through the Payload SDK; app-specific ops (auth, settings, AI, SSE) go through our custom routes and generated or manual client. TanStack Query hooks use these; components and stores do not call fetch directly.
+- **No "just Zustand + fetch" for server-state.** We'd reimplement caching identity, invalidation, loading/error, and retries; TanStack Query provides this in one place.
+- **No multiple DBs or backends in the client contract yet.** We use one Payload schema/DB; when we split, the client still talks to Payload REST and our Next API routes.
+
+---
+
+## Where things live
+
+- **Payload SDK (collection CRUD):** `apps/studio/lib/api-client/payload-sdk.ts`; hooks use it for forge-graphs and video-docs.
+- **Custom endpoints / SSE:** OpenAPI/Swagger spec is generated for **documentation** (no streaming). Custom endpoints use: generated services in `lib/api-client/services/` (Auth, Settings, Model, AI) where present; manual client modules in `lib/api-client/` (elevenlabs, media, workflows); vendor SDKs where appropriate (e.g. ElevenLabs: server uses `@elevenlabs/elevenlabs-js` in route handlers, client uses our thin client to our proxy; character voice playback can use ElevenLabs' audio-player from their registry: `pnpm dlx @elevenlabs/cli@latest components add audio-player`). Do not extend the OpenAPI spec to add new API clients - prefer manual modules or vendor SDKs.
+- **Platform API client:** `apps/platform/src/lib/api/studio.ts` is the typed browser boundary to Studio APIs.
+- **Platform query hooks and keys:** `apps/platform/src/lib/data/hooks/*` and `apps/platform/src/lib/data/keys.ts`.
+- **Platform org/session-local state:** `apps/platform/src/stores/org-store.ts` (Zustand).
+- **Shared UI atoms and third-party components** (shadcn registries, ElevenLabs, etc.): `packages/ui`; see [how-to 15 - Shadcn registries and UI components](how-to/15-shadcn-registries-and-components.mdx) for adding components and vendor CLI workarounds.
+- **Query keys and hooks:** `apps/studio/lib/data/keys.ts`, `apps/studio/lib/data/hooks/`
+- **Persisted client state:** Zustand persist on app-shell store (`apps/studio/lib/app-shell/store.ts`) and graph/video stores (draft partialize); see **docs/agent-artifacts/core/decisions.md**.
+- **Business-critical collections:** `organizations`, `organization-memberships`, `ai-usage-events`, `api-keys`, `storage-usage-events`, `enterprise-requests`, `listings`, `licenses` under `apps/studio/payload/collections/`.
+- **Decisions and rationale:** **docs/agent-artifacts/core/decisions.md**
+
+---
+
+## Roadmap alignment
+
+- Platform tech stack is aligned to current product direction: org-aware creator dashboard, marketplace catalog, Stripe Connect payouts, and AI usage visibility.
+- Current business direction docs: [business index](business/00-index.mdx), [revenue and stripe](business/revenue-and-stripe.mdx), [listings and clones](business/listings-and-clones.mdx).
+- Current roadmap and execution tracking: [product roadmap](roadmap/product.mdx), [task registry](agent-artifacts/core/task-registry.md), [STATUS](agent-artifacts/core/STATUS.md).

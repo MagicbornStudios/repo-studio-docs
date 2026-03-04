@@ -1,0 +1,16 @@
+[Tool Result: forge_modifyPlan]
+┌──────────────────────────────────────────┐
+│ Plan Modified (ID: plan_789)             │
+├──────────────────────────────────────────┤
+│ Status: PENDING_REVIEW                   │
+│ LangGraph Checkpoint: checkpoint_002     │
+│                                          │
+│ Changes:                                 │
+│ + Added [Walk Away] option               │
+│ + Added Combat Begins narrative          │
+│ + Added Escalation edge                  │
+│                                          │
+│ Steps: 8 (was 5)                         │
+│ ⚠ Awaiting approval for modified plan    │
+└──────────────────────────────────────────┘
+```

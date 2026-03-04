@@ -1,0 +1,157 @@
+---
+title: CopilotKit vs assistant-ui
+created: 2026-02-07
+updated: 2026-02-07
+---
+
+# CopilotKit vs assistant-ui
+
+Studio uses **two** AI UI frameworks. They serve different purposes and are not
+interchangeable.
+
+---
+
+## Summary
+
+| | CopilotKit | assistant-ui |
+|---|---|---|
+| **Role** | Domain copilot — context, actions, suggestions | Chat UI — threads, messages, tool rendering |
+| **Used by** | Dialogue, Character, Video editors (sidebar) | Dialogue Workbench chat + Strategy editor |
+| **Provider** | `CopilotKit` wraps the entire app | `AssistantRuntimeProvider` wraps the Strategy editor |
+| **Backend** | `/api/copilotkit` (CopilotKit runtime, responses API) | `/api/assistant-chat` (AI SDK chat transport) |
+| **Model routing** | OpenRouter via OpenAI SDK + `x-forge-model` headers; **responses v2 only** | OpenRouter via AI SDK `streamText` (chat pipeline) |
+| **Actions** | `useCopilotAction` + system contracts | Tool calls rendered by tool-ui components |
+| **Context** | `useCopilotReadable` + system context | Thread messages + system prompt |
+
+---
+
+## When to use which
+
+### CopilotKit (system copilot)
+
+Use CopilotKit when the AI agent needs to **operate on structured editor
+state** — nodes, edges, tracks, characters. CopilotKit excels at:
+
+- Registering system-specific actions (create node, update edge, run plan).
+- Providing real-time context from editor state (selection, graph summary).
+- Rendering suggestions and proposals inline.
+- Plan-execute-review-commit workflows.
+
+CopilotKit runs at the **app shell level** and each editor registers its own
+system contract via `useDomainCopilot(contract, options)`.
+
+### assistant-ui (chat UI)
+
+Use assistant-ui when you need a **conversational chat interface** with
+streaming, threads, and tool rendering. assistant-ui excels at:
+
+- Multi-turn chat with message history.
+- Thread management (create, switch, archive).
+- Tool call visualization via tool-ui components.
+- Streaming responses with real-time rendering.
+
+assistant-ui runs at the **component level** inside a specific editor
+(Strategy) and the **Dialogue Workbench** chat tab.
+
+> **Compatibility note**: CopilotKit BuiltInAgent uses the OpenAI **responses**
+> API and requires **responses v2** compatible models. We filter model selection
+> for CopilotKit and fall back when needed. assistant-ui uses the **chat** pipeline,
+> so it can use a broader set of OpenRouter models.
+
+---
+
+## Architecture
+
+```
+AppShell
+  ├── CopilotKit Provider (app-level)
+  │     ├── useCopilotReadable (shell context)
+  │     ├── useCopilotAction (switchEditor, openEditor, closeEditor)
+  │     ├── useCopilotAction (app_generateImage, app_respondWithStructure)
+  │     │
+  │     ├── DialogueEditor
+  │     │     └── useDomainCopilot(forgeContract) ← system actions
+  │     ├── CharacterEditor
+  │     │     └── useDomainCopilot(characterContract) ← system actions
+  │     ├── VideoEditor
+  │     │     └── useDomainCopilot(videoContract) ← system actions
+  │     │
+  │     └── StrategyEditor
+  │           └── AssistantRuntimeProvider (component-level)
+  │                 ├── Thread (chat UI)
+  │                 ├── ThreadList (thread management)
+  │                 └── ToolUIRegistry (tool rendering)
+```
+
+### CopilotKit flow
+
+1. Editor mounts and registers system context + actions.
+2. User interacts via CopilotKit sidebar chat.
+3. Agent reads context, calls system actions.
+4. Editor applies changes to editor state.
+
+### assistant-ui flow
+
+1. Strategy editor creates a chat transport to `/api/assistant-chat`.
+2. User types in the Thread composer.
+3. AI SDK streams a response (may include tool calls).
+4. Tool calls render via tool-ui components (approval cards, terminals, plans).
+5. Tool results flow back to the model for continued generation.
+
+**Workbench tabs**: Dialogue editor exposes the assistant-ui chat in the Workbench, plus
+CopilotKit and assistant-ui devtools tabs for inspection. Workflow panels live inside the
+Workbench (not in the Inspector) to keep workflow UI aligned with chat.
+
+---
+
+## Packages
+
+| Package | Purpose |
+|---------|---------|
+| `@copilotkit/react-core` | CopilotKit React hooks and provider |
+| `@copilotkit/react-ui` | CopilotKit sidebar and popup UI |
+| `@copilotkit/shared` | Shared CopilotKit types |
+| `@assistant-ui/react` | assistant-ui core (Thread, Message, Composer primitives) |
+| `@assistant-ui/react-ai-sdk` | AI SDK chat transport for assistant-ui |
+| `@assistant-ui/react-markdown` | Markdown rendering for assistant-ui messages |
+
+### tool-ui components
+
+The `tool-ui` library provides pre-built UI for common AI tool patterns. These
+live in `packages/shared/src/shared/components/tool-ui/` and include:
+
+- `approval-card` — user approval for tool execution
+- `code-block` — syntax-highlighted code display
+- `data-table` — structured data rendering
+- `plan` — multi-step plan visualization
+- `terminal` — command execution display
+- `progress-tracker` — step-by-step progress
+
+---
+
+## API routes
+
+| Route | Framework | Purpose |
+|-------|-----------|---------|
+| `/api/copilotkit` | CopilotKit runtime | Domain actions, context, suggestions |
+| `/api/assistant-chat` | AI SDK `streamText` | Strategy chat with streaming |
+
+Both routes use OpenRouter for model access. The CopilotKit route supports
+model overrides via `x-forge-model` headers. The assistant-chat route uses
+the model configured in server settings.
+
+---
+
+## Future state
+
+The migration from CopilotKit to Assistant UI + OpenRouter, domain contracts, agents, and MCP is documented in [AI architecture](../ai/00-index.mdx) and [migration phases](../ai/migration/00-index.mdx).
+
+---
+
+## References
+
+- [CopilotKit and agents](03-copilotkit-and-agents.mdx)
+- [Editor platform](05-editor-platform.mdx)
+- [AI architecture](../ai/00-index.mdx) — Assistant UI migration, domain contracts, agents
+- [Agent conversation flows](../ai/21-agent-conversation-flows.mdx) — Example flows across editors
+- [AI generation components](../how-to/22-ai-generation-components.mdx)

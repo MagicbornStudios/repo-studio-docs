@@ -1,0 +1,220 @@
+---
+title: Design components (atoms to organisms)
+created: 2026-02-05
+updated: 2026-02-10
+---
+
+# Design: components (atoms -> molecules -> organisms)
+
+This document catalogs the **shared components** we expose for consumers and contributors. It focuses on **real components in the repo** and how they map to our atomic design system.
+
+> **Rule of thumb:** import editor + AI helpers from `@forge/dev-kit` (or `@forge/shared`) and atoms from `@forge/ui`.
+
+## Density rules (editor UI)
+
+- Use tokenized spacing and sizing (`--control-*`, `--panel-padding`, `--tab-height`).
+- Avoid raw `px-*`/`py-*` utilities in editor surfaces.
+- Badge/tag padding uses `--badge-padding-*`; do not override with ad-hoc `px-*`/`h-*`.
+- Prefer `WorkspaceShell` + `DockLayout` + `DockPanel` for consistent padding and borders.
+- **Default appearance** aligns with shadcn (radius, type scale, focus); compact density is available via `data-density` where supported (see [03 - Design language](03-design-language.mdx)).
+
+## Icon audit checklist
+
+Use **Lucide React** throughout; standard size **12px** (`size-3` or `var(--icon-size)`) and outline style. Use `--icon-size-lg` (14px) sparingly for emphasis (send, primary action). Spinners and loading states use `Loader2` with `animate-spin`.
+
+| Surface | Where | Status |
+|--------|--------|--------|
+| Panel headers | `DockPanel` `title` + `icon` (Library, Inspector, Workbench, Tracks, Timeline, Characters, Properties) | Required |
+| Editor tabs | `WorkspaceApp.Tab` label (Dialogue, Video, Characters, Strategy) | Required |
+| Toolbar actions | Fit view, new, settings, etc. | Required |
+| Menu items | File/View/State menu items (Fit view, Open workbench, New narrative, Save, etc.) | Required |
+| Editor creation buttons | "+ Dialogue Editor", "+ Video Editor", "+ Character Editor", "+ Strategy Editor" (AppShell) | Required |
+| Workbench | Toolbar "Workbench" button (open/close bottom drawer) | Required |
+| Settings | Section titles or key dropdowns (Model, Theme, Density) | Optional |
+| Tab triggers | `PanelTabs` tab defs (e.g. Narratives, Storylets, Nodes) | Per-tab icon in `PanelTabDef.icon` |
+
+**UI audit (icons, buttons, menus, borders):** Button = shadcn `Button` from `@forge/ui/button`. Icons = Lucide React only (no custom SVGs). Menus = shadcn Menubar/DropdownMenu. Selection accent = one edge only (e.g. `border-l-2 border-primary`), never a full four-sided border.
+
+**Avoid:** Unstyled grey buttons and text-only menu items. Reference screenshot: [buttons_dropdowns_menutitems_unstyled.png](../images/buttons_dropdowns_menutitems_unstyled.png). When updating UI patterns, add or update reference screenshots in **docs/images/** as needed. After applying contrast and spacing fixes (toolbar, PanelTabs, editor tabs, outline buttons), see [styling_after_contrast_and_spacing.png](../images/styling_after_contrast_and_spacing.png) when available.
+
+---
+
+## Atoms (`@forge/ui`)
+
+Shadcn/Radix primitives - always import from the **root** package.
+
+```ts
+import {
+  Button,
+  Input,
+  Textarea,
+  Badge,
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardDescription,
+  Item,
+  ItemGroup,
+  ItemContent,
+  ItemTitle,
+  ItemDescription,
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@forge/ui';
+```
+
+### Core atoms we use constantly
+
+- **Button / Badge / Card** - structured surfaces and actions.
+- **Item / ItemGroup** - list rows and compact summaries (e.g. patch preview items).
+- **Form / FormField / FormItem** - React Hook Form helpers (see `CreateNodeModal` for the canonical pattern).
+
+<ShowcaseLink href="components/showcase/atoms" label="View atoms in Catalog" />
+
+---
+
+## Molecules (`@forge/shared`)
+
+Composable UI patterns built on atoms.
+
+### Editor chrome
+
+- `WorkspaceApp` (semantic wrapper over AppLayout + tabs + content)
+- `WorkspaceShell`
+- `WorkspaceHeader` (Left / Center / Right slots)
+- `WorkspaceToolbar` (Menubar, Group, Button, ProjectSelect, Settings)
+- `DockLayout` (left / main / right / bottom slots)
+- `DockPanel` (title, tabs, lock, settings)
+- `PanelTabs`
+- `PanelSettings`
+- `WorkspaceStatusBar`
+- `WorkspaceReviewBar`
+- `WorkspaceOverlaySurface`
+- `WorkspaceButton`, `WorkspaceTooltip`
+- `DockSidebar`
+- `AppProviders` (optional shared provider stack for tooltips/copilot)
+
+#### Editor layout (Dockview)
+
+Editors use **DockLayout** (Dockview) for Unreal-style docking: drag-to-reorder, floating groups, and tabbed panels. Layout is saved to `localStorage['dockview-{layoutId}']` and restored on load. **Reset layout:** call `ref.current.resetLayout()` (or clear the persisted key and reload). Use `PanelTabs` inside `DockPanel` for in-panel organization.
+
+### Gating + AI
+
+- `FeatureGate` (lock/hide/disable)
+- `useDomainAssistant`, `DomainAssistantContract`
+- `PlanCard`, `PlanActionBar` (generative UI in chat)
+- `CodebaseAgentStrategyEditor` (assistant-ui strategy editor)
+
+### Assistant UI + tool UI
+
+- Assistant UI primitives: thread, thread list, markdown renderer, tool fallback.
+- Tool UI primitives: plan cards, charts, tables, code blocks, media cards, approval cards.
+- Global assistant popup (`AssistantChatPopup`) reuses `DialogueAssistantPanel` and keeps model selection in the composer (`composerTrailing`) for parity with in-editor assistant UI.
+- Model switcher rows (search, filter chips, provider tags, compat badges) must use tokenized spacing (`--control-*`, `--badge-padding-*`) and Lucide icons.
+
+#### Component preview
+
+Use `ComponentPreview` to render registry examples inside docs.
+
+<ComponentPreview name="codebase-agent-strategy-editor" />
+
+---
+
+## Organisms (app + domain)
+
+These live in the **app repo** and are not published. Full editors and Studio shell.
+
+- `AppShell` - editor tabs + active editor routing.
+
+<ShowcaseLink href="components/showcase/organisms" label="View organisms in Catalog" />
+
+- `DialogueEditor` - React Flow editor + AI workflow panel.
+- `VideoEditor` - Video editor surface (locked); AI contract when unlocked.
+- `StrategyEditor` - CodebaseAgentStrategyEditor with tool UI.
+
+---
+
+## Example: patch preview list (atoms + molecules)
+
+```tsx
+<Card className="bg-muted/10 text-xs shadow-none">
+  <CardHeader className="p-3 pb-2">
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-xs">Patch</CardTitle>
+      <Badge variant="outline" className="text-[10px]">2 ops</Badge>
+    </div>
+    <CardDescription className="text-[11px]">Update node labels</CardDescription>
+  </CardHeader>
+  <CardContent className="px-3 pb-3 pt-0">
+    <ItemGroup className="gap-2">
+      <Item variant="outline" size="sm" className="bg-background/50">
+        <ItemContent>
+          <ItemTitle className="text-[11px]">Update node: start</ItemTitle>
+          <ItemDescription className="text-[11px]">Fields: label</ItemDescription>
+        </ItemContent>
+      </Item>
+    </ItemGroup>
+  </CardContent>
+</Card>
+```
+
+---
+
+## Example: modal form (atoms + molecules)
+
+See `apps/studio/components/CreateNodeModal.tsx` for the canonical form structure. The pattern:
+
+- `Form` wrapper from `@forge/ui`
+- `FormField` + `FormItem` + `FormControl`
+- `WorkspaceButton` for actions
+
+---
+
+## Character upsert + entity media pattern
+
+Canonical implementation lives in `apps/studio/components/character/CreateCharacterModal.tsx` and acts as the reusable **CharacterUpsertDialog** pattern.
+
+- Use one upsert dialog for both create and edit flows (`character?`, `onCreate`, `onUpdate`).
+- Keep section hierarchy explicit:
+- Basics (`User` icon): `name` (required), description, primary portrait URL.
+- Prompt (`Sparkles` icon): behavior/system-style prompt text persisted in `character.meta`.
+- Voice (`Mic2` icon): voice picker + preview text + playback.
+- Media (`ImagePlus` icon): generated/uploaded image, audio, and video lists with inline actions.
+- Media actions in create mode must auto-save first, then open generation/upload flows against a persisted entity id.
+
+For media generation UI, reuse:
+
+- `apps/studio/components/media/ConnectedGenerateMediaModal.tsx` in Studio.
+- `packages/shared/src/shared/components/media/GenerateMediaModal.tsx` for shared surfaces.
+
+Interim storage model for entity media/prompts:
+
+- `character.meta.prompts.characterBehavior`
+- `character.meta.media.images[]`
+- `character.meta.media.audioTracks[]`
+- `character.meta.media.videos[]`
+
+---
+
+## Adding components and registries
+
+To add a new shadcn registry or install components from a registry (e.g. `@lucide-animated`, `@billingsdk`), use the correct `components.json`: **packages/ui** for shared components, **apps/studio** or **apps/platform** for app-only. See [How-to 15 - Shadcn registries and UI components](../how-to/15-shadcn-registries-and-components.mdx) for step-by-step instructions and where components live (shared vs app).
+
+---
+
+## Consumer guidance
+
+- **Atoms:** import from `@forge/ui`.
+- **Editor shell + AI helpers:** import from `@forge/dev-kit` (or `@forge/shared`).
+- **Domain logic:** stays in your app/system package - not in the shared layer.
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/ui/`, `packages/shared/`, `apps/studio/components/`
+Related: design/01-styling-and-theming, components/00-index
+Do not: Use useDomainCopilot; use useDomainAssistant
+</Callout>

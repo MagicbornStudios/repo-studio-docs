@@ -1,0 +1,33 @@
+---
+title: Environment portal
+description: GUI for environment reconciliation and headless readiness checks.
+---
+
+# Environment portal
+
+Env GUI flow is now RepoStudio-first, backed by `@forge/forge-env`.
+
+## Default launcher behavior
+
+- `pnpm env:portal` and `forge-env portal` try to launch RepoStudio Env workspace first.
+- If RepoStudio is unavailable, fallback is the legacy inline portal UI at `http://127.0.0.1:3847`.
+- `forge-env portal --bootstrap` always uses bootstrap behavior that blocks until required keys are satisfied.
+
+## Force legacy portal
+
+```bash
+forge-env portal --legacy-portal
+```
+
+## Typical flow
+
+1. Run doctor: `forge-env doctor --mode headless --strict`.
+2. Open GUI: `forge-repo-studio open --view env --mode headless`.
+3. Reconcile/write: `forge-env reconcile --write --sync-examples`.
+4. Re-run doctor.
+
+## Notes
+
+- In `forge-agent` profile, env targets include `apps/studio` and `apps/platform`.
+- Discovery now scans workspace targets from `pnpm-workspace.yaml`.
+- Reconcile is non-destructive by default (union + preserve, backups on write).

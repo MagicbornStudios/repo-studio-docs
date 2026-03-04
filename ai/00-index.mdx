@@ -1,0 +1,30 @@
+---
+title: AI Architecture
+---
+
+# AI Architecture
+
+Assistant UI, domain contracts, tools, agents, MCP. No CopilotKit.
+
+## Vision
+
+"Create a character" from chat → full character creation in chat UI → review/audio → save. Same for dialogue, storylets, all editors.
+
+## Index
+
+| # | Doc | Summary |
+|---|-----|---------|
+| [01](01-architecture-overview) | Architecture overview | Package structure, flow |
+| [02](02-domain-integration) | Domain integration | DomainAssistantContract, useDomainAssistant |
+| [03](03-domains-forge-character) | Domains (Forge, Character) | Implementations |
+| [04](04-runtime-and-components) | Runtime and components | API route, DialogueAssistantPanel, tool-ui |
+| [05](05-agent-system) | Agent system | BaseAgent, AgentRegistry, delegation |
+| [06](06-mcp-integration) | MCP integration | Descriptors, tool mapping |
+| [07](07-two-ai-routes) | Two AI routes | Open Router assistant vs Codex (no merging) |
+| [Migration](migration/00-index) | Migration | Phases, progress |
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/assistant-runtime/`, `packages/shared/src/shared/assistant/`, `packages/domain-forge/src/assistant/`
+Related: how-to/07-assistant-and-ai, architecture/05-assistant-ui-architecture
+Do not: Use CopilotKit; use Assistant UI and domain contracts
+</Callout>

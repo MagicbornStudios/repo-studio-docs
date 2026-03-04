@@ -1,0 +1,29 @@
+---
+title: 27 - PostHog LLM analytics
+---
+
+# 27 - PostHog LLM analytics
+
+PostHog is used for analytics and feature flags. For LLM/agent usage, use OpenRouter Broadcast.
+
+## Option A — OpenRouter Broadcast (recommended)
+
+1. In [OpenRouter Broadcast / PostHog](https://openrouter.ai/docs/guides/features/broadcast/posthog), configure with your PostHog project API key.
+2. No code changes: OpenRouter reports requests to PostHog automatically.
+
+## Option B — PostHog SDK in runtime (optional)
+
+For trace IDs or finer control:
+
+- Install `posthog-node` and `@posthog/ai`.
+- Wrap the OpenAI client or custom fetch ([apps/studio/lib/model-router/openrouter-fetch.ts](../../apps/studio/lib/model-router/openrouter-fetch.ts)) so OpenRouter requests are reported.
+
+Revisit when you need trace IDs or server-side LLM events beyond Broadcast.
+
+**Next:** [28 - Vercel + Supabase launch](28-vercel-supabase-launch)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/lib/model-router/`, OpenRouter broadcast docs
+Related: architecture/model-routing
+Do not: Add PostHog wrapping unless trace IDs are needed; prefer OpenRouter Broadcast
+</Callout>

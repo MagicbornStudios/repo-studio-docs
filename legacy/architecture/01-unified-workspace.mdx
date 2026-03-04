@@ -1,0 +1,48 @@
+---
+title: Unified editor (App Shell) architecture
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# Unified editor (App Shell) architecture
+
+## Overview
+
+The app uses a **Unified Editor** implemented as an **App Shell** that owns multiple editors (Dialogue, Video, Character, Strategy). Users switch between editors via tabs; only the active editor is rendered. CopilotKit runs at the shell level and receives both shell context (active editor, labels) and system context from the active editor.
+
+## Hierarchy
+
+- **App Shell** (`apps/studio/components/AppShell.tsx`, `apps/studio/lib/app-shell/store.ts`)
+  - State: `activeWorkspaceId`, `openWorkspaceIds`, `globalModals`, `workspaceThemes` (optional per-editor overrides)
+  - Settings: `apps/studio/lib/settings/store.ts` provides app/editor/viewport settings with inheritance; settings sheets live in `apps/studio/components/settings/*`.
+  - Theme: `apps/studio/components/providers/AppThemeProvider.tsx` binds `ui.theme` to `<html data-theme>` via `next-themes`.
+- App layout primitives: `packages/shared/src/shared/components/app/*` (WorkspaceApp, Tabs, Tab, Content).
+  - Actions: `setActiveWorkspace`, `openWorkspace`, `closeWorkspace`
+  - Shell-level CopilotKit: `useCopilotReadable` (activeWorkspaceId, editor labels, editor summary), `useCopilotAction` (switchEditor, openEditor, closeEditor)
+
+- **Editors** (Dialogue, Video, Character, Strategy)
+  - Each editor uses `WorkspaceShell` from `packages/shared/src/shared/components/editor`.
+  - Domain contract: `useForgeContract` / `useVideoContract` + `useDomainCopilot` register context, actions, and suggestions only when that editor is active (only one editor is mounted at a time).
+  - CopilotKit provider reads merged app/editor/viewport settings for instructions, agent name, and temperature; editor/viewport model overrides are sent per-request via headers.
+
+- **Editors** (current)
+  - Dialogue Editor: React Flow graph editors for narrative + storylet.
+  - Video Editor: Twick timeline surface.
+  - Strategy Editor: assistant-ui chat with tool-ui rendering.
+
+## Route state (persisted)
+
+- **AppShellRoute**: `activeWorkspaceId`, `openWorkspaceIds`, `globalModals`. Persisted via Zustand `persist` under `forge:app-session:v2`.
+- **Current document ids**: `lastDialogueProjectId`, `lastVideoDocId`, `lastCharacterProjectId` are stored in the same persisted store.
+- **Draft vs server-state**: Draft edits live in Zustand (graph store, video store). Save sends to the server and clears dirty. Server-state is fetched via Next API routes and cached with TanStack Query (`apps/studio/lib/data/keys.ts`, `lib/data/hooks/`). `beforeunload` warns when any draft is dirty (`DirtyBeforeUnload`).
+- **Future**: Per-editor `EditorRoute` with multiple editors and focus when we add multi-window tabs.
+
+## Model routing and OpenRouter
+
+- **Free-first default**: Preferences default to a free-model fallback chain; mode (auto vs manual), primary, and enabled list resolved via `resolvePrimaryAndFallbacks()` in `apps/studio/lib/model-router/server-state.ts`. Model list is fetched from OpenRouter's API; see [06 - Model routing and OpenRouter](06-model-routing-and-openrouter.mdx) for SDK usage, static defaults, ModelSwitcher, and overrides (`x-forge-model`). Provider split (text/image vs audio vs video) is documented in 06.
+
+## References
+
+- [Editor architecture](./02-workspace-editor-architecture.mdx)
+- [Co-agents and multi-agent](../17-co-agents-and-multi-agent.mdx)
+- [Editor design](../12-workspace-design.mdx)

@@ -1,0 +1,34 @@
+---
+title: 07 - Two AI routes (Open Router vs Codex)
+---
+
+# 07 - Two AI routes (Open Router vs Codex)
+
+We maintain **two distinct AI routes**. They are never merged or mixed in code.
+
+## Open Router assistant
+
+- **Purpose:** Tools, general chat, dialogue nodes, domain tools (e.g. create nodes in dialogue editor).
+- **Stack:** Open Router (streamText, model registry, persistence). Uses OpenAI SDK + `@ai-sdk/openai` with baseURL. Optional LangGraph/orchestrator from `@forge/assistant-runtime`.
+- **Where:** Studio `POST /api/assistant-chat`; will be shareable so Repo Studio (and companion studios) can use the same path when running Open Router.
+- **Auth:** Session or API key (Studio); when Repo Studio is companion, trusted-caller (no Payload user lookup for companion requests).
+
+## Codex
+
+- **Purpose:** Coding agent; works on files. Mass/file work, repo or folder (e.g. create folder and run Codex there).
+- **Stack:** Codex SDK / app-server; CLI fallback (`codex-exec`). Does **not** use Open Router.
+- **Where:** Repo Studio only today: `apps/repo-studio/app/api/assistant-chat` with `assistantTarget=codex`, [codex-session.ts](apps/repo-studio/src/lib/codex-session.ts). Other studios use Codex by calling Repo Studio when it is the selected runtime.
+- **Auth:** Codex login/readiness; Repo Studio does not perform Payload user auth for Codex when used as companion.
+
+## Separation rule
+
+- No code path shall call Open Router for "Codex" behavior, or Codex for "assistant tools/chat" behavior.
+- Routing is by `assistantTarget` in Repo Studio (`forge` or `codex`); in Studio, assistant-chat is Open Router only. When Studio uses Repo Studio as runtime, it can send either assistant (Open Router) or Codex requests to Repo Studio's `/api/assistant-chat` with the appropriate target.
+
+**Next:** See `.planning/DECISIONS.md` (2026-02-23) and task registry for companion mode (detection, toggle, Repo Studio health, DB workspace).
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/repo-studio/app/api/assistant-chat/route.ts`, `apps/studio/app/api/assistant-chat/route.ts`, `apps/repo-studio/src/lib/codex-session.ts`
+Related: docs/architecture/03-model-routing-openrouter, .planning/DECISIONS.md
+Do not: Use Open Router for Codex; do not use Codex for domain tools/chat
+</Callout>

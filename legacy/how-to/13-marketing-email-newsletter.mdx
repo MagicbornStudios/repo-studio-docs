@@ -1,0 +1,27 @@
+---
+title: 13 - Platform email / newsletter
+created: 2026-02-05
+updated: 2026-02-10
+---
+
+# 13 - Platform email / newsletter
+
+Minimal newsletter pipeline for platform pages.
+
+## Storage
+
+- Subscribers are stored in Payload `newsletter-subscribers`.
+- Platform form posts to Studio `POST /api/newsletter`.
+
+## Optional Resend welcome email
+
+- **Env (Studio):** `RESEND_API_KEY` and optional `FROM_EMAIL`.
+- After subscriber creation, Studio can send a welcome email through Resend.
+- If email send fails, API still returns success because subscriber data is already stored.
+
+## Waitlist
+
+- Platform waitlist page posts to `POST /api/waitlist`.
+- Data is stored in Payload `waitlist` collection.
+
+**Next:** [14 - Marketing announcements and scheduling](14-marketing-announcements-scheduling.mdx)

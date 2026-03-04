@@ -1,0 +1,117 @@
+---
+title: 08 - Adding AI to editors
+description: "Step-by-step: domain tools, app-level tools, model routing, ElevenLabs."
+---
+
+# 08 - Adding AI to editors
+
+System actions, app-level actions, agents. Architecture: [ai/00-index](../ai/00-index).
+
+---
+
+## Overview [#overview]
+
+- **Assistant UI** — One chat route: `POST /api/assistant-chat`. LangGraph or legacy stream.
+- **Context** — Shell (editor id, labels) + active domain contract when editor is mounted.
+- **Tools** — Domain tools (`forge_*`, `character_*`) + app-level if needed. Use consistent prefixes.
+
+<ComponentPreview name="assistant-panel-demo" />
+
+---
+
+## Domain tools [#domain-tools]
+
+1. **Implement `DomainAssistantContract`** — Provide `getContextSnapshot()`, `getInstructions()`, `createTools()`, `getSuggestions()`, `onHighlight`, `clearHighlights`.
+
+2. **Wire in editor** — `useDomainAssistant(contract, { enabled })` and `<DomainToolsRenderer contract={contract} enabled={enabled} />`.
+
+3. **Mount chat panel** — e.g. `DialogueAssistantPanel` with `contract` and `toolsEnabled`.
+
+4. **Reference implementations:**
+   - `packages/domain-forge/src/assistant/` — Forge graph tools
+   - `packages/domain-character/src/assistant/` — Character tools
+
+**Example — Forge editor:**
+
+```tsx
+const contract = useForgeAssistantContract({
+  graph,
+  selection,
+  isDirty,
+  applyOperations,
+  onAIHighlight,
+  clearAIHighlights,
+  createPlanApi,
+  setPendingFromPlan,
+  commitGraph,
+});
+
+useDomainAssistant(contract, { enabled: toolsEnabled });
+<DomainToolsRenderer contract={contract} enabled={toolsEnabled} />
+
+<DialogueAssistantPanel
+  contract={toolsEnabled ? contract : undefined}
+  toolsEnabled={toolsEnabled}
+  executePlan={handleExecutePlan}
+/>
+```
+
+See [07 - Assistant and AI](07-assistant-and-ai.mdx) for contract and tool definitions.
+
+---
+
+## App-level tools [#app-level-tools]
+
+App-level tools are registered in the assistant runtime or route. They can call internal APIs (`/api/image-generate`, etc.).
+
+**Guidelines:**
+
+- Gate by capability when a feature is locked.
+- Use `available: 'disabled'` in tool def when the feature is off.
+- Use consistent naming (e.g. `app_*` prefix for app-wide actions).
+
+**Route:** `apps/studio/app/api/assistant-chat/route.ts` — Tools are merged from domain contracts and any app-level registry before calling the model.
+
+---
+
+## Model routing [#model-routing]
+
+OpenRouter is the model provider. Model is resolved per request based on route config and optional client hints.
+
+**Key points:**
+
+- Use **OpenAI SDK** with `baseURL` pointing to OpenRouter. Do not use `@openrouter/ai-sdk-provider`.
+- See [architecture/03-model-routing-openrouter](../architecture/03-model-routing-openrouter.mdx).
+- Model switcher in UI: `apps/studio/components/model-switcher/ModelSwitcher.tsx`.
+
+**Environment:** `OPENROUTER_API_KEY` is required for AI features. See [Environment variables](../reference/environment-variables.mdx).
+
+---
+
+## ElevenLabs [#elevenlabs]
+
+For character voice (TTS):
+
+- **Env:** `ELEVENLABS_API_KEY`
+- **Endpoints:** `/api/elevenlabs/voices`, `/api/elevenlabs/speech`
+- **Usage:** Character forms use these for voice picker and preview playback.
+
+<ShowcaseLink href="components/showcase/molecules#assistant-panel" label="View Assistant Panel in Catalog" />
+
+---
+
+## References [#references]
+
+- **API route:** `apps/studio/app/api/assistant-chat/route.ts`
+- **Assistant runtime:** `packages/assistant-runtime/`
+- **Domain Forge:** `packages/domain-forge/src/assistant/`
+- **How-to 07:** [Assistant and AI](07-assistant-and-ai.mdx)
+- **Architecture:** [ai/02-domain-integration](../ai/02-domain-integration)
+
+**Next:** Back to [00 - Index](00-index) or [24 - Vendoring](24-vendoring-third-party-code)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/app/api/assistant-chat/route.ts`, `packages/assistant-runtime/`, `packages/domain-forge/src/assistant/`
+Related: how-to/07-assistant-and-ai, ai/02-domain-integration
+Do not: Use CopilotKit; use Assistant UI and domain contracts
+</Callout>

@@ -1,0 +1,36 @@
+---
+title: First run
+---
+
+# First run
+
+## Start Studio
+
+From the repo root:
+
+```bash
+pnpm dev
+```
+
+Open **http://localhost:3000** in your browser.
+
+## What happens
+
+1. `pnpm env:bootstrap` runs first (unless skipped). If env keys are missing, the portal opens.
+2. Studio starts (Next.js + Payload). Default port 3000.
+3. You see the Studio shell: project switcher, editor tabs (Dialogue, Character), right-rail Inspector and Chat.
+4. Local auto-login uses seeded admin when `NEXT_PUBLIC_LOCAL_DEV_AUTO_ADMIN=1`.
+
+## Other commands
+
+| Command | Use |
+|--------|-----|
+| `pnpm build` | Build Studio |
+| `pnpm test` | Run tests |
+| `pnpm payload:types` | Regenerate Payload types after collection changes |
+
+<Callout variant="note" title="For coding agents">
+File refs: `package.json` (dev script), `apps/studio/`, `scripts/env-bootstrap.mjs`
+Related: STATUS § Apps, onboarding/05-what-youll-see, SETUP.md
+Do not: Run dev from apps/studio directly when iterating from root; use pnpm dev from root
+</Callout>

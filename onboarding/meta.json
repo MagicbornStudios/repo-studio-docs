@@ -1,0 +1,11 @@
+{
+  "title": "Onboarding",
+  "pages": [
+    "01-welcome",
+    "02-prerequisites",
+    "03-install-and-env",
+    "04-first-run",
+    "05-what-youll-see",
+    "06-next-steps"
+  ]
+}

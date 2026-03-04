@@ -1,0 +1,30 @@
+---
+title: 01 - Architecture overview
+---
+
+# 01 - Architecture overview
+
+Package structure and flow for the Assistant UI AI system.
+
+## Flow
+
+1. User types in Assistant chat panel
+2. Chat → POST /api/assistant-chat (AI SDK streaming)
+3. Model may call domain tools (`forge_createNode`, `character_create`)
+4. Tools execute; results render (Plan, Progress Tracker)
+5. Editor applies changes, highlights entities
+
+## Packages
+
+- **@forge/assistant-runtime** — OpenRouter adapter, streaming, agents, tools
+- **packages/shared/assistant/** — DomainAssistantContract, use-domain-assistant
+- **packages/domain-forge** — Forge contract and tools
+- **packages/domain-character** — Character contract and tools
+
+**Next:** [02 - Domain integration](02-domain-integration)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/assistant-runtime/`, `packages/shared/src/shared/assistant/`, `apps/studio/app/api/assistant-chat/route.ts`
+Related: ai/02-domain-integration, architecture/05-assistant-ui-architecture
+Do not: Use CopilotKit packages
+</Callout>

@@ -1,0 +1,47 @@
+---
+title: Coding agent strategy
+---
+
+# Coding agent strategy
+
+How to use agent artifacts. Entry: root [AGENTS.md](../AGENTS.md), README, [index](index) § I'm a coding agent.
+
+## Loop
+
+1. **Before:** Read [STATUS](agent-artifacts/core/STATUS.md) and relevant AGENTS.md; check [errors-and-attempts](agent-artifacts/core/errors-and-attempts.md). For long artifacts, see [tool-usage § Reading long artifacts](agent-artifacts/core/tool-usage.md).
+2. **Pick:** STATUS § Next or [task-registry](agent-artifacts/core/task-registry.md).
+3. **Implement:** One slice; scope to apps, packages, docs.
+4. **After:** Update STATUS (Ralph Wiggum Done), scan docs for drift per loop.
+
+**Forge-loop lifecycle:** AI runtimes and Database workspace work are tracked under **Phase 13** (`.planning/ROADMAP.md`). For similar multi-slice or corrective work, use the forge-loop lifecycle: discuss-phase → plan-phase → execute-phase → verify-work → sync-legacy.
+
+## Doc improvements
+
+When fleshing out docs, follow [docs-building](agent-artifacts/core/docs-building.md): page length, QuickNav, ShowcaseLink, catalog as single source. Add improvement ideas to [enhanced-features-backlog](agent-artifacts/core/enhanced-features-backlog.md) with "docs" tag; do not implement proposed items until a human sets status to accepted.
+
+## Key artifacts
+
+- **STATUS** — Current state, Done list
+- **docs-building** — Doc structure, showcase, env, settings; when to update. [docs-building](agent-artifacts/core/docs-building.md)
+- **decisions** — ADRs
+- **errors-and-attempts** — Do not repeat; user correction overrides
+- **tool-usage** — rg, list_dir, Read; AGENT_SECTION
+- **task-registry** — Granular tasks
+
+## User correction
+
+When the user explicitly rejects a hypothesis or forbids a fix: **stop**. Document in errors-and-attempts. Do not re-implement.
+
+## Scope
+
+Do not modify `.tmp/` or agent-download directories. Scope edits to apps, packages, docs.
+
+## UI/styling
+
+After implementing: update design docs and STATUS. Do **not** run browser screenshot automation. See [styling-and-ui-consistency](agent-artifacts/core/styling-and-ui-consistency.md) and [how-to 26](how-to/26-styling-debugging-with-cursor).
+
+<Callout variant="note" title="For coding agents">
+File refs: `agent-artifacts/core/`, root AGENTS.md
+Related: 18-agent-artifacts-index
+Do not: Skip STATUS update; retry failed pattern without checking errors-and-attempts; edit .tmp/
+</Callout>

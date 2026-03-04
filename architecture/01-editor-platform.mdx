@@ -1,0 +1,57 @@
+---
+title: 01 - Editor platform
+---
+
+# 01 - Editor platform
+
+Unreal-style dockable panels. WorkspaceApp, WorkspaceShell, DockLayout.
+
+## Naming
+
+| Old | New | Import |
+|-----|-----|--------|
+| AppSpace | WorkspaceApp | @forge/shared/components/app |
+| WorkspaceShell | WorkspaceShell | @forge/shared/components/workspace |
+| WorkspaceLayoutGrid | DockLayout | @forge/shared/components/workspace |
+| WorkspaceLeftPanel | DockPanel | @forge/shared/components/workspace |
+
+## Hierarchy
+
+```
+WorkspaceApp
+  WorkspaceApp.Tabs
+  WorkspaceApp.Content
+    WorkspaceShell (editorId, domain, theme)
+      WorkspaceHeader
+      WorkspaceToolbar
+      WorkspaceReviewBar
+      DockLayout (left, main, right, bottom)
+        DockPanel
+          PanelTabs
+          PanelSettings
+        ViewportMeta
+      WorkspaceStatusBar
+      WorkspaceOverlaySurface
+```
+
+## WorkspaceShell
+
+```tsx
+<WorkspaceShell editorId="dialogue" title="Dialogue" domain="dialogue" theme="dark-fantasy">
+  {/* slots */}
+</WorkspaceShell>
+```
+
+Sets `data-editor-id`, `data-domain`, `data-theme`, `data-density`.
+
+## DockLayout
+
+Dockview-based: drag-to-reorder, floating groups, tabbed panels.
+
+**Next:** [02 - Component library](02-component-library)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/components/workspace/`, `WorkspaceShell`, `DockLayout`, `DockPanel`
+Related: components/01-editor-shell, how-to/02-editor-shell
+Do not: Use old Workspace* names; add new layout without extending DockLayout
+</Callout>

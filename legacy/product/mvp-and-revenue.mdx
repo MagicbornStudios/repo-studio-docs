@@ -1,0 +1,194 @@
+---
+title: MVP and first revenue
+created: 2026-02-08
+updated: 2026-02-11
+---
+
+# MVP and first revenue
+
+Product and monetization strategy for the Studio platform. **We focus on funding quickly while delivering clear value.** See [product roadmap](../roadmap/product.mdx) for editor and initiative details, and [STATUS](../agent-artifacts/core/STATUS.md) for current state and next steps.
+
+---
+
+## Product stance
+
+We are **opinionated** about content authoring:
+
+- **Start from the aspect of a book and its structure** — narrative first, then interactivity.
+- **Focus on narrative-style games**; we **start with dialogue** because it is the backbone of interactive narrative.
+- **Future of content authoring:** AI-first, thin engine; content stays in our system; we generate media and guide with graphs + AI; scale to AAA via Yarn/Unity/Unreal/Godot.
+
+---
+
+## MVP definition of done
+
+- **MVP success criterion** = **first paid clone completed end-to-end**.
+- **One end-to-end clone/download** — cloneable project or template is the first paid product; one full flow shipped.
+- **Paid and free plan tiers** — required at MVP; capabilities gate who can list and who can clone/download paid items.
+- **Catalog at MVP** — users and orgs can browse and list (catalog for users and orgs).
+- **Creators list from day one** — catalog at MVP includes creator listings from day one; Stripe Connect (or similar) and payouts required so creators can list and get paid.
+- **Creator financial visibility at MVP baseline** — dashboard shows org-scoped revenue and AI usage cost visibility for customers.
+
+---
+
+## First revenue: paid clone / download
+
+Our **first revenue mechanism** is **paid clone or download** (not publish/host or seats first).
+
+- **First thing they can pay for:** a **cloneable project or template**.
+- Users can **clone** a project, template, or “core” (e.g. Codebase Agent Strategy) to their account for a price.
+- Or **download** a build or integration package for a price.
+- Listings, checkout, and payouts (e.g. Stripe Connect) are in scope; plan tiers and capabilities gate who can list and who can clone/download paid items.
+
+**Plans/capabilities:** We extend `user.plan` and `CAPABILITIES` (e.g. `PLATFORM_MONETIZE`) to gate platform features. Copilot remains free; monetization and listing are gated.
+
+---
+
+## Revenue model
+
+**Both platform and creator get paid** (Unity Asset Store / Bandlab model). Presets and packages; we take a cut; creators get payouts (Stripe Connect or similar). Catalog supports users and orgs.
+
+---
+
+## Clone semantics and business rules
+
+When a user **pays to clone**:
+
+- **Listing creation is free** — only **buyers** pay the creator-set clone price.
+- **Creator chooses per listing:** **indefinite** (purchaser can always clone, e.g. latest version) or **version-only** (purchaser gets the snapshot at purchase; clone-again returns the same snapshot).
+- **Clone** = full project (settings, characters, graphs, pages, etc.) with **media as references** until the clone owner replaces them; then we upload new media and drop the old reference.
+- We create a **license** record on payment; it enables **clone again** (and future audio/licenses). Purchaser can list "your licenses" and clone again per listing rules.
+
+Full business rules: [Business: listings and clones](../business/listings-and-clones.mdx) and [Revenue and Stripe](../business/revenue-and-stripe.mdx).
+
+---
+
+## Yarn export in MVP
+
+**Yarn Spinner export (e.g. `.yarn` export) is in MVP**, not deferred. Needed for narrative games and the scale-to-AAA story (Unity, Unreal, Godot).
+
+---
+
+## Users and API keys
+
+- **Standard users** (no API key concept): use **our cloud Studio**; a **subscription** covers AI usage; they author heavily on our infra.
+- **Advanced users**: first-class **OpenRouter**; optional **ELEVENLABS_API_KEY** and **OpenAPI key for Sora** for full media (voice, video).
+- **MVP users** = **Studio in the cloud** — no requirement to bring API keys for the standard tier. See [Dev-kit and API keys](dev-kit-and-keys.mdx).
+
+---
+
+## Strategy definition
+
+**Codebase Agent Strategy** = our **core docs** (agent-artifacts, decisions, STATUS, etc.) **plus AGENTS.md** files in the codebase. The Strategy editor (in-app) is **docs + analysis** of those docs and agent artifacts.
+
+- We **provide the core** for users to **download**.
+- **TRACE** (e.g. log where you look and what you found in TRACE.md) is part of **MVP for the Strategy (downloadable core)** — to prove effectiveness when users install the core. TRACE is **not** part of MVP for the Studio app or the marketing platform.
+- As we update core, we can **benchmark before/after** installation to prove effectiveness.
+- **Strategy is literally the entirety of core + AGENTS.md.**
+
+---
+
+## Writer editor (for writers)
+
+Notion-like editor based on **Facebook Lexical**. Write normally; **branching narrative** (different takes) in the project. **Interactive narrative, choices, dialogue** with AI assistance and **graphing**. **Yarn Spinner** as formalized dialogue (Unity/Unreal/Godot); narrative can **scale to AAA** when they outgrow our thin engine. We keep their content; we generate media and guide with graphs + AI. **Thin engine produces “Yarn Games”** (simple, opinionated). The downloadable Strategy core helps them get a more productive agent for building complex games in Unreal/Unity/Godot.
+
+---
+
+## MVP editors (Studio)
+
+**In MVP:** **Dialogue**, **Character**, **Writer**, **GamePlayer**.
+
+- **GamePlayer** — playable runtime for Yarn Games; we use **Pixi'VN** for demos and hosted builds (see [10 - GamePlayer](../architecture/10-gameplayer.mdx)). Authors build in Dialogue/Character/Writer, then play in GamePlayer. **Adapters** from Yarn (first), then RenPy, Ink, Twine let creators **import existing projects**; we generate assets so they get **renewed interest** and we gain catalog content and customers from those ecosystems. See [Ecosystem and import strategy](../business/ecosystem-and-import-strategy.mdx). Documented as MVP editor; implementation to be built.
+- **Video** and **Strategy (codebase) editor** are **not** in MVP. Video is locked until after MVP; the in-app CodebaseAgentStrategyEditor is out of scope for MVP. The **downloadable Strategy core** (docs + AGENTS.md) and TRACE (for proof) remain in scope; the Strategy editor in Studio ships after MVP.
+
+---
+
+## MVP infrastructure and platform
+
+- **MVP infra** = we run **Vercel + Payload** (Studio in the cloud). No self-host requirement for MVP.
+- **Platform** = `apps/platform` is the **landing page and customer platform** (account, catalog, billing, "Open Studio").
+- **Org-first customer context** = organizations + memberships + active-org switching for dashboard/account features.
+
+---
+
+## MVP: two hero moments
+
+MVP is the smallest slice that (1) delivers clear value and (2) ties to first revenue (paid clone/download). We have **two hero paths**; both lead to the same monetization.
+
+### Path A — Author a small game fully with AI
+
+- Use Studio (Dialogue + Character + Writer + GamePlayer + AI) to **author a complete small game** (narrative/content).
+- Value: writers, narrative teams, and indies ship a playable thing without building the engine.
+- Monetization: **clone** a starter or **download** a build/template for a price.
+
+### Path B — Layer Studio on existing projects
+
+- Use Studio to **create content** (dialogue, narrative, characters) for games that already exist.
+- **Download** our **Codebase Agent Strategy core** (docs + AGENTS.md) for agent productivity. Strategy *editor* in Studio ships after MVP.
+- Value: indies and AAA get narrative content authoring plus our downloadable core for their repo (feature work, agent-driven dev).
+- Monetization: **clone** a template or **download** the Strategy core/integration for a price.
+
+MVP = ship one or both paths with **paid clone/download**, **catalog**, **creators list from day one**, and **paid + free** plan tiers.
+
+---
+
+## MVP technical bar
+
+- **Simple game** built on our graphs.
+- **All image, audio, and generation** up and running.
+- **All AI** must be working in editors; expectation is **users never need to use an editor by hand** (AI-first); editor is there as fallback.
+
+---
+
+## Audience
+
+| Segment | What they get |
+|--------|----------------|
+| **Writers** | Narrative/dialogue authoring with AI; Writer editor (Lexical, branching); ship or sell content; Yarn Games. |
+| **Game content / narrative teams** | Dialogue and character graphs, Yarn-compatible workflows, collaboration. |
+| **Indie game devs** | Author a small game with AI, or add content + Codebase Agent Strategy to existing projects. |
+| **AAA (prototype / enhance)** | Prototype narrative; enhance coding agents and analytics for more ambitious games. |
+
+---
+
+## Positioning
+
+- **We are a game/narrative content authoring engine, AI- and chat-first.**
+- **Thin game engine** — we are not a full game engine; we are the **content + agent layer**.
+- Authors build dialogue, characters, and narrative; they can run small playable experiences (Yarn Games) or plug our core (Strategy) into existing codebases for agent-driven development.
+
+---
+
+## Video editor: locked until after MVP
+
+The Video editor (Twick timeline) is **locked** behind capability `studio.video.editor` and is **not** part of MVP.
+
+- Unlock **after** MVP (after paid clone/download and plan tiers are live).
+- See [ISSUES.md](../../ISSUES.md) and (historical) [plan-dockview-restore-video-lock-feature-flags.md](../agent-artifacts/archive/plan-dockview-restore-video-lock-feature-flags.md).
+
+---
+
+## Strategy (codebase) editor: not in MVP
+
+The in-app **Strategy editor** (CodebaseAgentStrategyEditor) is **out of scope for MVP**. The **downloadable Strategy core** (docs + AGENTS.md) and **TRACE** (for proof) are in scope; the Strategy editor in Studio ships after MVP.
+
+---
+
+## Evolution (high level)
+
+| Phase | Focus |
+|-------|--------|
+| **Now** | Studio + Dialogue (primary), Character, Strategy; Video locked. No paid flows. |
+| **MVP** | **Editors:** Dialogue, Character, Writer, GamePlayer. Video and Strategy editor not in MVP. One end-to-end clone/download; **success** = first paid clone E2E; **creators list from day one**; **Yarn export**; **catalog** (users + orgs); **paid + free tiers**; **revenue share** (platform + creator); **clone semantics**; **publish and host playable builds** (so players can play builds); **Vercel + Payload**; **platform** = `apps/platform`. TRACE for Strategy (downloadable core) only. |
+| **After MVP** | Video unlock; Strategy editor in Studio; more editors/MCP; expand listings and payouts. |
+| **Dream** | Full content authoring platform + Strategy core everywhere; writers, indies, AAA; clone/download and optional host/distribute. |
+
+---
+
+## References
+
+- [Product roadmap](../roadmap/product.mdx) — Active editors, platform initiatives.
+- [Dev-kit and API keys](dev-kit-and-keys.mdx) — How users use the dev-kit and what keys they need.
+- [STATUS § Next](../agent-artifacts/core/STATUS.md) — Canonical “what can I do next?” with impact sizes; monetization (clone/download) and plan tiers are **MVP-critical**.
+- [Project overview](../10-project-overview.mdx) — Product vision, tech stack, code layout.
+- [Decisions](../agent-artifacts/core/decisions.md) — Copilot not gated; platform features (publish, monetize) gated by plan/capabilities; clone semantics and revenue model.

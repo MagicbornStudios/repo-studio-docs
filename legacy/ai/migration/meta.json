@@ -1,0 +1,15 @@
+{
+  "title": "Migration",
+  "pages": [
+    "00-index",
+    "phase-1-foundation",
+    "phase-2-tool-system",
+    "phase-3-forge-domain",
+    "phase-4-character-domain",
+    "phase-4b-writer",
+    "phase-5-agent-system",
+    "phase-6-mcp",
+    "phase-7-cleanup",
+    "verification"
+  ]
+}

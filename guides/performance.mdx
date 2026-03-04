@@ -1,0 +1,29 @@
+---
+title: Performance
+---
+
+# Performance
+
+Memoization, virtualization, code splitting.
+
+## Memoization
+
+- `useMemo` for expensive derivations
+- `React.memo` for pure list items
+- Stable callbacks via `useCallback` when passed to memoized children
+
+## Virtualization
+
+Long lists (nodes, tracks): use `@tanstack/react-virtual` or similar. Avoid rendering hundreds of DOM nodes.
+
+## Code splitting
+
+Editors load on demand via registry. Lazy-load heavy panels (e.g. chat) when opened.
+
+**Next:** Back to [00-index](00-index)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/registry/`, `packages/shared/`
+Related: architecture/01-editor-platform
+Do not: Eager-load all editors; use registry lazy load
+</Callout>

@@ -1,0 +1,39 @@
+---
+title: "Editor design: extending AI and patterns"
+
+created: 2026-02-04
+updated: 2026-02-07
+---
+
+# Editor design: extending AI and patterns
+
+## Design patterns
+
+### Extending the AI (actions, context, delegation, prompts)
+
+1. **Context**: Expose minimal, stable state via `useCopilotReadable` (or the system contract's `getContextSnapshot()`). Include `editorId`, selection summary, and system-specific state (e.g. graph summary, track count). Shell context is registered in `AppShell`; system context is registered when the editor mounts (e.g. `useDomainCopilot(forgeContract)`).
+
+2. **Actions**: Register with `useCopilotAction`. Use a **system prefix** (e.g. `forge_createNode`, `video_addTrack`) to avoid collisions. Each action: name, description, parameters, handler; optional `render` for generative UI (confirmations, previews). System actions are created in `lib/domains/<domain>/copilot/actions.ts` and registered via `useDomainCopilot`.
+
+3. **Delegation**: The main agent can call shell actions (`switchEditor`, `openEditor`, `closeEditor`). For sub-tasks, you can add co-agents (`useCoAgent` / `useAgent`). See [17-co-agents-and-multi-agent.mdx](./17-co-agents-and-multi-agent.mdx).
+
+4. **Prompts / instructions**: Base instructions come from the app-level settings and the CopilotKit provider. System-specific instructions come from the contract's `getInstructions()` and are layered as additional instructions. Keep instructions short and mention available action prefixes.
+
+### What to expect with auto model (free-first fallbacks)
+
+- **Auto mode**: App resolves a primary model plus a fallback chain using `resolvePrimaryAndFallbacks()`.
+- **Manual mode**: User picks a specific primary model; fallbacks still apply unless disabled.
+- **Fallbacks**: Requests include `models: [primary, ...fallbacks]` so OpenRouter retries within a single request on 429/5xx.
+- **No health dots**: We do not track per-model health or cooldown in the client; fallbacks handle rate limits.
+
+### Adding an editor
+
+1. **New editor**: Add an editor id to `EditorId` in `lib/app-shell/store.ts`. Create an editor component (e.g. `XEditor`) using `WorkspaceShell`, wire system store, `useXContract` + `useDomainCopilot`. Add tab and render branch in `AppShell`. Register shell context/actions (editor name, switch/open/close) if not already generic.
+2. **Viewport surface**: Implement the viewport in the editor's **main** slot. Expose selection (and optional viewport handle) for `revealSelection`. If you add multiple editor windows/tabs later, extend route state with `editors[]` and `sessions` per editor; see [01-unified-workspace.mdx](./architecture/01-unified-workspace.mdx).
+3. **Register agents**: System contract registers context and actions when the editor is active. Optionally add a co-agent (see [17-co-agents-and-multi-agent.mdx](./17-co-agents-and-multi-agent.mdx)).
+
+## References
+
+- [Adding system actions](./14-adding-domain-actions.mdx)
+- [Unified editor architecture](./architecture/01-unified-workspace.mdx)
+- [Errors and attempts](./agent-artifacts/core/errors-and-attempts.md) (do not repeat)

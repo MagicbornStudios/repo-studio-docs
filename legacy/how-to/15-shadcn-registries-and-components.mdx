@@ -1,0 +1,55 @@
+---
+title: 15 - Shadcn registries and UI components
+created: 2026-02-05
+updated: 2026-02-10
+---
+
+# 15 - Shadcn registries and UI components
+
+How we use shadcn `components.json`, where to add registries, and where generated components should live.
+
+## components.json ownership
+
+`components.json` is per-project. The CLI installs components into the current project directory.
+
+| Location | Role | Registries |
+|----------|------|------------|
+| `packages/ui` | Shared atoms and shared registry components published as `@forge/ui` | `@lucide-animated`, `@billingsdk` |
+| `apps/studio` | Studio-only components | (none currently) |
+| `apps/platform` | Platform-only customer UI (landing/docs/account/catalog) | platform app registries as needed |
+
+## Rule of thumb
+
+- Shared across apps/consumers -> install in `packages/ui`.
+- Only used by Studio -> install in `apps/studio`.
+- Only used by platform -> install in `apps/platform`.
+
+## Adding a registry
+
+```bash
+cd packages/ui
+# or: cd apps/studio
+# or: cd apps/platform
+pnpm dlx shadcn@latest registry add @namespace
+```
+
+## Installing a component from a registry
+
+```bash
+pnpm dlx shadcn@latest add @namespace/component-name
+```
+
+Examples:
+
+- Shared atom/component: run in `packages/ui`, then export from `packages/ui/src/index.ts`.
+- Platform-only UI: run in `apps/platform`.
+
+## Summary matrix
+
+| Goal | Use this `components.json` | Installed component location |
+|------|-----------------------------|------------------------------|
+| Shared UI atom or shared registry component | `packages/ui` | `packages/ui/src/components/ui/*` |
+| Studio-only component | `apps/studio` | `apps/studio/components/*` |
+| Platform-only component | `apps/platform` | `apps/platform/src/components/*` |
+
+**Back to index:** [00 - How-to index](00-index.mdx)

@@ -1,0 +1,55 @@
+---
+title: 23 - Adding a new collection, datatype, or client
+created: 2026-02-06
+updated: 2026-02-07
+---
+
+# 23 - Adding a new collection, datatype, or client
+
+This guide explains how to add a new Payload collection, expose CRUD to the client via the Payload SDK, and when to add a custom API route and client instead.
+
+## 1. Adding a new Payload collection
+
+1. **Create the collection config** in `apps/studio/payload/collections/<name>.ts` (e.g. `pages.ts`, `blocks.ts`). Define `slug`, `access`, and `fields`. Follow existing collections for access patterns (e.g. read/create/update/delete returning `true` for now).
+2. **Register the collection** in `apps/studio/payload/collections/index.ts`: add the import and include the collection in the `collections` array and in the named `export` block.
+3. **Generate types**: from the repo root run `pnpm payload:types`. This updates `packages/types/src/payload-types.ts`.
+4. **Add system type (optional)** in `packages/types/src/payload.ts`: export a record type alias, e.g. `export type PageRecord = PayloadCollections['pages'];`. If the collection is used by a system (domain package), add a doc alias (e.g. `PageDoc`) in a system file under `packages/types/src/` and export from `index.ts`.
+
+**Reference:** `apps/studio/payload/collections/forge-graphs.ts`, `video-docs.ts`, `pages.ts`, `blocks.ts`.
+
+## 2. Exposing CRUD to the client (Payload SDK path)
+
+Use the **Payload SDK** for all collection CRUD. Do not use raw `fetch` in components or stores for server state.
+
+1. **Add a slug constant** in `apps/studio/lib/api-client/payload-sdk.ts`, e.g. `export const PAGES_SLUG = 'pages';`.
+2. **Add query keys** in `apps/studio/lib/data/keys.ts` (e.g. `pages(projectId)`, `page(id)`). Use these for cache identity and invalidation.
+3. **Add hooks** in `apps/studio/lib/data/hooks/`:
+   - List/single: `useX`, `useXById` (or `usePage`, `usePages`) using `payloadSdk.find` and `payloadSdk.findByID`.
+   - Mutations: `useCreateX`, `useUpdateX` (and optionally `useDeleteX`) using `payloadSdk.create`, `payloadSdk.update`; in `onSuccess`, invalidate the relevant query keys.
+4. **Export hooks** from `apps/studio/lib/data/hooks/index.ts`.
+
+**Rule:** No raw `fetch` for `/api/*` in components, hooks, or stores. Use these hooks or extend the client (see below). See [decisions.md](../agent-artifacts/core/decisions.md) and [11-tech-stack.mdx](../11-tech-stack.mdx).
+
+**Reference:** `apps/studio/lib/data/hooks/use-forge-graphs.ts`, `use-pages.ts`, `use-blocks.ts`.
+
+## 3. When to add a custom API route and client
+
+- **Payload SDK** is used for **collection CRUD only** (list, get, create, update, delete documents in Payload collections).
+- **Custom Next API route + client** when you need:
+  - Non-CRUD behavior (auth shape, settings upsert, AI, workflows, import from an external API).
+  - Streaming (e.g. SSE); the OpenAPI spec does not support streaming.
+  - A proxy to a vendor API (e.g. ElevenLabs, Notion); the route calls the vendor, the client calls our route.
+
+**Adding a new client module:**
+
+- Add a file under `apps/studio/lib/api-client/` (e.g. `notion.ts`, `workflows.ts`). Use `fetch` to our Next API route with `credentials: 'include'` where needed. Export the functions and any types.
+- Do **not** add new endpoints to the OpenAPI spec solely to generate a client. Use manual client modules or vendor SDKs in route handlers. See AGENTS.md and [11-tech-stack.mdx](../11-tech-stack.mdx).
+
+## 4. Checklist
+
+- [ ] Collection defined in `apps/studio/payload/collections/`, registered in `index.ts`.
+- [ ] `pnpm payload:types` run; system/domain type added in `packages/types` if needed.
+- [ ] Slug constant in `payload-sdk.ts`; query keys in `keys.ts`; hooks in `lib/data/hooks/` and exported.
+- [ ] Custom route + client only if needed (non-CRUD, streaming, or vendor proxy); documented here or in the module.
+
+**Next:** See [20 - Create an editor](20-create-a-workspace.mdx) for wiring a new editor to data and the editor shell.

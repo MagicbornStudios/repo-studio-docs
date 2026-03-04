@@ -1,0 +1,51 @@
+---
+title: 06 - Dialogue and Yarn Spinner
+---
+
+# 06 - Dialogue and Yarn Spinner
+
+Dialogue Editor: visual graph editor with planned Yarn Spinner support.
+
+## Yarn Spinner concepts
+
+- **Nodes** — Named blocks (scenes, beats)
+- **Lines** — Spoken dialogue
+- **Options** — Player choices, branching
+- **Commands** — Engine instructions (animation, scene change)
+- **Variables** — Persistent state
+- **Functions** — Custom logic
+
+## Graph types
+
+| Graph | Purpose | Yarn mapping |
+|-------|---------|---------------|
+| Narrative | Story structure (acts, scenes, beats) | Node graph |
+| Storylet | Dialogue branches within beat | Options and lines within node |
+
+## Node types
+
+| Type | Constant | Yarn mapping |
+|------|----------|---------------|
+| Character | FORGE_NODE_TYPE.CHARACTER | CharacterName: Line |
+| Player | FORGE_NODE_TYPE.PLAYER | -> Option |
+| Conditional | FORGE_NODE_TYPE.CONDITIONAL | `<<if $var>>` |
+
+## Export and panel
+
+- **Preview**: Yarn panel in DialogueEditor (Monaco read-only); `exportToYarn(graph, createMinimalContext())` for current graph only.
+- **Full export**: Download button calls `POST /api/forge/yarn-export` with `graphId`; server resolves storylet/detour via Payload, returns complete .yarn string.
+- **Package**: `@forge/yarn-converter` — handlers (Character, Player, Conditional, Storylet, Detour), builders, condition formatter/parser.
+
+## Domain
+
+- `packages/domain-forge` — Dialogue logic, assistant contract
+- `packages/types` — ForgeGraphDoc, ForgeNodeType
+- `packages/yarn-converter` — Yarn export/import, storylet/detour resolution
+
+**Next:** Back to [00 - Index](00-index) or [how-to/06-dialogue-walkthrough](../how-to/06-dialogue-walkthrough)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/domain-forge/`, `packages/types/src/graph.ts`, `apps/studio/components/editors/DialogueEditor.tsx`
+Related: how-to/06-dialogue-walkthrough, ai/03-domains-forge-character
+Do not: Use CopilotKit domain contract; use DomainAssistantContract
+</Callout>

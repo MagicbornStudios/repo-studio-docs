@@ -1,0 +1,36 @@
+---
+title: Product roadmap
+---
+
+# Product roadmap
+
+AI-first interactive narrative engine. Ralph Wiggum loop: read STATUS → implement slice → update STATUS.
+
+**MVP:** Dialogue, Character, Writer, GamePlayer. Video and Strategy editor not in MVP. Success = first paid clone E2E. See [MVP](../product/mvp-and-revenue).
+
+**Next:** [STATUS § Next](../agent-artifacts/core/STATUS.md). Granular tasks: [task-registry](../agent-artifacts/core/task-registry.md).
+
+## Active editors
+
+| Editor | Status | Focus |
+|--------|--------|-------|
+| Dialogue | In progress | Yarn Spinner, plan→patch→review, dual graph panels |
+| Character | In progress | Relationship graph, ElevenLabs voice |
+| GamePlayer | MVP (to build) | Playable Yarn Games runtime |
+| Video | Locked | Capability-gated; new timeline/editor TBD when unlocked |
+| Strategy | After MVP | Assistant UI chat, downloadable core in scope |
+
+## Platform initiatives
+
+- **LangGraph** — Phase 1 done (@forge/assistant-runtime, Forge/Character workflows); Phase 2 in progress
+- **MCP** — Studio + editors as MCP apps; app tools, editor registration (after MVP)
+- **Yarn Spinner** — Export/import `.yarn`; full implementation planned (MVP-critical)
+- **Dev-kit single entrypoint** — Docs done; package consolidation in progress
+
+**Next:** [Potential ideas](potential-ideas)
+
+<Callout variant="note" title="For coding agents">
+File refs: `agent-artifacts/core/STATUS.md`, `agent-artifacts/core/task-registry.md`
+Related: product/mvp-and-revenue, architecture/04-editors-as-mcp-apps
+Do not: Add initiatives without STATUS update
+</Callout>

@@ -1,0 +1,42 @@
+---
+title: CopilotKit editor integration (archived)
+created: 2026-02-04
+updated: 2026-02-12
+---
+
+# CopilotKit editor integration (archived)
+
+**Status: CopilotKit removed.** Assistant UI and domain assistant contracts replace this. See [AI architecture](../ai/00-index.mdx) and [migration](../ai/migration/00-index.mdx).
+
+## Pattern: context + actions (historical)
+
+- **Context** describes current state so the agent can reason (e.g. which editor, what graph, dirty state). Supply it via `useCopilotReadable` in the editor component or via `useDomainCopilot` contracts.
+- **Actions** perform edits. Register them with `useCopilotAction`; the agent calls them to change the graph, document, etc.
+
+The agent uses context to answer questions like "What's in the graph?" and uses actions to apply changes (create node, update node, save, etc.).
+
+## Stable action IDs (conventions)
+
+- App-level actions are prefixed via `createAppAction()` (e.g. `app_generateImage`).
+- System actions are prefixed via `createDomainAction(domain, ...)` (e.g. `forge_createNode`).
+
+Even if an action is disabled, it should exist so the UI stays consistent.
+
+## Editor context shape (Dialogue)
+
+Dialogue exposes to the agent:
+
+- `editorId`: `"dialogue"`
+- `viewportType`: `"react-flow"` (legacy `editorType`)
+- `graphSummary`: `{ title, nodeCount, edgeCount, nodeIds }` or `null` when no graph
+- `isDirty`: boolean
+
+Other editors (e.g. Writer/Lexical) can expose their own summary (e.g. document title, word count, selection).
+
+## Selection-aware instructions
+
+When the user says "change this node" or "edit the selected one", the agent should use the current selection. Dialogue can expose selected node IDs by including `selectedNodeIds` in the value passed to `useCopilotReadable` and wiring it from the graph store or React Flow state.
+
+## No imperative toolbar
+
+The agent does not add or remove toolbar buttons. It uses existing actions (Save, graph ops) only.

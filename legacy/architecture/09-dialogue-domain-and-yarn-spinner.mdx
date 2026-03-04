@@ -1,0 +1,183 @@
+---
+title: Dialogue system and Yarn Spinner
+created: 2026-02-07
+updated: 2026-02-07
+---
+
+# Dialogue system and Yarn Spinner
+
+Dialogue Editor is the primary editor in Studio. It provides a visual graph
+editor for building interactive dialogue trees, with planned first-class
+support for the **Yarn Spinner** dialogue scripting language.
+
+---
+
+## What is Yarn Spinner?
+
+[Yarn Spinner](https://yarnspinner.dev) is an open-source dialogue system used
+in game engines (Unity, Unreal, Godot) and interactive fiction. Key concepts:
+
+- **Nodes** — named blocks of dialogue content (like scenes or beats).
+- **Lines** — individual lines of dialogue spoken by characters.
+- **Options** — player choices that branch the conversation.
+- **Commands** — instructions to the game engine (play animation, change scene).
+- **Variables** — state that persists across nodes (quest flags, relationship scores).
+- **Functions** — custom logic callable from dialogue (dice rolls, inventory checks).
+
+Yarn scripts are plain text files (`.yarn`) that compile to a bytecode format
+consumable by game runtimes.
+
+---
+
+## Dialogue Editor architecture
+
+```
+DialogueEditor
+  ├── WorkspaceShell (editorId="dialogue")
+  ├── WorkspaceHeader + WorkspaceToolbar
+  │     ├── ProjectSwitcher
+  │     ├── File / View / State menus
+  │     └── ModelSwitcher + SettingsMenu
+  ├── WorkspaceReviewBar (plan review)
+  ├── DockLayout
+  │     ├── left: DockPanel (Library)
+  │     │     └── PanelTabs: Narratives | Storylets | Nodes
+  │     ├── main: DockPanel (Dialogue Graphs)
+  │     │     ├── ForgeGraphPanel (narrative)
+  │     │     └── ForgeGraphPanel (storylet)
+  │     ├── right: DockPanel (Inspector)
+  │     │     └── Inspector (`WorkspaceInspector`, sections + AI workflow)
+  │     └── bottom: DockPanel (Workbench)
+  ├── WorkspaceStatusBar
+  └── WorkspaceOverlaySurface (CreateNodeModal)
+```
+
+### Graph types
+
+| Graph | Purpose | Yarn Spinner mapping |
+|-------|---------|---------------------|
+| **Narrative** | High-level story structure (acts, scenes, beats) | Node graph — each node is a Yarn node |
+| **Storylet** | Fine-grained dialogue branches within a beat | Options and lines within a Yarn node |
+
+### Node types
+
+| Node Type | Constant | Description | Yarn mapping |
+|-----------|----------|-------------|-------------|
+| Character | `FORGE_NODE_TYPE.CHARACTER` | NPC dialogue line | `CharacterName: Line text` |
+| Player | `FORGE_NODE_TYPE.PLAYER` | Player choice | `-> Option text` |
+| Conditional | `FORGE_NODE_TYPE.CONDITIONAL` | Branching condition | `<<if $variable>>` |
+
+---
+
+## Domain packages
+
+| Package | Path | Purpose |
+|---------|------|---------|
+| `@forge/domain-forge` | `packages/domain-forge/` | Dialogue system logic, copilot wiring |
+| `@forge/types` | `packages/types/src/graph.ts` | Graph types (ForgeGraphDoc, ForgeNodeType, etc.) |
+
+### Domain copilot contract
+
+The dialogue system exposes a copilot contract via `useForgeContract`:
+
+```ts
+const forgeContract = useForgeContract({
+  graph: activeGraph,
+  selection: activeSelection,
+  isDirty: activeDirty,
+  applyOperations: applyActiveOperations,
+  openOverlay,
+  revealSelection,
+  onAIHighlight,
+  clearAIHighlights: clearHighlights,
+  createNodeOverlayId: CREATE_NODE_OVERLAY_ID,
+  createPlanApi,
+  setPendingFromPlan: setPendingFromPlanActive,
+  commitGraph,
+});
+
+useDomainCopilot(forgeContract, { toolsEnabled });
+```
+
+This registers CopilotKit actions for: `createNode`, `updateNode`,
+`deleteNode`, `createEdge`, `getGraph`, `openCreateNodeModal`, and
+`revealSelection`.
+
+---
+
+## AI workflow
+
+Dialogue Editor supports an AI plan-execute-review-commit workflow:
+
+1. **Plan** — User describes a goal; AI generates a plan (via `useCreateForgePlan`).
+2. **Patch** — Plan is applied as graph operations (add/update/delete nodes and edges).
+3. **Review** — `WorkspaceReviewBar` shows pending changes; user can revert or accept.
+4. **Commit** — Accepted changes are saved to the server.
+
+During plan application, the editor is locked via `usePanelLock` and a
+`LockedOverlay` prevents interaction.
+
+---
+
+## Yarn Spinner integration roadmap
+
+### Phase 1: First-class Yarn Spinner support (next)
+
+| Item | Description |
+|------|-------------|
+| **Yarn export** | Export narrative + storylet graphs as `.yarn` files |
+| **Yarn import** | Parse `.yarn` files into graph structures |
+| **Syntax preview** | Show Yarn syntax alongside the visual graph |
+| **Variable panel** | Declare and track Yarn variables (`$variableName`) |
+| **Command palette** | Insert common Yarn commands (`<<wait>>`, `<<stop>>`, etc.) |
+
+### Phase 2: Full Yarn Spinner implementation (later)
+
+| Item | Description |
+|------|-------------|
+| **Yarn compiler** | Compile graphs to Yarn bytecode in-browser |
+| **Runtime preview** | Play through dialogue in a preview pane |
+| **Localization** | String table export for multi-language support |
+| **Custom commands** | Register project-specific commands and functions |
+| **Unity/Unreal export** | Export packages for game engine integration |
+
+---
+
+## Data model
+
+### ForgeGraphDoc
+
+```ts
+interface ForgeGraphDoc {
+  id: number;
+  title: string;
+  kind: ForgeGraphKind;     // 'narrative' | 'storylet'
+  project: number;          // project ID
+  flow: {
+    nodes: FlowNode[];
+    edges: FlowEdge[];
+    viewport: { x: number; y: number; zoom: number };
+  };
+}
+```
+
+### Patch operations
+
+```ts
+type ForgeGraphPatchOp =
+  | { type: 'createNode'; nodeType: ForgeNodeType; position: { x: number; y: number }; data?: Record<string, unknown> }
+  | { type: 'updateNode'; nodeId: string; data: Record<string, unknown> }
+  | { type: 'deleteNode'; nodeId: string }
+  | { type: 'createEdge'; source: string; target: string; data?: Record<string, unknown> }
+  | { type: 'deleteEdge'; edgeId: string };
+```
+
+---
+
+## References
+
+- [Editor platform](05-editor-platform.mdx)
+- [CopilotKit and agents](03-copilotkit-and-agents.mdx)
+- [Dialogue Editor walkthrough](../how-to/06-forge-workspace-walkthrough.mdx)
+- [Product roadmap](../roadmap/product.mdx)
+- [Yarn Spinner documentation](https://docs.yarnspinner.dev/)

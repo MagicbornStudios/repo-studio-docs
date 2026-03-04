@@ -1,0 +1,44 @@
+---
+title: How-to guides
+---
+
+# How-to guides
+
+Step-by-step guides. Read in order for building editors; use reference guides for tooling and loop operations.
+
+## Foundation (01-04)
+
+| # | Guide | Summary |
+|---|-------|---------|
+| [01](01-foundation) | Foundation | Repo structure, packages, key concepts |
+| [02](02-editor-shell) | Editor shell and slots | WorkspaceShell, WorkspaceToolbar, DockLayout, WorkspaceStatusBar, WorkspaceOverlaySurface |
+| [03](03-styling) | Styling and theming | Design tokens, data-theme, @forge/ui |
+| [04](04-data-and-state) | Data and state | Draft (Zustand), server state (TanStack Query), API boundary |
+
+## Building editors (05-06)
+
+| # | Guide | Summary |
+|---|-------|---------|
+| [05](05-building-an-editor) | Building an editor | Registry, shell, main, inspector, domain contract |
+| [06](06-dialogue-walkthrough) | Dialogue walkthrough | How DialogueEditor is built; plan, patch, review, commit |
+
+## AI integration (07-08)
+
+| # | Guide | Summary |
+|---|-------|---------|
+| [07](07-assistant-and-ai) | Assistant and AI | Domain contracts, Assistant UI, tools |
+| [08](08-adding-ai-to-editors) | Adding AI to editors | System actions, app actions, agents |
+
+## Reference (24-28)
+
+| # | Guide | Summary |
+|---|-------|---------|
+| [24](24-vendoring-third-party-code) | Vendoring | Vendor external repos (e.g. GSD), pnpm overrides |
+| [25](25-verdaccio-local-registry) | Verdaccio | Local npm registry; publish and consume @forge/* |
+| [26](26-styling-debugging-with-cursor) | Styling debug | Workflow for fixing styling with coding agents |
+| [27](27-posthog-llm-analytics) | PostHog LLM analytics | OpenRouter Broadcast, trace IDs |
+| [28](28-vercel-supabase-launch) | Vercel launch | Env sync, deployment runbook |
+| [29](29-studio-apps-and-app-spec) | Studio apps and app spec | One app-spec per studio app; repeatable pattern, viewport/pinned panels |
+| [Forge Loop](forge-loop-workflow) | Forge Loop workflow | `.planning` lifecycle, strict verify, recovery pattern |
+| [Forge Loop manual](forge-loop-manual-usage) | Manual usage | Human-driven loop flow and file touchpoints |
+| [Forge Loop agents](forge-loop-agent-usage) | Agent usage | Coding-agent operating contract and safe cadence |

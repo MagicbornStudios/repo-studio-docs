@@ -1,0 +1,107 @@
+---
+title: CopilotKit and agents architecture (historical)
+created: 2026-02-04
+updated: 2026-02-12
+---
+
+# CopilotKit and agents architecture (historical)
+
+**Status: CopilotKit removed.** Assistant UI is the primary chat surface. This doc is kept for historical reference. See [AI architecture](../../ai/00-index.mdx) and [migration](../../ai/migration/00-index.mdx).
+
+Single source of truth for how the AI sidebar, context, actions, and runtime *used to* work. See also [AI editor integration](../15-ai-workspace-integration.mdx) and [01-unified-workspace.mdx](./01-unified-workspace.mdx).
+
+## 1. App and editor hierarchy
+
+- **Single Next.js app** (`apps/studio`): one layout, one CopilotKit provider, one App Shell.
+- **App Shell** (`apps/studio/components/AppShell.tsx`): owns editor tabs and the active editor; only the active editor is mounted.
+- **Editors**: Dialogue (primary, graph editor), Video (showcase), Character, Strategy (assistant-ui chat). Each uses `WorkspaceShell` from shared and implements a **system contract** (context + actions + suggestions + highlights).
+- **Route**: Persisted in Zustand to localStorage (`forge:app-session:v2`); no URL for editor.
+
+## 2. CopilotKit flow (client to runtime to model)
+
+1. User sends a message or clicks a suggestion in the sidebar.
+2. CopilotKit client sends the request to `POST /api/copilotkit` with headers: editor id (`x-forge-editor-id`, legacy `x-forge-workspace-id`), viewport id (`x-forge-viewport-id`), model override, tools-enabled.
+3. Runtime resolves the model (router or override), builds a CopilotRuntime with one BuiltInAgent (OpenRouter), and handles the request. The LLM receives context (readables) and tool definitions (actions).
+4. OpenRouter returns response and/or tool calls. Runtime streams back to the client.
+5. Client runs action handlers in the browser; results are sent back to the agent. Draft state (Zustand) is updated; highlights can be triggered.
+
+**Important:** Actions run in the client. The agent never writes to the database directly; persistence is via Save (user or future commit action) which calls Next API routes.
+
+## 3. Context (what the agent sees)
+
+| Layer   | Where registered | Content |
+|--------|------------------|--------|
+| Shell  | AppShell         | `useCopilotReadable`: `activeWorkspaceId`, `openWorkspaceIds` (route state), editor labels, editor summary. |
+| System | `useDomainCopilotContext` | `contract.getContextSnapshot()` -> `useCopilotReadable`. Snapshot: `domain` (system id), `editorId`, `selection`, `selectionSummary`, `domainState` (system state). |
+
+- Dialogue: graph summary, selection, isDirty (from `buildForgeContext` in `packages/domain-forge`).
+- Video: doc summary, tracks, selection (from `buildVideoContext` in `apps/studio/lib/domains/video/copilot`).
+- **Additional instructions**: `useCopilotAdditionalInstructions` with `contract.getInstructions()` (system prompt: node types, action names, when to call getGraph).
+
+## 4. Actions (what the agent can do)
+
+| Layer   | Where | Actions |
+|--------|-------|--------|
+| Shell  | AppShell | `switchEditor`, `openEditor`, `closeEditor` (prefixed via `createAppAction`). |
+| System | `useDomainCopilotActions` | All from `contract.createActions()`; each registered with `useCopilotAction`. |
+
+- **Dialogue** (`packages/domain-forge/src/copilot/actions.ts`): `forge_createNode`, `forge_updateNode`, `forge_deleteNode`, `forge_createEdge`, `forge_getGraph`, `forge_openCreateNodeModal`, `forge_revealSelection`. Handlers call `applyOperations` (draft); optional `render` for generative UI in chat. Actions are prefixed via `createDomainAction('forge', ...)`.
+- **Video** (`apps/studio/lib/domains/video/copilot/actions.ts`): `video_*` (addTrack, addElement, setSceneOverride, etc.); same pattern.
+
+**Constraint:** Same number of actions every render; use `available: 'disabled'` for contextually inactive ones. Actions are immediate: no plan step or commit step today.
+
+## 5. Highlights (what the AI changed)
+
+- **Contract** (`packages/shared/src/shared/copilot/types.ts`): requires `onAIHighlight(payload)`, `clearAIHighlights()`.
+- **Hook** (`use-ai-highlight.ts`): `highlights` state (entityType -> ids), `onAIHighlight` (merge + auto-clear after ~5s), `isHighlighted(entityType, id)`.
+- **Wiring**: Dialogue/Video handlers call `onAIHighlight({ entities: { 'forge.node': [id] } })`; GraphEditor uses `isHighlighted` for ring/edge classes. Highlights are transient; no review step today.
+
+## 6. Suggestions and entitlements
+
+- **Suggestions**: `contract.getSuggestions()` -> `useCopilotChatSuggestions` (chips in chat).
+- **Tools on/off**: `toolsEnabled` = settings + entitlements (e.g. `CAPABILITIES.STUDIO_AI_TOOLS`). When disabled, all system actions are registered with `available: 'disabled'`.
+
+## 7. Runtime and agent
+
+- **Single agent**: One BuiltInAgent (OpenRouter) in `apps/studio/app/api/copilotkit/route.ts`. Model resolved per request via preferences: **primary + fallbacks** (or `x-forge-model` override). We use **OpenRouter model fallbacks** (`models: [primary, ...fallbacks]` in the request body) so OpenRouter retries with the next model on rate limit / 5xx within the same request; no custom cooldown or health tracking. We use OpenAI SDK + baseURL for OpenRouter (not a separate OpenRouter SDK); see [06 - Model routing and OpenRouter](06-model-routing-and-openrouter.mdx) and [agent-artifacts/core/decisions.md](../agent-artifacts/core/decisions.md).
+- **Next wrapper**: `@forge/shared/copilot/next` exports `createForgeCopilotRuntime(...)` and `ForgeCopilotProvider` for fast Next.js adoption.
+- **Co-agents**: Documented in [17-co-agents-and-multi-agent.mdx](../17-co-agents-and-multi-agent.mdx); not used in the app yet.
+
+## 8. Image generation
+
+- **API**: `POST /api/image-generate` (body: `prompt`, optional `aspectRatio`, `imageSize`) calls OpenRouter with `modalities: ["image", "text"]`. Model is `OPENROUTER_IMAGE_MODEL` or default `google/gemini-2.5-flash-image-preview`.
+- **Action**: `app_generateImage` (app-level, registered in AppShell). Gated by `CAPABILITIES.IMAGE_GENERATION` (pro plan). Render shows generated image in chat.
+- **Model registry**: `ModelDef` has optional `supportsImages`; image gen uses a dedicated env/model, not the chat model registry.
+- **Provider stack**: Audio TTS is ElevenLabs; video generation will use OpenAI Sora (or equivalent) when we add it. Full breakdown: [06 - Model routing and OpenRouter](06-model-routing-and-openrouter.mdx) (provider stack).
+
+## 10. Structured output
+
+- **API**: `POST /api/structured-output` (body: `prompt`, optional `schemaName` or `schema`) calls OpenRouter with `response_format: { type: "json_schema", json_schema }`. Predefined schema names: `characters`, `keyValue`, `list`.
+- **Action**: `app_respondWithStructure` (app-level, registered in AppShell). Parameters: `prompt`, optional `schemaName`. Render shows JSON in chat.
+
+## 11. Plan -> execute -> review -> commit (Dialogue)
+
+- **forge_createPlan(goal)**: Calls `POST /api/forge/plan` with goal and graph summary; returns `{ steps }` without mutating the draft.
+- **Plan card**: `apps/studio/components/copilot/ForgePlanCard.tsx` renders `PlanCard` + `PlanActionBar` inline in chat with Apply/Dismiss actions.
+- **forge_executePlan(steps)**: Applies each step via `applyOperations`, triggers highlights, sets `pendingFromPlan` for review.
+- **Review UI**: When `isDirty && pendingFromPlan`, a bar shows "Pending changes from plan" with **Revert** (refetch graph, clear pending) and **Accept** (keep draft, clear pending). The bar is the shared primitive `WorkspaceReviewBar` from `@forge/shared/components/editor`; place it between toolbar and DockLayout.
+- **forge_commit**: Saves the graph (same as Save button); clears `pendingFromPlan`. Graph store has `pendingFromPlan` and `setPendingFromPlan`.
+
+## 12. Missing / roadmap
+
+**What's left:**
+
+| Item | Status | Notes |
+|------|--------|--------|
+| **Vision / image input** | Missing | Model registry has no `supportsVision`; chat has no image upload. Future: add flag to model def, support image parts in messages. |
+| **Co-agents** | Documented, not used | Pattern in [17-co-agents-and-multi-agent.mdx](../17-co-agents-and-multi-agent.mdx). When needed: add `useCoAgent` (or equivalent) per editor/flow. |
+| **Workflow graphs (internal engine)** | Implemented (minimal) | `packages/agent-engine` defines steps + events; `POST /api/workflows/run` streams plan/patch/review over SSE. Used as the base pattern for plan -> propose -> review. |
+| **Graphs / subgraphs (e.g. LangGraph)** | Future | We currently use the minimal workflow engine above. If we add LangGraph, it replaces the executor, not the system contracts. |
+
+Image generation (Section 8), structured output (Section 10), and plan-execute-review-commit (Section 11) are implemented. See [15-ai-workspace-integration.mdx](../15-ai-workspace-integration.mdx#missing--roadmap) and [agent-artifacts/core/STATUS.md](../agent-artifacts/core/STATUS.md) for status. **Product vs technical roadmap:** [docs/roadmap/](../roadmap/00-roadmap-index.mdx) - product roadmap for editors and initiatives; technical/infra items may be tracked there or separately. To add more AI (actions, agents, future graphs), see [08 - Adding AI to editors](../how-to/08-adding-ai-to-workspaces.mdx).
+
+## 13. Conventions
+
+- **One contract per system**: All context/actions/suggestions/highlights go through `DomainCopilotContract`. Use `createAppAction` / `createDomainAction` for consistent prefixes.
+- **New features as slices**: Docs -> backend (if any) -> action + handler -> UI (render/panel) -> entitlements. Update STATUS and architecture docs per slice.
+- **Highlights**: Same `AIHighlightPayload` and `useAIHighlight`; review UI uses existing highlight state plus `pendingFromPlan` and Revert/Accept.

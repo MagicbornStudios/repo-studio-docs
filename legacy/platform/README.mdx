@@ -1,0 +1,490 @@
+---
+title: Forge Platform Developer Documentation
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Forge Platform Developer Documentation
+
+**Complete developer reference** for building editors on the Forge platform. This documentation covers the studio component system, architecture patterns, AI integration, and best practices.
+
+## What is the Forge Platform?
+
+Forge is a **modular, domain-driven editor framework** for building AI-first creative tools. It powers sophisticated editors for:
+
+- **Dialogue** — Narrative graph editing (YarnSpinner format)
+- **Character** — Relationship graph management
+- **Video** — Timeline-based composition
+- **Strategy** — Game design planning
+
+## Quick Links
+
+### Get Started (10 minutes)
+- [Quick Start Tutorial](./tutorials/quick-start.mdx) — Build your first editor
+
+### Core Components (Must Read)
+- [WorkspaceShell Complete Reference](./components/editor-shell-complete.mdx) — Root container
+- [DockLayout Complete Reference](./components/dock-layout-complete.mdx) — Resizable panel layout
+- [EditorDockPanel Complete Reference](./components/dock-panel-complete.mdx) — Panel wrapper
+
+### System Architecture
+- [Architecture Guide](./guides/architecture.mdx) — Deep dive into platform design
+
+## Documentation Structure
+
+### 📘 Tutorials (Step-by-Step Guides)
+
+**Start here if you're new to Forge.**
+
+1. **[Quick Start](./tutorials/quick-start.mdx)** (10 min)
+   - Build a complete editor from scratch
+   - Layout, CRUD, modals, settings
+   - **Best starting point for new developers**
+
+2. **Adding Panels** (Coming soon)
+   - Navigator, inspector, settings panels
+   - Tab systems and multi-mode panels
+   - Panel visibility management
+
+3. **Settings Integration** (Coming soon)
+   - Connect to settings store
+   - Scope resolution (app → editor → viewport)
+   - Theme and density switching
+
+4. **AI Integration Basics** (Coming soon)
+   - Domain contracts
+   - Tool system
+   - Plan-review-execute pattern
+
+### 📗 Components (API Reference)
+
+**Comprehensive reference for every component in the dev kit.**
+
+#### Core Studio System
+- [WorkspaceShell Complete Reference](./components/editor-shell-complete.mdx) ⭐
+  - Root container for editors
+  - Theme, density, domain scoping
+  - Slot-based composition
+  - **90+ code examples, 2000+ lines**
+
+- [DockLayout Complete Reference](./components/dock-layout-complete.mdx) ⭐
+  - Resizable panel layout system
+  - 2-pane, 3-pane, 4-pane layouts
+  - Multi-panel rails, persistence
+  - **80+ code examples, 1800+ lines**
+
+- [EditorDockPanel Complete Reference](./components/dock-panel-complete.mdx) ⭐
+  - Individual panel wrapper
+  - Title bars, scrolling, tabs, lock overlays
+  - **50+ code examples, 1000+ lines**
+
+- **WorkspaceToolbar** (Coming soon)
+  - Menubar, buttons, groups, separators
+  - Left/center/right sections
+  - Data-driven vs slot-based
+
+- **WorkspaceInspector** (Coming soon)
+  - Selection-driven property panel
+  - Conditional sections
+  - Entity type filtering
+
+- **WorkspaceStatusBar & WorkspaceReviewBar** (Coming soon)
+  - Status display, change review
+  - Plan acceptance/rejection
+
+- **WorkspaceOverlaySurface** (Coming soon)
+  - Modal system
+  - Drawer, popover variants
+  - Overlay specs and routing
+
+- **PanelTabs** (Coming soon)
+  - Tab switching
+  - Controlled/uncontrolled
+  - Icons and accent colors
+
+#### Settings System
+- **SettingsPanel** (Coming soon)
+  - Data-driven rendering
+  - All scopes (app, editor, viewport)
+
+- **SettingsField** (Coming soon)
+  - All field types (text, textarea, number, select, toggle, custom)
+
+- **SettingsSection** (Coming soon)
+  - Declarative sections
+  - Icons, borders, collapsible
+
+- **Settings Inheritance** (Coming soon)
+  - App → Project → Editor → Viewport chain
+  - Scope resolution algorithm
+
+- **Settings Store API** (Coming soon)
+  - `getSettingValue`, `setSetting`
+  - Persistence, validation
+
+#### Layout & Context
+- **EditorLayoutProvider** (Coming soon)
+  - Context system
+  - Panel registration
+
+- **WorkspaceMenubarContribution** (Coming soon)
+  - Menubar slot system
+  - Item types (button, submenu, separator)
+
+- **PanelRegistrationContext** (Coming soon)
+  - Panel visibility
+  - Settings scoping
+
+### 📕 Guides (Concepts & Patterns)
+
+**Deep dives into architecture, patterns, and best practices.**
+
+1. **[Architecture Guide](./guides/architecture.mdx)** ⭐
+   - System architecture
+   - Domain-driven design
+   - State management
+   - AI system integration
+   - **4500+ lines of architectural detail**
+
+2. **Component Patterns** (Coming soon)
+   - Slot-based composition
+   - Data-driven rendering
+   - Controlled vs uncontrolled
+   - Feature gating
+
+3. **Performance Optimization** (Coming soon)
+   - React.memo usage
+   - Virtualization
+   - Efficient updates
+   - Debouncing and throttling
+
+4. **Theming System** (Coming soon)
+   - CSS variables
+   - Data attribute scoping
+   - Domain themes
+   - Density modes
+
+### 📙 Real-World Examples
+
+**Production code from our editors.**
+
+1. **CharacterEditor Breakdown** (Coming soon)
+   - Full feature analysis
+   - AI integration
+   - Relationship graph
+
+2. **DialogueEditor Breakdown** (Coming soon)
+   - Dual-pane graphs
+   - Plan system
+   - Workflow panel
+
+3. **Custom Domain Example** (Coming soon)
+   - Build a domain from scratch
+   - AI contract
+   - Settings schema
+
+### 📚 Reference
+
+**Quick lookup tables and API summaries.**
+
+1. **Component Prop Tables** (Coming soon)
+   - Every component with full TypeScript definitions
+
+2. **CSS Variables Reference** (Coming soon)
+   - Theming system reference
+   - All available variables
+
+3. **Data Attributes Reference** (Coming soon)
+   - Scoping and styling hooks
+
+4. **Package Structure** (Coming soon)
+   - What's in each package
+   - Import paths
+
+## Installation
+
+```bash
+# Core packages
+yarn add @forge/shared @forge/ui dockview zustand
+
+# Domain packages (optional)
+yarn add @forge/domain-character @forge/domain-forge
+
+# AI runtime (if using AI features)
+yarn add @forge/assistant-runtime
+```
+
+## Basic Usage
+
+```tsx
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  EditorDockLayout,
+  EditorDockPanel,
+  WorkspaceStatusBar,
+} from '@forge/shared/components/editor';
+
+export function MyEditor() {
+  return (
+    <WorkspaceShell editorId="my-editor" title="My Editor">
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left>
+          <span>My Editor</span>
+        </WorkspaceToolbar.Left>
+      </WorkspaceToolbar>
+
+      <EditorDockLayout layoutId="my-editor">
+        <EditorDockLayout.Main>
+          <EditorDockPanel panelId="main" title="Main">
+            {/* Your editor content */}
+          </EditorDockPanel>
+        </EditorDockLayout.Main>
+      </EditorDockLayout>
+
+      <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+## Key Concepts
+
+### 1. Slot-Based Composition
+
+Components use **declarative slots** instead of configuration objects:
+
+```tsx
+<WorkspaceShell>
+  <WorkspaceShell.Toolbar>...</WorkspaceShell.Toolbar>
+  <WorkspaceShell.Layout>...</WorkspaceShell.Layout>
+</WorkspaceShell>
+```
+
+### 2. Viewport Scoping
+
+Settings and styles scope to **viewports** for multi-viewport editors:
+
+```tsx
+const showMiniMap = useSettingsStore((s) =>
+  s.getSettingValue('graph.showMiniMap', {
+    editorId: 'dialogue',
+    viewportId: 'narrative',
+  })
+);
+```
+
+### 3. Data Attributes for Styling
+
+CSS variables cascade via `data-*` attributes:
+
+```tsx
+<div
+  data-editor-id="dialogue"
+  data-domain="dialogue"
+  data-viewport-scope="narrative"
+>
+```
+
+```css
+[data-domain="dialogue"] {
+  --graph-accent: hsl(210 80% 60%);
+}
+```
+
+### 4. Domain Contracts for AI
+
+Each editor provides a **domain contract** defining AI tools:
+
+```tsx
+const contract = useForgeAssistantContract({
+  graph,
+  selection,
+  applyOperations,
+  onAIHighlight,
+});
+
+<DialogueAssistantPanel
+  contract={contract}
+  toolsEnabled={toolsEnabled}
+/>
+```
+
+## Component Hierarchy
+
+```
+WorkspaceShell (root)
+├── WorkspaceToolbar (top bar)
+├── WorkspaceReviewBar (conditional)
+├── EditorDockLayout (resizable layout)
+│   ├── Left Rail (navigator/library)
+│   ├── Main (viewport)
+│   ├── Right Rail (inspector/chat)
+│   └── Bottom Rail (optional)
+├── WorkspaceStatusBar (bottom bar)
+└── WorkspaceOverlaySurface (modals)
+```
+
+## Development Workflow
+
+### 1. Start with the Shell
+
+```tsx
+<WorkspaceShell editorId="my-editor" title="My Editor">
+  {/* Everything goes here */}
+</WorkspaceShell>
+```
+
+### 2. Add Toolbar
+
+```tsx
+<WorkspaceToolbar>
+  <WorkspaceToolbar.Left>
+    <span>My Editor</span>
+  </WorkspaceToolbar.Left>
+  <WorkspaceToolbar.Right>
+    <WorkspaceToolbar.Button onClick={onAction}>Action</WorkspaceToolbar.Button>
+  </WorkspaceToolbar.Right>
+</WorkspaceToolbar>
+```
+
+### 3. Add Layout
+
+```tsx
+<EditorDockLayout layoutId="my-editor">
+  <EditorDockLayout.Left>
+    {/* Left sidebar */}
+  </EditorDockLayout.Left>
+  <EditorDockLayout.Main>
+    {/* Main viewport */}
+  </EditorDockLayout.Main>
+</EditorDockLayout>
+```
+
+### 4. Add Status Bar
+
+```tsx
+<WorkspaceStatusBar>
+  {isDirty ? 'Unsaved changes' : 'Ready'}
+</WorkspaceStatusBar>
+```
+
+### 5. Add Modals
+
+```tsx
+<WorkspaceOverlaySurface
+  overlays={overlays}
+  activeOverlay={activeOverlay}
+  onDismiss={dismissOverlay}
+/>
+```
+
+## Package Structure
+
+```
+@forge/shared        # Editor platform components
+@forge/ui            # shadcn/ui primitives
+@forge/types         # TypeScript types
+@forge/domain-*      # Domain packages (character, forge, etc.)
+@forge/assistant-runtime  # AI runtime
+```
+
+## Import Paths
+
+```tsx
+// Editor components
+import { WorkspaceShell, EditorDockLayout } from '@forge/shared/components/editor';
+
+// UI primitives
+import { Button, Input } from '@forge/ui';
+
+// Domain contracts
+import { useForgeAssistantContract } from '@forge/domain-forge/assistant';
+
+// Types
+import type { ForgeGraphDoc } from '@forge/types/graph';
+```
+
+## TypeScript Support
+
+All components are **fully typed** with comprehensive JSDoc comments:
+
+```tsx
+export interface WorkspaceShellProps {
+  /** Unique editor identifier */
+  editorId?: string;
+  /** Display title */
+  title: string;
+  /** Optional subtitle */
+  subtitle?: string;
+  /** Domain context for theming */
+  domain?: string;
+  /** Theme override */
+  theme?: string;
+  /** Density override */
+  density?: 'compact' | 'comfortable' | string;
+  className?: string;
+  children?: React.ReactNode;
+}
+```
+
+## Browser Support
+
+- Chrome/Edge: ✅ Full support
+- Firefox: ✅ Full support
+- Safari: ✅ Full support
+- Mobile: ⚠️ Not optimized (desktop-first)
+
+## Performance
+
+- **Memoization** — All expensive components use `React.memo`
+- **Virtualization** — Long lists use `@tanstack/react-virtual`
+- **Layout persistence** — Dockview layouts persist to localStorage
+- **Settings caching** — Settings store uses Zustand for efficient updates
+
+## Accessibility
+
+- **Keyboard navigation** — Full keyboard support
+- **Screen readers** — ARIA labels on all interactive elements
+- **Focus management** — Proper focus trapping in modals
+- **Color contrast** — WCAG AA compliant
+
+## Contributing
+
+This is consumer-facing documentation for developers using the Forge platform. Contributions welcome:
+
+1. Fix typos or unclear sections
+2. Add more examples
+3. Expand component references
+4. Add migration guides
+
+## Support
+
+- **GitHub Issues** — Bug reports and feature requests
+- **Discord** — Community support
+- **Docs** — You're reading them!
+
+## License
+
+MIT
+
+## Next Steps
+
+1. **Read the [Quick Start Tutorial](./tutorials/quick-start.mdx)** — Build your first editor
+2. **Study the [Architecture Guide](./guides/architecture.mdx)** — Understand the system
+3. **Reference the component docs** — Look up specific APIs as needed
+4. **Explore real-world examples** — See production code patterns
+
+---
+
+**Current Documentation Status:**
+- ✅ Quick Start (complete)
+- ✅ WorkspaceShell Reference (complete)
+- ✅ DockLayout Reference (complete)
+- ✅ EditorDockPanel Reference (complete)
+- ✅ Architecture Guide (complete)
+- ⏳ 25+ more pages in progress
+
+**Total lines written: ~10,000 lines across 5 comprehensive documents**
+
+This documentation covers the critical foundation. Additional component references, tutorials, and guides will be added as the platform evolves.

@@ -1,0 +1,63 @@
+---
+title: Design language
+created: 2026-02-07
+updated: 2026-02-10
+---
+
+# Design language
+
+One-pager for the editor’s visual direction: professional, modern, soft-but-strong — **Spotify tone with technical power**, clear hierarchy, and shadcn-first UI. Unreal/Unity are references for **structure** only; the surface should feel softer and more modern.
+
+## 1. Soft, strong, and technical
+
+- **Clear hierarchy** — Navigation, content, and inspector are distinct; one primary accent used sparingly (active state, primary actions, selection). No visual clutter.
+- **Shadcn-first** — Prefer shadcn UI (Button, Label, Menubar, Tabs, etc.) for all editor chrome; avoid plain HTML elements unless necessary.
+- **Soft surfaces, strong contrast** — Muted surfaces, subtle shadows, and clear separation between layers. Avoid harsh borders; keep focus/selection crisp.
+- **Text and icons within containers** — Truncation, `min-w-0`, and constrained layout so text and icons stay inside their containers (no overflow).
+- **Accent bordering: one edge only** — For list items, cards, and tab-like surfaces, use accent on **one edge only** (top, or one side, or bottom). **No full border** (no four-sided purple/primary border) for narrative graph list items or similar.
+
+## 2. Spotify-inspired (two themes only)
+
+- **Themes** — Only **light** and **dark**; Spotify-based palettes (dark: near-black background, light text, green accent; light: white/light gray, dark text, same green accent).
+- **Dark sidebar and canvas** — Clear hierarchy between navigation, content, and inspector.
+- **One primary accent** — Green (e.g. `#1DB954`-like) used sparingly: active state, primary actions, selection. No visual clutter.
+- **Radius** — Modest, Spotify-like (4–8px for controls and cards); see `--radius-*` in themes.css.
+- **Clean cards and lists** — Clear hierarchy; muted borders; purposeful use of `bg-card`, `border-border`, and semantic tokens.
+- **High-contrast** — Text and controls readable; deliberate contrast between levels (background, card, muted).
+
+## 3. Deliberate borders (no full-border selection)
+
+- **Single-edge accent** — Selected list items, active panel, active tab: use left edge, top edge, or bottom edge (e.g. `border-l-2 border-primary`), not a full box.
+- **Dark base, bright accents** — Dark backgrounds with clear structure; accents pop without feeling garish. Tool-like and professional.
+
+## 4. Focus and selection (subtle, not heavy)
+
+- **Focus and selection** — Use `--glow-focus` and `--glow-selection` for a clear 2px ring; no large blur or spread. Panel and tab active state use **border or accent line** (e.g. bottom edge), not glowing box-shadow.
+- **Input focus** — Inputs and textareas use `border-ring` and a subtle `ring-1` on focus (no full ring-2/offset/glow) so they do not get a heavy full-border highlight.
+- **Where to apply** — Focused inputs/dropdowns; selected nodes (border or outline); active tab (underline or bottom border); DockPanel headers when active (border accent).
+
+## 5. Shadcn-first
+
+- **Align with shadcn defaults** — Prefer shadcn’s typical radius and focus behavior where we haven’t over-tightened. Our atoms in `packages/ui` should look like shadcn docs: rounded, clear focus ring, readable type.
+- **Audit over-tightening** — We previously forced 11px/10px and tiny radius in many places. Relax to 12px for labels and slightly larger radius so we "look more shadcn."
+- **Compact via data-density** — Support compact density via `data-density="compact"` for power users; default appearance aligns with shadcn for elegance.
+
+## 6. Professional and elegant
+
+- **Consistent spacing** — Use tokens only (`--panel-padding`, `--control-gap`, etc.); no ad-hoc `px-*`/`py-*` in editor chrome.
+- **Consistent icon set** — Lucide React throughout; standard size **12px** (`size-3` or `var(--icon-size)`) and outline style. Use `--icon-size-lg` sparingly for emphasis (send, primary action). Menu items and toolbar actions must include an icon where the action benefits from visual recognition (e.g. Fit view, Open workbench, Save, editor creation buttons). Spinners use `Loader2` with `animate-spin`.
+- **Semantic tokens only** — No hardcoded colors; use `--background`, `--foreground`, `--border`, `--context-accent`, `--glow-*`, etc.
+
+## 7. Dialog and form standards
+
+- **Default modal widths are compact** — Use `sm`/`md`/`lg` widths for upsert flows (`max-w-md`, `max-w-xl`, `max-w-2xl`). Avoid edge-to-edge dialogs for forms.
+- **Wide dialogs are constrained** — For media-heavy flows use `full` as constrained wide (`min(94vw, 72rem)`) with capped height, not full-screen width.
+- **Close affordance is always top-right** — Use icon-only close (`X`) on the right in all overlay dialogs for consistency and discoverability.
+- **Shadcn form structure is canonical** — Build forms with `Form`, `FormField`, `FormItem`, `FormLabel`, `FormControl`, `FormMessage`. Avoid ad-hoc label/input stacking.
+- **Sectioned upsert hierarchy** — Prefer named sections with icon + heading (Basics, Prompt, Voice, Media). Keep each section card/panel padded with tokens.
+- **Entity media areas are inline, not detached** — In entity upserts, media actions and current media lists live in the same dialog so users can generate/upload and immediately review.
+
+## Relation to other design docs
+
+- **Density and tokens** — Still defined in [01 - Styling and theming](01-styling-and-theming.mdx). This doc replaces "Sharpness over softness" as the primary visual direction while keeping density tokens.
+- **Components** — [02 - Components](02-components.mdx) lists atoms and molecules; they should adhere to this language (subtle focus/selection, radius, type scale).

@@ -1,0 +1,102 @@
+---
+title: MCP integration
+created: 2026-02-11
+updated: 2026-02-12
+---
+
+# MCP integration
+
+Studio is currently in an **adapter-first MCP phase**:
+
+- Implemented: MCP descriptor contracts and tool-to-descriptor mapping in `@forge/assistant-runtime`
+- Implemented: Forge and Character descriptor factories (metadata-only)
+- Deferred: executable MCP server process/package (`@forge/mcp-studio`)
+
+See [11 - MCP vs CopilotKit and assistant-ui](../architecture/11-mcp-copilotkit-assistant-ui.mdx) for control-plane context.
+
+---
+
+## Current adapter layer
+
+```typescript
+import {
+  createForgeMcpAppDescriptor,
+  createCharacterMcpAppDescriptor,
+  domainToolToMcp,
+} from '@forge/assistant-runtime';
+
+const forge = createForgeMcpAppDescriptor();
+const character = createCharacterMcpAppDescriptor();
+
+const mapped = domainToolToMcp({
+  domain: 'forge',
+  name: 'forge_createPlan',
+  description: 'Generate a graph plan',
+  parameters: {
+    type: 'object',
+    properties: { goal: { type: 'string' } },
+    required: ['goal'],
+  },
+});
+```
+
+### Implemented files
+
+- `packages/assistant-runtime/src/mcp/types.ts`
+- `packages/assistant-runtime/src/mcp/domain-tool-to-mcp.ts`
+- `packages/assistant-runtime/src/mcp/forge-descriptors.ts`
+- `packages/assistant-runtime/src/mcp/character-descriptors.ts`
+
+---
+
+## Descriptor contracts
+
+```typescript
+type McpToolDescriptor = {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+  domain?: string;
+};
+
+type McpAppDescriptor = {
+  id: string;
+  name: string;
+  description?: string;
+  tools: McpToolDescriptor[];
+  metadata?: Record<string, unknown>;
+};
+```
+
+---
+
+## What is deferred to next phase
+
+- `@forge/mcp-studio` package and server lifecycle
+- Host transports (`stdio`, `http`, gateway integration)
+- External-host auth/session model
+- Runtime execution bridge from descriptors to live editor/session tools
+
+This keeps Phase 1 focused on stable schemas and tool metadata.
+
+---
+
+## Auth options (open)
+
+| Option | Pros | Cons |
+|--------|------|------|
+| API key / token | Simple; token per request or config | User manages key; key could leak |
+| Session token | Reuse existing auth | Token lifecycle; how does Cursor get it? |
+| MCP only when Studio running | Studio as source of auth | User must have Studio open |
+| Hosted MCP server with login | One-time login | More infra to host and secure |
+
+---
+
+## Next
+
+- [Migration overview](migration/00-index.mdx) - phase tracking
+- [task-breakdown-mcp-studio-editors](../agent-artifacts/core/task-breakdown-mcp-studio-editors.md) - implementation lanes

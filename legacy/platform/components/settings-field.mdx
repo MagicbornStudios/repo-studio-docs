@@ -1,0 +1,579 @@
+---
+title: SettingsField
+created: 2026-02-11
+updated: 2026-02-11
+icon: "🔧"
+---
+
+# 🔧 SettingsField
+
+**Individual settings field with auto-rendering, custom controls, and settings store integration**
+
+SettingsField is a FormField-like component for individual settings. It automatically renders controls based on field type, supports custom controls via render props, and integrates with the hierarchical settings store.
+
+---
+
+## Usage
+
+```typescript
+import { SettingsField } from '@/components/settings/SettingsField';
+import { Input } from '@forge/ui/input';
+import { SettingsSection } from '@/components/settings/SettingsSection';
+
+export function MySettings() {
+  return (
+    <SettingsSection scope="editor" scopeId="dialogue-editor">
+      <SettingsField
+        fieldKey="ai.agentName"
+        label="Agent Name"
+        type="text"
+        placeholder="Enter agent name"
+        default="DialogueAgent"
+      >
+        <Input />
+      </SettingsField>
+
+      <SettingsField
+        fieldKey="ai.autoSuggest"
+        label="Auto Suggestions"
+        type="toggle"
+        description="Enable automatic dialogue suggestions"
+        default={true}
+      >
+        <Switch />
+      </SettingsField>
+    </SettingsSection>
+  );
+}
+```
+
+---
+
+## Props
+
+<div className="overflow-x-auto">
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="border-b">
+        <th className="text-left p-2">Prop</th>
+        <th className="text-left p-2">Type</th>
+        <th className="text-left p-2">Default</th>
+        <th className="text-left p-2">Description</th>
+      </tr>
+    </thead>
+    <tbody className="text-muted-foreground">
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">fieldKey</td>
+        <td className="p-2 font-mono text-xs">string</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Setting key (e.g. 'ai.agentName')</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">label</td>
+        <td className="p-2 font-mono text-xs">string</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Field label text</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">type</td>
+        <td className="p-2 font-mono text-xs">SettingsFieldType</td>
+        <td className="p-2">-</td>
+        <td className="p-2">'text' | 'textarea' | 'select' | 'number' | 'toggle'</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">description</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Help text below label</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">placeholder</td>
+        <td className="p-2 font-mono text-xs">string?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Placeholder text for input</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">options</td>
+        <td className="p-2 font-mono text-xs">Array&lt;&#123;value: string, label: string&#125;&gt;?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Options for select type</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">default</td>
+        <td className="p-2 font-mono text-xs">unknown</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Default value (required for reset functionality)</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">icon</td>
+        <td className="p-2 font-mono text-xs">ReactNode?</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Icon rendered before label</td>
+      </tr>
+      <tr className="border-b">
+        <td className="p-2 font-mono text-xs">children</td>
+        <td className="p-2 font-mono text-xs">ReactNode | Function</td>
+        <td className="p-2">-</td>
+        <td className="p-2">Control element or render function</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+---
+
+## TypeScript Definitions
+
+```typescript
+export type SettingsFieldType = 'text' | 'textarea' | 'select' | 'number' | 'toggle';
+
+export interface SettingsFieldProps {
+  fieldKey: string;
+  label: string;
+  type: SettingsFieldType;
+  description?: string;
+  placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
+  default?: unknown;
+  icon?: React.ReactNode;
+  children?:
+    | React.ReactNode
+    | ((field: { value: unknown; onChange: (next: unknown) => void }) => React.ReactNode);
+}
+```
+
+---
+
+## Examples
+
+### Text Input Field
+
+```typescript
+import { Input } from '@forge/ui/input';
+
+<SettingsField
+  fieldKey="user.name"
+  label="Name"
+  type="text"
+  placeholder="Enter your name"
+  default=""
+>
+  <Input />
+</SettingsField>
+```
+
+### Textarea Field
+
+```typescript
+import { Textarea } from '@forge/ui/textarea';
+
+<SettingsField
+  fieldKey="project.description"
+  label="Description"
+  type="textarea"
+  description="Project description for documentation"
+  placeholder="Enter description..."
+  default=""
+>
+  <Textarea />
+</SettingsField>
+```
+
+### Number Input Field
+
+```typescript
+import { Input } from '@forge/ui/input';
+
+<SettingsField
+  fieldKey="ui.fontSize"
+  label="Font Size"
+  type="number"
+  description="Font size in pixels (10-24)"
+  placeholder="14"
+  default={14}
+>
+  <Input type="number" />
+</SettingsField>
+```
+
+### Select Dropdown Field
+
+```typescript
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@forge/ui/select';
+
+<SettingsField
+  fieldKey="ui.theme"
+  label="Theme"
+  type="select"
+  description="Choose your preferred color theme"
+  options={[
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
+  ]}
+  default="dark"
+>
+  <Select>
+    <SelectTrigger>
+      <SelectValue placeholder="Select theme" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="light">Light</SelectItem>
+      <SelectItem value="dark">Dark</SelectItem>
+      <SelectItem value="system">System</SelectItem>
+    </SelectContent>
+  </Select>
+</SettingsField>
+```
+
+### Toggle Switch Field
+
+```typescript
+import { Switch } from '@forge/ui/switch';
+
+<SettingsField
+  fieldKey="ai.autoSuggest"
+  label="Auto Suggestions"
+  type="toggle"
+  description="Enable automatic dialogue suggestions"
+  default={true}
+>
+  <Switch />
+</SettingsField>
+```
+
+### Field with Icon
+
+```typescript
+import { Bot } from 'lucide-react';
+import { Input } from '@forge/ui/input';
+
+<SettingsField
+  fieldKey="ai.agentName"
+  label="Agent Name"
+  type="text"
+  description="Display name for the AI agent"
+  placeholder="DialogueAgent"
+  icon={<Bot size={14} />}
+  default="DialogueAgent"
+>
+  <Input />
+</SettingsField>
+```
+
+### Custom Control via Render Prop
+
+```typescript
+import { Slider } from '@forge/ui/slider';
+
+<SettingsField
+  fieldKey="ai.temperature"
+  label="Temperature"
+  type="number"
+  description="Controls randomness (0-1)"
+  default={0.7}
+>
+  {({ value, onChange }) => (
+    <Slider
+      min={0}
+      max={1}
+      step={0.1}
+      value={[Number(value) || 0.7]}
+      onValueChange={([v]) => onChange(v)}
+    />
+  )}
+</SettingsField>
+```
+
+### Color Picker Field
+
+```typescript
+import { Input } from '@forge/ui/input';
+import { Palette } from 'lucide-react';
+
+<SettingsField
+  fieldKey="ui.accentColor"
+  label="Accent Color"
+  type="text"
+  description="Hex color code for accent"
+  placeholder="#3b82f6"
+  icon={<Palette size={14} />}
+  default="#3b82f6"
+>
+  {({ value, onChange }) => (
+    <div className="flex gap-2">
+      <Input
+        type="color"
+        value={String(value) || '#3b82f6'}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-16 h-8 p-1"
+      />
+      <Input
+        type="text"
+        value={String(value) || '#3b82f6'}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="#3b82f6"
+      />
+    </div>
+  )}
+</SettingsField>
+```
+
+### Range Slider Field
+
+```typescript
+import { Slider } from '@forge/ui/slider';
+import { Gauge } from 'lucide-react';
+
+<SettingsField
+  fieldKey="audio.volume"
+  label="Volume"
+  type="number"
+  description="Audio volume (0-100)"
+  icon={<Gauge size={14} />}
+  default={75}
+>
+  {({ value, onChange }) => (
+    <div className="space-y-2">
+      <Slider
+        min={0}
+        max={100}
+        step={5}
+        value={[Number(value) || 75]}
+        onValueChange={([v]) => onChange(v)}
+      />
+      <div className="text-xs text-muted-foreground text-right">
+        {Number(value) || 75}%
+      </div>
+    </div>
+  )}
+</SettingsField>
+```
+
+### Field Group Example
+
+```typescript
+import { SettingsSection } from '@/components/settings/SettingsSection';
+import { Input } from '@forge/ui/input';
+import { Switch } from '@forge/ui/switch';
+import { Select } from '@forge/ui/select';
+
+export function AISettings() {
+  return (
+    <SettingsSection scope="editor" scopeId="dialogue-editor" title="AI Configuration">
+      <SettingsField
+        fieldKey="ai.model"
+        label="Model"
+        type="select"
+        options={[
+          { value: 'gpt-4', label: 'GPT-4' },
+          { value: 'claude-3', label: 'Claude 3' },
+        ]}
+        default="gpt-4"
+      >
+        <Select />
+      </SettingsField>
+
+      <SettingsField
+        fieldKey="ai.temperature"
+        label="Temperature"
+        type="number"
+        placeholder="0.7"
+        default={0.7}
+      >
+        <Input type="number" step={0.1} />
+      </SettingsField>
+
+      <SettingsField
+        fieldKey="ai.autoSuggest"
+        label="Auto Suggestions"
+        type="toggle"
+        default={true}
+      >
+        <Switch />
+      </SettingsField>
+    </SettingsSection>
+  );
+}
+```
+
+---
+
+## Auto-Rendering vs Custom Controls
+
+SettingsField supports two modes:
+
+### Auto-Rendering (Pass Control Element)
+
+```typescript
+<SettingsField fieldKey="ui.theme" label="Theme" type="text">
+  <Input /> {/* SettingsField injects value, onChange, id */}
+</SettingsField>
+```
+
+SettingsField automatically clones the control and passes:
+- `value` or `checked` (for toggles)
+- `onChange` or `onCheckedChange` (for toggles)
+- `id` (for accessibility)
+- `placeholder` (for text/number inputs)
+
+### Custom Control (Render Function)
+
+```typescript
+<SettingsField fieldKey="ai.temperature" label="Temperature" type="number">
+  {({ value, onChange }) => (
+    <Slider
+      value={[Number(value) || 0.7]}
+      onValueChange={([v]) => onChange(v)}
+    />
+  )}
+</SettingsField>
+```
+
+Use render functions when:
+- Control needs custom logic
+- Multiple controls needed (e.g., color picker + text input)
+- Control doesn't support standard props (value, onChange)
+
+---
+
+## Settings Store Integration
+
+SettingsField automatically connects to the settings store:
+
+```typescript
+// Reads from store
+const value = useSettingsStore((s) =>
+  s.getSettingValue(fieldKey, { editorId, viewportId })
+);
+
+// Reads source (for inheritance badges)
+const source = useSettingsStore((s) =>
+  s.getSettingSource(fieldKey, { editorId, viewportId })
+);
+
+// Writes to store
+const onChange = (next: unknown) =>
+  setSetting(scope, fieldKey, next, { editorId, viewportId });
+
+// Clears override
+const onReset = () =>
+  clearSetting(scope, fieldKey, { editorId, viewportId });
+```
+
+---
+
+## Scope Resolution
+
+SettingsField uses `SettingsRegistrationContext` to get scope:
+
+```typescript
+import { SettingsSection } from './SettingsSection';
+
+// Scope provided by parent SettingsSection
+<SettingsSection scope="editor" scopeId="dialogue-editor">
+  <SettingsField fieldKey="ai.agentName" ... />
+  <SettingsField fieldKey="ui.theme" ... />
+</SettingsSection>
+```
+
+Scope is resolved to IDs:
+- `app` → `{}`
+- `project` → `{ projectId: scopeId }`
+- `editor` → `{ editorId: scopeId }`
+- `viewport` → `{ editorId, viewportId }` (split on `:`)
+
+---
+
+## Reset Functionality
+
+Reset button appears when:
+- Setting is overridden at current scope
+- Scope is not `app` (app has no parent to inherit from)
+
+**Reset Behavior:**
+1. Removes override at current scope
+2. Value falls back to parent scope
+3. Badge changes from "Override" to "Inherited from {parent}"
+
+```typescript
+// Before reset
+value: "dark" (source: "editor")
+badge: "Override"
+
+// After reset
+value: "light" (source: "app")
+badge: "Inherited from app"
+```
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+- Always provide `default` value (enables reset and codegen)
+- Use namespaced keys (`ai.agentName`, not `agentName`)
+- Provide `description` for non-obvious fields
+- Use correct `type` for field (toggle for booleans, select for enums)
+- Pass appropriate control element (`Input`, `Switch`, `Select`, etc.)
+- Use render props for custom controls
+- Add `icon` for visual hierarchy
+
+### ❌ Don't
+
+- Don't forget `default` value (breaks reset functionality)
+- Don't use generic keys (`theme` instead of `ui.theme`)
+- Don't use `text` type for booleans (use `toggle`)
+- Don't forget `options` for `select` type
+- Don't pass incompatible controls (e.g., `Input` for toggle type)
+- Don't use render props when simple auto-rendering works
+- Don't create overly complex custom controls
+
+---
+
+## Field Layout
+
+### Toggle Layout (Horizontal)
+
+```
+┌─────────────────────────────────────────────────┐
+│ [icon] Label            [Badge] [Reset] [Switch]│
+│        Description                              │
+└─────────────────────────────────────────────────┘
+```
+
+### Other Types (Vertical)
+
+```
+┌─────────────────────────────────────────────────┐
+│ [icon] Label                    [Badge] [Reset] │
+│        Description                              │
+│                                                 │
+│ [Input Field]                                   │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## Related Components
+
+- [SettingsPanel](./settings-panel) - Full settings UI
+- [SettingsSection](./settings-section) - Section grouping
+- [Field](../ui/field) - Base field components
+- [Input](../ui/input) - Text input
+- [Switch](../ui/switch) - Toggle switch
+- [Select](../ui/select) - Dropdown select
+
+---
+
+## Source Code
+
+**Location:** `apps/studio/components/settings/SettingsField.tsx`
+
+**External Dependencies:**
+- `@forge/ui/field` - Field components (FieldLabel, FieldDescription, etc.)
+- `@forge/ui/item` - Item layout components
+- `@forge/ui/button` - Reset button
+- `@/lib/settings/store` - Settings store (useSettingsStore)
+- `@/lib/editor-registry/SettingsRegistrationContext` - Scope context

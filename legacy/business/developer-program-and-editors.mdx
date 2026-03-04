@@ -1,0 +1,55 @@
+---
+title: Developer program and editor ecosystem
+created: 2026-02-09
+updated: 2026-02-11
+---
+
+# Developer program and editor ecosystem
+
+Trusted and regular developers can submit **apps/editors** built with our dev kit (web tech). Editors can integrate Babylon.js, Kaplay, Phaser, and media/video editing with **first-class Forge narrative** (forge-graph, approved-editor data). Approved editors in the **official Studio suite** receive a **revenue split** (share of platform/clone revenue or defined split) **while the editor remains in the official suite**; when the editor is **removed** from the suite, the split stops. Community (unofficial) apps are listable and installable but do not receive payouts. Payout/account operations align with org-scoped platform finance flows. See [Revenue and Stripe](revenue-and-stripe.mdx) for payout model and [Listings and clones](listings-and-clones.mdx) for how clone/listings apply to editor apps.
+
+---
+
+## Approved editors and data contracts
+
+**Approved editors** are editors that are part of the official platform contract. Their **output data** is what other editors and the GamePlayer can assume exists when they are "installed."
+
+| Approved editor | Produces data | Consumers |
+|----------------|---------------|-----------|
+| Character | Characters, relationships | Dialogue (e.g. character refs), Writer, GamePlayer |
+| Writer | Pages, blocks | Dialogue, GamePlayer |
+| Dialogue | Forge-graphs (dialogue/storylet) | GamePlayer, any editor that needs narrative |
+| Dialogue graph editor | Same as Dialogue; has access to Character data | GamePlayer |
+
+**GamePlayer** is not an editor but a **system/player/tool**: it creates the playable demo or game (YarnGame). YarnGames are native to our system; we need builds. GamePlayer consumes data from Dialogue, Character, Writer.
+
+**Third-party approved editors:** When a developer's editor is **approved**, it can (1) **produce** new data types that others can consume (we define the schema/contract), and (2) **consume** data from approved editors that are installed. Data access is **assumed from approved editors that are installed** in the user's Studio.
+
+---
+
+## Dev kit and submission (web tech, engines)
+
+- **Web tech only** for submitted apps (no native-only).
+- **First-class narrative:** Forge graph, Yarn, and approved-editor data must be hookable (APIs/contracts).
+- **Preferred integrations:** Babylon.js, Kaplay, Phaser, media/video editing — we want more of these with first-class narrative support.
+- **Submission:** GitHub repo; **private repo**; for paid users we **fork** (or mirror) so they get the app. App store or listings for editors will support both community listings and applications for official integration.
+
+---
+
+## Community vs official apps
+
+- **Official** = approved into Studio suite; produces/consumes approved data; **receives a revenue split** (share of platform/clone revenue or defined split) **while the editor remains in the official suite**; when removed from the suite, the split stops (see [Revenue and Stripe](revenue-and-stripe.mdx)). No usage-based pay in Studio.
+- **Community** = not approved; **no payouts**; can still be **listed** and **installed** by users (community editors). Users can **clone** projects that use community editors.
+- **Submission path:** (1) Developer submits repo (e.g. GitHub, private). (2) We can **fork** for paid users so they get the app. (3) Developer can **list** in app store (community) and/or **apply for official integration** (review, approval, then revenue split and ability to publish updates).
+
+---
+
+## Publish updates
+
+Developers whose editor is **official** (or listed) must be able to **publish updates** to their editor (e.g. new versions). Process TBD: repo tag, build, or store update flow. Document in this doc and in [Revenue and Stripe](revenue-and-stripe.mdx) when defined.
+
+---
+
+## MCP Apps
+
+Third-party approved and community editors should **also be MCP Apps**: same contract (tools + UI resources) as our built-in editors so they can be embedded in Studio and in external MCP hosts. See [07 - Editors as MCP Apps](../architecture/07-modes-as-mcp-apps.mdx).

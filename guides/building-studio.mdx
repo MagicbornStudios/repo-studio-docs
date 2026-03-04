@@ -1,0 +1,329 @@
+---
+title: Building a complete Studio
+description: "Step-by-step guide to build a Studio from scratch: app shell, editor registry, first editor, data layer, Assistant UI, and settings."
+---
+
+# Building a complete Studio
+
+This guide walks you through building a complete Studio application from the ground up: atoms → molecules → organisms → Studio shell → your editor → data → settings → Assistant UI.
+
+## Step 0: Atoms
+
+Import primitives from `@forge/ui`. Use [Button](components/showcase/atoms.mdx), [Input](components/showcase/atoms.mdx), [Select](components/showcase/atoms.mdx), [Dialog](components/showcase/atoms.mdx), [Tabs](components/showcase/atoms.mdx), [Switch](components/showcase/atoms.mdx), and [Label](components/showcase/atoms.mdx) as building blocks. Browse all at [Components Showcase → Atoms](components/showcase/atoms.mdx).
+
+## What you get
+
+After completing this guide you will have:
+
+- **App shell** — [Studio](components/showcase/organisms.mdx#studio) with menubar, sidebar, project switcher
+- **Editor registry** — Tab-based editor switching, no manual branches
+- **First editor** — Built with [WorkspaceShell](components/showcase/molecules.mdx#workspaceshell), [WorkspaceLayout](components/showcase/molecules.mdx#workspacelayout)
+- **Data layer** — TanStack Query + API client for projects and documents
+- **Assistant UI** — AI chat with domain tools via `DomainAssistantContract`
+- **Settings** — Theme, density, model routing with [SettingsPanel](components/showcase/molecules.mdx#settingspanel)
+
+---
+
+## Step 1: Molecules — WorkspaceShell, WorkspaceLayout [#step-1-molecules]
+
+Compose atoms into [WorkspaceShell](components/showcase/molecules.mdx#workspaceshell), [WorkspaceLayout](components/showcase/molecules.mdx#workspacelayout), [WorkspaceToolbar](components/showcase/molecules.mdx#workspacetoolbar), and [PanelTabs](components/showcase/molecules.mdx#paneltabs). See [how-to 02 — Editor shell](how-to/02-editor-shell.mdx) and [how-to 05 — Building an editor](how-to/05-building-an-editor.mdx).
+
+## Step 2: Organisms — Full editors
+
+[DialogueEditor](components/showcase/organisms.mdx) and [CharacterEditor](components/showcase/organisms.mdx) are full organisms: WorkspaceShell + DockLayout + domain-specific content. Reference: `apps/studio/components/editors/DialogueEditor.tsx`, `apps/studio/components/editors/CharacterEditor.tsx`.
+
+## Step 3: Studio shell and providers [#step-3-studio-shell-and-providers]
+
+The Studio is the single root. It owns all providers and renders the active editor from the registry.
+
+**Source:** `apps/studio/components/Studio.tsx`
+
+### Layout structure
+
+```
+<Studio>
+  <StudioApp>           ← from @forge/shared/components/app
+    <UnifiedMenubar />  ← File, View, Edit, Settings, Help
+    <Sidebar />         ← Project list, editor tabs
+    <Main>
+      {activeEditor}    ← Rendered from registry
+    </Main>
+  </StudioApp>
+  <AppSettingsSheet />
+  <Toaster />
+</Studio>
+```
+
+### Providers
+
+Studio wraps everything in:
+
+- `SidebarProvider` — Sidebar state
+- `StudioMenubarProvider` — Menubar contribution slots
+- `StudioSettingsProvider` — Settings sheet state
+- `OpenSettingsSheetProvider` — Settings trigger context
+- `QueryClientProvider` — TanStack Query
+
+### App page
+
+```tsx
+// app/page.tsx
+import { Studio } from '@/components/Studio';
+import { AppProviders } from '@/components/AppProviders';
+
+export default function Home() {
+  return (
+    <AppProviders>
+      <Studio />
+    </AppProviders>
+  );
+}
+```
+
+`AppProviders` includes: `QueryClientProvider`, `SessionProvider`, theme `ThemeProvider`, `AppShellStoreProvider`.
+
+### App shell store
+
+Route and editor state live in `apps/studio/lib/app-shell/store.ts`:
+
+```ts
+export const EDITOR_IDS = ['dialogue', 'character'] as const;
+export type EditorId = (typeof EDITOR_IDS)[number];
+
+interface AppShellState {
+  route: { activeWorkspaceId: string | null; activeEditorId: EditorId | null };
+  switchEditor: (id: EditorId | null) => void;
+  openEditor: (id: EditorId) => void;
+  closeEditor: (id: EditorId) => void;
+}
+```
+
+***
+
+## Step 4: Editor registry and add your editor
+
+Editors register on bootstrap. The registry renders the active editor; no manual `if (editor === 'dialogue')` branches.
+
+### Editor bootstrap
+
+```tsx
+// lib/editor-registry/editor-bootstrap.ts
+'use client';
+import { useEditorRegistryStore } from './editor-registry';
+import { DialogueEditor, editorDescriptor as dialogueDescriptor } from '@/components/editors/DialogueEditor';
+import { CharacterEditor, editorDescriptor as characterDescriptor } from '@/components/editors/CharacterEditor';
+
+export function registerDefaultEditors(): void {
+  const { registerEditor } = useEditorRegistryStore.getState();
+  registerEditor({ ...dialogueDescriptor, component: DialogueEditor });
+  registerEditor({ ...characterDescriptor, component: CharacterEditor });
+}
+```
+
+### Editor descriptor
+
+Each editor exports `editorDescriptor`:
+
+```tsx
+// components/editors/MyEditor.tsx
+import type { EditorDescriptor } from '@/lib/editor-registry/editor-registry';
+import { FileEdit } from 'lucide-react';
+
+export const editorDescriptor: Omit<EditorDescriptor, 'component'> = {
+  id: 'my-editor',
+  label: 'My Editor',
+  summary: 'Brief description for menus',
+  icon: FileEdit,
+  order: 2,
+};
+```
+
+### Viewport metadata
+
+For theming and settings scoping, add viewport ids in `lib/app-shell/editor-metadata.ts`:
+
+```ts
+export const EDITOR_VIEWPORT_IDS: Record<EditorId, string> = {
+  dialogue: 'dialogue-graph',
+  character: 'character-graph',
+  'my-editor': 'my-viewport',
+};
+```
+
+***
+
+## Add your first editor
+
+Use [WorkspaceShell](components/showcase/molecules.mdx#workspaceshell) and [WorkspaceLayout](components/showcase/molecules.mdx#workspacelayout). See [how-to 05](how-to/05-building-an-editor) for the full walkthrough.
+
+### Minimal editor
+
+```tsx
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceLayout,
+  WorkspacePanel,
+  WorkspaceStatusBar,
+} from '@forge/shared';
+
+export function MyEditor() {
+  return (
+    <WorkspaceShell editorId="my-editor" title="My Editor" domain="my-domain" className="bg-canvas">
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left>
+          <span className="text-xs font-medium">My Editor</span>
+        </WorkspaceToolbar.Left>
+      </WorkspaceToolbar>
+
+      <WorkspaceLayout layoutId="my-editor-layout" leftDefaultSize={20}>
+        <WorkspaceLayout.Left>
+          <WorkspacePanel panelId="nav" title="Navigator">
+            <div className="p-4">Sidebar content</div>
+          </WorkspacePanel>
+        </WorkspaceLayout.Left>
+        <WorkspaceLayout.Main>
+          <WorkspacePanel panelId="main" title="Viewport">
+            <div className="p-4">Main content</div>
+          </WorkspacePanel>
+        </WorkspaceLayout.Main>
+      </WorkspaceLayout>
+
+      <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+### Layout composition
+
+- **[WorkspaceToolbar](components/showcase/molecules.mdx#workspacetoolbar)** — `.Left`, `.Center`, `.Right`, `.Menubar`, `.Button`
+- **[WorkspacePanel](components/showcase/molecules.mdx#workspacepanel)** — `panelId`, `title`, `scrollable`, `locked`
+- **PanelTabs** — Use [PanelTabs](components/showcase/molecules.mdx#paneltabs) when the right panel has Inspector + Chat
+
+---
+
+## Step 4: Wire mock or real data [#step-4-wire-mock-or-real-data]
+
+### API client
+
+All data flows through our Next.js API routes. Use the generated client and TanStack Query:
+
+```tsx
+// lib/data/hooks/use-projects.ts
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api-client';
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: () => api.projects.list(),
+  });
+}
+```
+
+### Mock data for docs
+
+For docs playgrounds, use `DocsMockProvider` and `mock-data.ts`:
+
+```tsx
+import { DocsMockProvider } from '@/components/docs';
+import { MOCK_PROJECT_ID } from '@/lib/docs/mock-data';
+
+<DocsMockProvider activeProjectId={MOCK_PROJECT_ID} activeEditorId="dialogue">
+  <DialogueEditor />
+</DocsMockProvider>
+```
+
+### App shell integration
+
+- `activeProjectId` from `useEditorStore((s) => s.route.activeWorkspaceId)`
+- Data hooks use `activeProjectId` in query keys
+- Editors receive context via `EditorLayoutProvider` when rendered by Studio
+
+***
+
+## Step 6: Assistant UI and domain contracts [#step-6-assistant-ui-and-domain-contracts]
+
+Editors contribute an AI chat panel. Use `DomainAssistantContract` (not CopilotKit contract).
+
+### Domain contract
+
+```tsx
+// packages/domain-my-editor/src/assistant.ts
+import type { DomainAssistantContract } from '@forge/shared/assistant';
+
+export function useMyEditorAssistantContract(): DomainAssistantContract {
+  return {
+    getContextSnapshot: () => ({ projectId, selection, ... }),
+    getInstructions: () => 'You help with X.',
+    createTools: () => ({ my_tool: { ... } }),
+  };
+}
+```
+
+### Assistant panel
+
+Use `DialogueAssistantPanel` (or equivalent) in a [PanelTabs](components/showcase/molecules.mdx#paneltabs) slot:
+
+```tsx
+<WorkspacePanel
+  panelId={CHAT_PANEL_ID}
+  title="Chat"
+  tabs={[
+    { id: 'inspector', label: 'Inspector', content: <WorkspaceInspector ... /> },
+    { id: 'chat', label: 'Chat', content: <DialogueAssistantPanel contract={contract} /> },
+  ]}
+/>
+```
+
+### Model routing
+
+Model selection uses `useSettingsStore` and OpenRouter `baseURL`. See [Model routing and OpenRouter](architecture/03-model-routing-openrouter.mdx).
+
+***
+
+## Step 6: Settings and theming [#step-6-settings-and-theming]
+
+### Settings tree
+
+Settings use a **tree-as-source** model: SettingsSection + SettingsField in the React tree are the source of truth. Codegen writes `generated/defaults.ts`. Run `pnpm settings:generate` after changing the tree. See [Settings tree-as-source and codegen](architecture/settings-tree-as-source-and-codegen.mdx).
+
+### Theme and density
+
+Editors read from `useSettingsStore`:
+
+```tsx
+const theme = useSettingsStore((s) => s.getSettingValue('ui.theme', { editorId }));
+const density = useSettingsStore((s) => s.getSettingValue('ui.density', { editorId }));
+
+<WorkspaceShell theme={theme} density={density} ... />
+```
+
+### Settings panel
+
+Use [SettingsPanel](components/showcase/molecules.mdx#settingspanel) and [SettingsField](components/showcase/molecules.mdx#settingsfield) for app/editor/viewport scopes.
+
+***
+
+## File reference
+
+| Area | Path |
+|------|------|
+| Studio root | `apps/studio/components/Studio.tsx` |
+| App providers | `apps/studio/components/AppProviders.tsx` |
+| Editor bootstrap | `apps/studio/lib/editor-registry/editor-bootstrap.ts` |
+| App shell store | `apps/studio/lib/app-shell/store.ts` |
+| Editor metadata | `apps/studio/lib/app-shell/editor-metadata.ts` |
+| First editor | `apps/studio/components/editors/DialogueEditor.tsx` |
+| Domain contract | `packages/domain-forge/src/assistant/index.ts` |
+
+***
+
+## Related
+
+- [how-to 05 — Building an editor](how-to/05-building-an-editor)
+- [WorkspaceShell](components/showcase/molecules.mdx#workspaceshell)
+- [WorkspaceLayout](components/showcase/molecules.mdx#workspacelayout)
+- [Studio](components/showcase/organisms.mdx#studio)
+

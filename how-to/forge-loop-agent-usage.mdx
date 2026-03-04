@@ -1,0 +1,48 @@
+---
+title: Forge Loop agent usage
+created: 2026-02-13
+updated: 2026-02-13
+---
+
+# Forge Loop agent usage
+
+Use this contract for any coding agent.
+
+## Required reads before execution
+
+1. `.planning/PROJECT.md`
+2. `.planning/REQUIREMENTS.md`
+3. `.planning/ROADMAP.md`
+4. `.planning/STATE.md`
+5. Current phase files under `.planning/phases/<NN-slug>/`
+6. `.planning/DECISIONS.md` and `.planning/ERRORS.md`
+
+## Operating contract
+
+- Runtime is prompt-pack only (`config.runtime = prompt-pack`).
+- Forge Loop does not embed provider SDK/API execution.
+- Agent should use generated prompts under `.planning/prompts/`.
+- Keep writes in planning artifacts and implementation files referenced by plans.
+- Auto-commit scope defaults to `.planning/**` and `docs/agent-artifacts/core/**`.
+- For headless runs, pass env gate first: `pnpm forge-env:doctor -- --mode headless --strict`.
+- For interactive remediation, launch RepoStudio Env workspace: `pnpm forge-repo-studio open --view env --mode headless`.
+
+## Recommended command cadence
+
+```bash
+pnpm forge-env:doctor -- --mode headless --strict
+pnpm forge-loop:progress
+pnpm forge-loop:discuss-phase -- <phase>
+pnpm forge-loop:plan-phase -- <phase>
+pnpm forge-loop:execute-phase -- <phase> --non-interactive
+pnpm forge-loop:verify-work -- <phase> --non-interactive --strict
+pnpm forge-loop:sync-legacy
+```
+
+## Failure handling
+
+1. Log root cause in `.planning/ERRORS.md`.
+2. Log accepted tradeoff in `.planning/DECISIONS.md`.
+3. Generate gaps with `plan-phase --gaps`.
+4. Execute only gap plans with `execute-phase --gaps-only`.
+5. Re-run strict verification.

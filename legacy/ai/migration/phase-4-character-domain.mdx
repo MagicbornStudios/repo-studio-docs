@@ -1,0 +1,36 @@
+---
+title: Phase 4 - Character domain
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Phase 4: Character domain (Week 3–4)
+
+---
+
+## Tasks
+
+1. Create CharacterAgent
+2. Migrate character tools
+3. Question Flow for character creation wizard (name, personality, voice, etc.)
+4. ElevenLabs + tool-ui Audio for voice generation and playback in chat
+5. Test cross-domain context (create character from app-level chat)
+6. Character creation in chat with review workflow
+
+---
+
+## Critical files
+
+**Create:**
+
+- `packages/domain-character/src/assistant/index.ts`
+- `packages/domain-character/src/assistant/tools.ts`
+
+**Modify:**
+
+- `apps/studio/components/editors/CharacterEditor.tsx` — Add Assistant UI integration
+
+**Reference:**
+
+- [packages/domain-character/src/copilot/actions.ts](../../../packages/domain-character/src/copilot/actions.ts)
+- [07 - Components reference](../../07-components-reference.mdx) — Question Flow, Audio, ElevenLabs

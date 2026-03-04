@@ -1,0 +1,46 @@
+---
+title: Components
+---
+
+# Components
+
+Editor primitives from `@forge/shared` and Studio settings. Build professional editors with WorkspaceShell, WorkspaceLayout, WorkspacePanel, and more.
+
+## Showcase
+
+Browse all components in one place. Navigate by tier:
+
+| Tier | Description |
+|------|-------------|
+| [Atoms](components/showcase/atoms.mdx) | `@forge/ui` — Button, Input, Card, Badge, and 50+ primitives |
+| [Molecules](components/showcase/molecules.mdx) | `@forge/shared` — WorkspaceShell, DockLayout, WorkspaceToolbar |
+| [Organisms](components/showcase/organisms.mdx) | Full editors — DialogueEditor, CharacterEditor, Studio |
+
+## Quick start
+
+```tsx
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceLayout,
+  WorkspacePanel,
+  WorkspaceStatusBar,
+} from '@forge/shared/components/workspace';
+
+<WorkspaceShell editorId="my-editor" title="My Editor">
+  <WorkspaceToolbar>...</WorkspaceToolbar>
+  <WorkspaceLayout layoutId="my-layout">
+    <WorkspaceLayout.Main>
+      <WorkspacePanel panelId="main" title="Viewport">
+        <MyContent />
+      </WorkspacePanel>
+    </WorkspaceLayout.Main>
+  </WorkspaceLayout>
+  <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+</WorkspaceShell>
+```
+
+## Guides
+
+- [Building a complete Studio](guides/building-studio.mdx) — Step-by-step guide
+

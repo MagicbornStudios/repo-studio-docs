@@ -1,0 +1,64 @@
+---
+title: Forge Loop workflow
+created: 2026-02-13
+updated: 2026-02-13
+---
+
+# Forge Loop workflow
+
+`forge-loop` is the lifecycle OS for repeated build cycles with `.planning/` as the single source of truth.
+
+## Command cheatsheet
+
+```bash
+pnpm forge-loop:new-project -- --profile forge-agent
+pnpm forge-loop:discuss-phase -- <phase>
+pnpm forge-loop:plan-phase -- <phase> [--skip-research] [--gaps]
+pnpm forge-loop:execute-phase -- <phase> [--gaps-only] [--non-interactive]
+pnpm forge-loop:verify-work -- <phase> [--non-interactive] [--strict]
+pnpm forge-loop:progress
+pnpm forge-loop:sync-legacy
+pnpm forge-loop:doctor
+pnpm forge-env:doctor -- --mode headless --strict
+pnpm forge-repo-studio open --view env --mode headless
+```
+
+## Lifecycle
+
+1. `new-project`: initialize `.planning` and seed config/artifacts (`--profile forge-agent|forge-loop|custom`).
+2. `discuss-phase`: capture phase boundary decisions and generate discuss prompt pack.
+3. `plan-phase`: create research/plan files with schema-validated frontmatter and must-haves.
+4. `execute-phase`: run plan tasks, write idempotent summaries, update state, and auto-commit by task.
+5. `verify-work`: run verification matrix + UAT, produce verification report, detect gaps.
+6. `progress`: read lifecycle state and route to exact next command.
+7. `sync-legacy`: snapshot `.planning` into legacy docs between generated markers only.
+
+## Runtime policy
+
+- Runtime is `prompt-pack` only.
+- Forge Loop itself does not embed provider SDK calls.
+- Prompt packs are generated for coding-agent or manual runs.
+- For headless agent execution, validate env readiness with `pnpm forge-env:doctor -- --mode headless --strict`.
+- For interactive env triage, use RepoStudio: `pnpm forge-repo-studio open --view env`.
+
+## Strict verification
+
+- Default behavior is strict (`verification.strictDefault: true`).
+- `verify-work --strict` exits non-zero when automated checks fail or any UAT item is marked `issue`.
+- Non-interactive UAT is recorded as `skipped` (never auto-`pass`).
+
+## Recovery and resume
+
+1. Run `pnpm forge-loop:doctor` for config/artifact/marker safety checks.
+2. Run `pnpm forge-loop:progress` for next action routing.
+3. If verification reports gaps:
+   1. `pnpm forge-loop:plan-phase -- <phase> --gaps`
+   2. `pnpm forge-loop:execute-phase -- <phase> --gaps-only`
+   3. `pnpm forge-loop:verify-work -- <phase> --strict`
+
+## Human and agent modes
+
+- Manual user path: see [forge-loop-manual-usage](forge-loop-manual-usage).
+- Coding agent path: see [forge-loop-agent-usage](forge-loop-agent-usage).
+- Artifact contracts: see [reference/forge-loop-artifacts](../reference/forge-loop-artifacts).
+- Package runbooks (npm consumers): `packages/forge-loop/docs/01-quickstart.md`

@@ -1,0 +1,51 @@
+---
+title: 24 - Vendoring third-party code
+---
+
+# 24 - Vendoring third-party code
+
+Vendor third-party code, make local fixes, contribute upstream. Current example: **get-shit-done (GSD)** from MagicbornStudios.
+
+## Why we vendor
+
+- Consume upstream as first-class dependencies
+- Patch internals for editor needs
+- Clean path to submit fixes upstream
+
+Rules: vendor under `vendor/` (not `.tmp/`); never edit `node_modules`; use workspace overrides when the vendor is a pnpm workspace member.
+
+## get-shit-done (GSD)
+
+We vendor [get-shit-done](https://github.com/MagicbornStudios/get-shit-done) under `vendor/get-shit-done` for our **@forge/gsd** fork (Codex-only, loop-aware). It is not a pnpm workspace member; we run the installer from the vendored path.
+
+**Add submodule (first time):**
+
+```bash
+git submodule add https://github.com/MagicbornStudios/get-shit-done.git vendor/get-shit-done
+git submodule update --init --recursive
+```
+
+**Install GSD for Codex (from repo root):**
+
+```bash
+node vendor/get-shit-done/bin/install.js --codex --local
+```
+
+Or use the root script: `pnpm gsd:install` (if configured).
+
+**Our fork:** We gate (do not strip) other runtimes: the installer respects `FORGE_GSD_CODEX_ONLY=1` to expose only the Codex path. Loop awareness: set `FORGE_LOOP_ID` (default when unset) so planning root is `.planning/` or `.planning/loops/<id>/`. Publish as **@forge/gsd** from the vendor build; see root `package.json` scripts `vendor:gsd:build` and `vendor:gsd:publish:local`. Consumer install from local registry only: `pnpm add -D @forge/gsd --registry http://localhost:4873`.
+
+**Update GSD submodule:**
+
+```bash
+git -C vendor/get-shit-done fetch && git -C vendor/get-shit-done checkout main && git -C vendor/get-shit-done pull
+git add vendor/get-shit-done && git commit -m "chore: update get-shit-done submodule"
+```
+
+**Next:** [25 - Verdaccio and local registry](25-verdaccio-local-registry)
+
+<Callout variant="note" title="For coding agents">
+File refs: `vendor/get-shit-done/`, `pnpm-workspace.yaml`, `verdaccio.yaml`, `scripts/env/manifest.mjs`
+Related: how-to/25-verdaccio-local-registry, architecture (component library)
+Do not: Edit .tmp/
+</Callout>

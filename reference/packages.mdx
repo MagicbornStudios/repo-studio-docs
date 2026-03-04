@@ -1,0 +1,42 @@
+---
+title: Package structure
+---
+
+# Package structure
+
+## @forge/dev-kit
+
+**Main entry point for external consumers.** Re-exports shared + agent-engine. Install with pnpm:
+
+```bash
+pnpm add @forge/dev-kit
+```
+
+Components: WorkspaceShell, WorkspaceToolbar, WorkspaceLayout, WorkspacePanel, WorkspaceStatusBar, WorkspaceInspector, WorkspaceOverlaySurface.
+
+> For internal development in this repo, import from `@forge/shared` and `@forge/ui` directly. Browse all components in the [Component Showcase](components/showcase/atoms.mdx).
+
+## @forge/shared
+
+Editor shell, DockLayout, Assistant domain contract, app/editor/viewport contracts.
+
+## @forge/ui
+
+Shadcn/Radix atoms. No domain deps.
+
+## @forge/domain-*
+
+Internal: domain-forge, domain-character. Not published.
+
+## @forge/types
+
+Payload-generated types. Internal.
+
+**Next:** [TypeScript interfaces](typescript-interfaces)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/ui/`, `packages/shared/`, `packages/domain-forge/`, `packages/types/`
+Related: architecture/02-component-library
+Do not: Import domain packages from ui
+</Callout>
+

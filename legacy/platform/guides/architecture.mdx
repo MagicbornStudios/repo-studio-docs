@@ -1,0 +1,840 @@
+---
+title: Forge Platform Architecture
+created: 2026-02-11
+updated: 2026-02-11
+---
+
+# Forge Platform Architecture
+
+Deep dive into the Forge editor platform architecture, design principles, and system components.
+
+## Overview
+
+The Forge platform is a **modular, domain-driven editor framework** for building AI-first creative tools. It powers our suite of editors:
+
+- **Dialogue Editor** — Narrative graph editor (YarnSpinner format)
+- **Character Editor** — Relationship graph editor (React Flow)
+- **Video Editor** — Timeline-based video composition
+- **Strategy Editor** — Game design planning
+
+## Core Principles
+
+### 1. Domain-Driven Design
+
+Each editor is a **domain** with its own:
+
+- **Data model** — Domain entities (characters, nodes, edges, etc.)
+- **AI contract** — Domain-specific tools and context
+- **Settings schema** — Domain-specific configuration
+- **Theme** — Domain-specific colors and styles
+
+```tsx
+<WorkspaceShell
+  editorId="character"
+  domain="character"
+  theme={theme}
+>
+  {/* Character-specific UI */}
+</WorkspaceShell>
+```
+
+### 2. Composition Over Configuration
+
+**Slot-based composition** instead of monolithic components:
+
+```tsx
+<WorkspaceShell editorId="...">
+  <WorkspaceShell.Toolbar>...</WorkspaceShell.Toolbar>
+  <WorkspaceShell.Layout>...</WorkspaceShell.Layout>
+  <WorkspaceShell.StatusBar>...</WorkspaceShell.StatusBar>
+</WorkspaceShell>
+```
+
+Not configuration objects:
+
+```tsx
+// ❌ Avoid
+<WorkspaceShell
+  config={{
+    toolbar: { ... },
+    layout: { ... },
+    statusBar: { ... }
+  }}
+/>
+```
+
+### 3. Viewport Scoping
+
+Settings, themes, and AI context scope to **viewports**:
+
+```
+App (global)
+  └─ Editor (editorId: 'dialogue')
+      └─ Viewport (viewportId: 'narrative')
+          └─ Setting value resolution
+```
+
+```tsx
+const showMiniMap = useSettingsStore((s) =>
+  s.getSettingValue('graph.showMiniMap', {
+    editorId: 'dialogue',
+    viewportId: 'narrative',
+  })
+);
+```
+
+### 4. Data Attributes for Styling
+
+CSS variables scope via `data-*` attributes:
+
+```tsx
+<div
+  data-editor-id="dialogue"
+  data-domain="dialogue"
+  data-viewport-scope="narrative"
+  data-theme="dark"
+  data-density="comfortable"
+>
+  ...
+</div>
+```
+
+```css
+[data-domain="dialogue"] {
+  --graph-node-page-bg: hsl(220 30% 30%);
+}
+
+[data-viewport-scope="narrative"] {
+  --graph-accent: hsl(210 80% 60%);
+}
+
+[data-density="compact"] {
+  --control-padding-y: 0.25rem;
+}
+```
+
+## System Architecture
+
+### Component Hierarchy
+
+```
+WorkspaceShell
+├── WorkspaceToolbar
+│   ├── WorkspaceToolbar.Left
+│   │   ├── WorkspaceMenubar (File, Edit, View)
+│   │   └── Status indicators
+│   └── WorkspaceToolbar.Right
+│       ├── Model switcher
+│       └── Action buttons
+├── WorkspaceReviewBar (conditional)
+├── EditorDockLayout
+│   ├── Left Rail (Navigator/Library)
+│   │   └── EditorDockPanel
+│   │       └── PanelTabs (multi-mode)
+│   ├── Main (Viewport)
+│   │   └── EditorDockPanel
+│   │       └── Canvas/Flow/Timeline
+│   ├── Right Rail (Inspector/Chat)
+│   │   └── EditorDockPanel
+│   │       ├── WorkspaceInspector (properties)
+│   │       └── DialogueAssistantPanel (AI)
+│   └── Bottom Rail (optional)
+│       └── EditorDockPanel
+│           └── Workflow panel
+├── WorkspaceStatusBar
+└── WorkspaceOverlaySurface
+    └── Modal dialogs
+```
+
+### State Management
+
+#### 1. Domain Store (Zustand)
+
+Each editor has a Zustand store for domain state:
+
+```tsx
+// packages/domain-forge/src/store.ts
+interface ForgeGraphsState {
+  projectId: number | null;
+  narrativeGraph: ForgeGraphDoc | null;
+  storyletGraph: ForgeGraphDoc | null;
+  activeScope: ForgeGraphScope;
+  dirtyByScope: Record<ForgeGraphScope, boolean>;
+
+  setProject: (id: number | null) => void;
+  setGraph: (scope: ForgeGraphScope, graph: ForgeGraphDoc) => void;
+  applyOperations: (scope: ForgeGraphScope, ops: ForgeGraphPatchOp[]) => void;
+  markSaved: (scope: ForgeGraphScope) => void;
+}
+
+export const useForgeGraphsStore = create<ForgeGraphsState>((set) => ({
+  // ... implementation
+}));
+```
+
+#### 2. Settings Store (Zustand)
+
+Global settings store with scope resolution:
+
+```tsx
+// lib/settings/store.ts
+interface SettingsState {
+  settings: Record<string, unknown>;
+
+  getSettingValue: (
+    key: string,
+    scope?: { editorId?: string; viewportId?: string }
+  ) => unknown;
+
+  setSetting: (
+    type: 'app' | 'editor' | 'viewport',
+    key: string,
+    value: unknown,
+    scope?: { editorId?: string; viewportId?: string }
+  ) => void;
+}
+```
+
+Resolution order:
+1. Viewport-specific (`viewport.${viewportId}.${key}`)
+2. Editor-specific (`editor.${editorId}.${key}`)
+3. App-level (`app.${key}`)
+4. Default value
+
+#### 3. App Shell Store (Zustand)
+
+App-level state (projects, active editor, panel visibility):
+
+```tsx
+// lib/app-shell/store.ts
+interface EditorStoreState {
+  activeProjectId: number | null;
+  activeEditorId: string | null;
+  settingsViewportId: string | null;
+  settingsSidebarOpen: boolean;
+  bottomDrawerOpen: Record<string, boolean>;
+
+  setActiveProject: (id: number | null) => void;
+  setActiveEditor: (id: string | null) => void;
+  setSettingsViewportId: (id: string | null) => void;
+  setSettingsSidebarOpen: (open: boolean) => void;
+  setBottomDrawerOpen: (editorId: string, open: boolean) => void;
+}
+```
+
+### Data Flow
+
+#### Editor → Domain Store → API
+
+```
+User Action
+  ↓
+Event Handler (CharacterEditor)
+  ↓
+Domain Store Mutation (useCharacterStore)
+  ↓
+Optimistic Update (local state)
+  ↓
+API Call (mutation)
+  ↓
+Server Update
+  ↓
+Query Invalidation (React Query)
+  ↓
+Store Sync (useEffect)
+```
+
+Example from CharacterEditor:
+
+```tsx
+const handleUpdateCharacter = useCallback(
+  async (id: number, updates: Partial<CharacterDoc>) => {
+    // Optimistic update
+    updateCharacterLocal(id, updates);
+
+    // API call
+    await updateCharMutation.mutateAsync({ id, ...updates });
+  },
+  [updateCharMutation, updateCharacterLocal]
+);
+```
+
+#### Settings Flow
+
+```
+User changes setting
+  ↓
+Settings Store (setSetting)
+  ↓
+localStorage persistence
+  ↓
+Component re-render (useSettingsStore)
+  ↓
+Data attribute update
+  ↓
+CSS variable cascade
+```
+
+### Layout Persistence
+
+#### DockLayout Persistence
+
+```
+User resizes panel
+  ↓
+Dockview onDidLayoutChange
+  ↓
+JSON serialization
+  ↓
+localStorage (uncontrolled)
+  OR
+  Database/Store (controlled)
+  ↓
+Layout restore on mount
+```
+
+## AI System Architecture
+
+### Assistant UI Integration
+
+We use [Assistant UI](https://www.assistant-ui.com/) for chat interface, not CopilotKit:
+
+```tsx
+<DialogueAssistantPanel
+  contract={forgeAssistantContract}
+  toolsEnabled={toolsEnabled}
+  transportHeaders={assistantTransportHeaders}
+/>
+```
+
+### Domain Contracts
+
+Each editor defines a **domain contract** for AI tools:
+
+```tsx
+// packages/domain-forge/src/assistant/index.ts
+export function useForgeAssistantContract({
+  graph,
+  selection,
+  isDirty,
+  applyOperations,
+  onAIHighlight,
+  clearAIHighlights,
+  createPlanApi,
+  setPendingFromPlan,
+  openOverlay,
+  revealSelection,
+}: ForgeAssistantContractParams): AssistantContract {
+  return {
+    tools: [
+      // Create Node Tool
+      {
+        name: 'create_node',
+        description: 'Create a new dialogue node',
+        parameters: z.object({
+          nodeType: z.enum(['PAGE', 'CHARACTER', 'PLAYER', 'CONDITIONAL']),
+          label: z.string().optional(),
+          content: z.string().optional(),
+        }),
+        execute: async ({ nodeType, label, content }) => {
+          const position = { x: 100, y: 100 };
+          applyOperations([
+            { type: 'createNode', nodeType, position, data: { label, content } },
+          ]);
+          return { success: true, message: 'Node created' };
+        },
+      },
+
+      // Update Node Tool
+      {
+        name: 'update_node',
+        description: 'Update an existing node',
+        parameters: z.object({
+          nodeId: z.string(),
+          label: z.string().optional(),
+          content: z.string().optional(),
+        }),
+        execute: async ({ nodeId, label, content }) => {
+          applyOperations([
+            { type: 'updateNode', nodeId, data: { label, content } },
+          ]);
+          return { success: true, message: 'Node updated' };
+        },
+      },
+
+      // ... more tools
+    ],
+
+    context: {
+      graph: graph ? {
+        nodes: graph.flow.nodes.map((n) => ({
+          id: n.id,
+          type: n.type,
+          label: n.data?.label,
+        })),
+        edges: graph.flow.edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+        })),
+      } : null,
+      selection,
+      isDirty,
+    },
+  };
+}
+```
+
+### LangGraph Integration
+
+For multi-step workflows (plan → execute):
+
+```tsx
+// API Route: apps/studio/app/api/forge/plan/route.ts
+export async function POST(req: Request) {
+  const { goal, graphSummary } = await req.json();
+
+  // Call LangGraph service
+  const plan = await langGraphClient.createPlan({
+    goal,
+    context: graphSummary,
+  });
+
+  return NextResponse.json({ plan });
+}
+```
+
+Editor executes plan:
+
+```tsx
+const executePlan = useCallback(
+  (steps: PlanStep[]) => {
+    const ops = steps.map(planStepToOp).filter(Boolean);
+    applyOperations(ops);
+
+    // Highlight affected entities
+    onAIHighlight({ entities: extractEntities(ops) });
+
+    // Mark as pending review
+    setPendingFromPlan(true);
+  },
+  [applyOperations, onAIHighlight, setPendingFromPlan]
+);
+```
+
+## Package Architecture
+
+### Monorepo Structure
+
+```
+forge-agent/
+├── apps/
+│   └── studio/                 # Next.js app
+│       ├── app/
+│       │   ├── api/           # API routes
+│       │   └── (app)/         # App routes
+│       ├── components/
+│       │   ├── editors/       # Editor implementations
+│       │   └── ui/            # App-specific UI
+│       └── lib/
+│           ├── domains/       # Domain stores
+│           ├── data/          # React Query hooks
+│           └── settings/      # Settings store
+│
+├── packages/
+│   ├── shared/                # Shared components & utils
+│   │   └── src/
+│   │       ├── components/
+│   │       │   ├── editor/    # Editor platform components
+│   │       │   ├── app/       # App shell components
+│   │       │   └── tool-ui/   # AI tool UI components
+│   │       └── lib/           # Utilities
+│   │
+│   ├── ui/                    # shadcn/ui components
+│   │   └── src/components/
+│   │
+│   ├── domain-character/      # Character domain
+│   │   └── src/
+│   │       ├── assistant/     # AI contract
+│   │       └── store.ts       # (Optional, in app)
+│   │
+│   ├── domain-forge/          # Dialogue domain
+│   │   └── src/
+│   │       ├── assistant/     # AI contract
+│   │       ├── copilot/       # Plan utilities
+│   │       └── store.ts       # (In app)
+│   │
+│   ├── assistant-runtime/     # Assistant UI runtime
+│   │   └── src/
+│   │
+│   └── types/                 # Shared types
+│       └── src/
+│           ├── payload-types.ts
+│           └── graph.ts
+│
+└── docs/
+    └── platform/              # This documentation
+```
+
+### Import Paths
+
+```tsx
+// Shared components
+import { WorkspaceShell, EditorDockLayout } from '@forge/shared/components/editor';
+
+// UI primitives
+import { Button, Input, Dialog } from '@forge/ui';
+
+// Domain packages
+import { useForgeAssistantContract } from '@forge/domain-forge/assistant';
+import { useCharacterAssistantContract } from '@forge/domain-character';
+
+// Types
+import type { ForgeGraphDoc, ForgeNodeType } from '@forge/types/graph';
+import type { CharacterDoc } from '@forge/types';
+
+// App internals
+import { useSettingsStore } from '@/lib/settings/store';
+import { useEditorStore } from '@/lib/app-shell/store';
+```
+
+## Theming System
+
+### CSS Variable Architecture
+
+```css
+/* Global defaults (packages/shared/src/shared/styles/globals.css) */
+:root {
+  /* Colors */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --muted: 240 4.8% 95.9%;
+  --border: 240 5.9% 90%;
+
+  /* Spacing */
+  --panel-padding: 0.75rem;
+  --control-padding-x: 0.5rem;
+  --control-padding-y: 0.375rem;
+  --control-gap: 0.5rem;
+
+  /* Sizing */
+  --toolbar-height: 2.5rem;
+  --tab-height: 2rem;
+  --control-height-sm: 1.75rem;
+  --icon-size: 0.875rem;
+
+  /* Domain-specific */
+  --graph-node-page-bg: hsl(220 20% 25%);
+  --graph-node-page-border: hsl(220 70% 60%);
+  --graph-edge-choice-1: hsl(30 80% 60%);
+}
+
+/* Domain overrides */
+[data-domain="dialogue"] {
+  --graph-node-page-bg: hsl(220 30% 30%);
+  --graph-accent: hsl(210 80% 60%);
+}
+
+[data-domain="character"] {
+  --graph-node-page-bg: hsl(280 30% 30%);
+  --graph-accent: hsl(280 80% 65%);
+}
+
+/* Viewport overrides */
+[data-viewport-scope="narrative"] {
+  --context-accent: hsl(210 80% 60%);
+}
+
+[data-viewport-scope="storylet"] {
+  --context-accent: hsl(30 80% 60%);
+}
+
+/* Density */
+[data-density="compact"] {
+  --panel-padding: 0.5rem;
+  --control-padding-y: 0.25rem;
+  --control-gap: 0.25rem;
+}
+
+[data-density="comfortable"] {
+  --panel-padding: 1rem;
+  --control-padding-y: 0.5rem;
+  --control-gap: 0.5rem;
+}
+```
+
+### Theme Switching
+
+```tsx
+// Read from settings
+const editorTheme = useSettingsStore((s) =>
+  s.getSettingValue('ui.theme', { editorId: 'dialogue' })
+) as string | undefined;
+
+// Apply via WorkspaceShell
+<WorkspaceShell
+  editorId="dialogue"
+  domain="dialogue"
+  theme={editorTheme}
+>
+  {/* ... */}
+</WorkspaceShell>
+
+// Sets data-theme attribute
+// <div data-theme="dark" data-domain="dialogue">
+```
+
+## Performance Optimizations
+
+### 1. React.memo for Expensive Components
+
+```tsx
+const ExpensiveViewport = React.memo(function ExpensiveViewport({
+  graph,
+  onNodesChange,
+}: ViewportProps) {
+  // Heavy rendering logic
+  return <ReactFlow nodes={graph.nodes} edges={graph.edges} />;
+});
+```
+
+### 2. Virtualized Lists
+
+```tsx
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+function CharacterList({ characters }: { characters: CharacterDoc[] }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: characters.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+  });
+
+  return (
+    <div ref={parentRef} className="h-full overflow-auto">
+      <div style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualizer.getVirtualItems().map((item) => (
+          <div key={item.key} style={{ transform: `translateY(${item.start}px)` }}>
+            {characters[item.index].name}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### 3. Memoized Selectors
+
+```tsx
+// Bad: New array on every render
+const characters = useCharacterStore((s) => s.characters.filter((c) => !c.archived));
+
+// Good: Memoized selector
+const characters = useCharacterStore(
+  useCallback(
+    (s) => s.characters.filter((c) => !c.archived),
+    []
+  )
+);
+```
+
+### 4. Debounced Updates
+
+```tsx
+import { useDebouncedCallback } from 'use-debounce';
+
+function NodeEditor({ node }: { node: Node }) {
+  const handleLabelChange = useDebouncedCallback(
+    (value: string) => {
+      updateNode(node.id, { label: value });
+    },
+    300
+  );
+
+  return <Input defaultValue={node.label} onChange={(e) => handleLabelChange(e.target.value)} />;
+}
+```
+
+## Testing Strategy
+
+### Component Testing (Jest + Testing Library)
+
+```tsx
+import { render, screen, fireEvent } from '@testing-library/react';
+import { WorkspaceToolbar } from '@forge/shared/components/editor';
+
+describe('WorkspaceToolbar', () => {
+  it('renders left and right sections', () => {
+    render(
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left>
+          <span>Left content</span>
+        </WorkspaceToolbar.Left>
+        <WorkspaceToolbar.Right>
+          <span>Right content</span>
+        </WorkspaceToolbar.Right>
+      </WorkspaceToolbar>
+    );
+
+    expect(screen.getByText('Left content')).toBeInTheDocument();
+    expect(screen.getByText('Right content')).toBeInTheDocument();
+  });
+
+  it('calls button onClick handler', () => {
+    const onClick = jest.fn();
+    render(
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left>
+          <WorkspaceToolbar.Button onClick={onClick}>Click me</WorkspaceToolbar.Button>
+        </WorkspaceToolbar.Left>
+      </WorkspaceToolbar>
+    );
+
+    fireEvent.click(screen.getByText('Click me'));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### E2E Testing (Playwright)
+
+```tsx
+import { test, expect } from '@playwright/test';
+
+test('character editor workflow', async ({ page }) => {
+  await page.goto('/character');
+
+  // Create character
+  await page.click('button:has-text("Add Character")');
+  await page.fill('input[name="name"]', 'Alice');
+  await page.fill('textarea[name="description"]', 'Protagonist');
+  await page.click('button:has-text("Create")');
+
+  // Verify character appears
+  await expect(page.locator('text=Alice')).toBeVisible();
+
+  // Select character
+  await page.click('text=Alice');
+
+  // Verify properties panel
+  await expect(page.locator('[data-panel-id="character-properties"]')).toContainText('Alice');
+});
+```
+
+## Deployment Architecture
+
+### Vercel Deployment
+
+```
+forge-agent/
+├── apps/studio/          # Deployed to Vercel
+│   ├── app/             # App Router
+│   ├── public/          # Static assets
+│   └── vercel.json      # Vercel config
+│
+├── packages/            # Built as dependencies
+│   └── */dist/         # Compiled output
+```
+
+### Environment Variables
+
+```bash
+# Database
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# Payload CMS
+PAYLOAD_SECRET="..."
+NEXT_PUBLIC_SERVER_URL="https://..."
+
+# AI Services
+OPENAI_API_KEY="..."
+ANTHROPIC_API_KEY="..."
+OPENROUTER_API_KEY="..."
+
+# Feature Flags
+NEXT_PUBLIC_LANGGRAPH_ENABLED="true"
+```
+
+## Best Practices
+
+### 1. Component Organization
+
+```tsx
+// ✅ Good: Slot composition
+<WorkspaceShell>
+  <WorkspaceShell.Toolbar>...</WorkspaceShell.Toolbar>
+  <WorkspaceShell.Layout>...</WorkspaceShell.Layout>
+</WorkspaceShell>
+
+// ❌ Bad: Prop drilling
+<WorkspaceShell
+  toolbar={...}
+  layout={...}
+/>
+```
+
+### 2. State Management
+
+```tsx
+// ✅ Good: Domain store for domain state
+const characters = useCharacterStore((s) => s.characters);
+
+// ✅ Good: Settings store for UI preferences
+const theme = useSettingsStore((s) => s.getSettingValue('ui.theme'));
+
+// ❌ Bad: Mixing concerns
+const [characters, setCharacters] = useState([]);
+const [theme, setTheme] = useState('dark');
+```
+
+### 3. Styling
+
+```tsx
+// ✅ Good: CSS variables for theming
+<div className="bg-[var(--background)] text-[var(--foreground)]">
+
+// ✅ Good: Tailwind for structure
+<div className="flex items-center gap-2">
+
+// ❌ Bad: Hardcoded colors
+<div className="bg-gray-900 text-white">
+```
+
+### 4. AI Integration
+
+```tsx
+// ✅ Good: Domain contract with tools
+const contract = useForgeAssistantContract({
+  graph,
+  selection,
+  applyOperations,
+});
+
+// ❌ Bad: Direct AI calls in components
+const response = await openai.chat.completions.create({...});
+```
+
+## Related Documentation
+
+- [Quick Start](../tutorials/quick-start.mdx) — Build your first editor
+- [WorkspaceShell Reference](../components/editor-shell-complete.mdx) — Root component
+- [DockLayout Reference](../components/dock-layout-complete.mdx) — Layout system
+- [Settings System](./settings-system.mdx) — Settings architecture
+
+## Conclusion
+
+The Forge platform architecture is built on:
+
+1. **Domain-driven design** — Each editor is a domain
+2. **Composition** — Slot-based components over configuration
+3. **Viewport scoping** — Settings and styles scope to viewports
+4. **Data attributes** — CSS variables cascade via `data-*`
+5. **AI-first** — Domain contracts for AI tools
+6. **Performance** — Memoization, virtualization, debouncing
+
+These principles enable rapid development of sophisticated, AI-powered creative tools.

@@ -1,0 +1,605 @@
+---
+title: Package Structure
+created: 2026-02-12
+updated: 2026-02-12
+icon: "📦"
+---
+
+# 📦 Package Structure Reference
+
+**Complete guide to Forge's monorepo architecture and package organization**
+
+Understand how Forge is organized, what each package provides, and how to import and use them in your editors.
+
+---
+
+## Monorepo Architecture
+
+Forge uses **Yarn workspaces** + **Turborepo** for a fast, scalable monorepo:
+
+```
+forge-agent/
+├── apps/
+│   └── studio/              # Main Next.js application
+├── packages/
+│   ├── shared/              # Core platform components
+│   ├── ui/                  # shadcn/ui components
+│   ├── types/               # TypeScript types
+│   ├── domain-forge/        # Dialogue domain logic
+│   ├── domain-character/    # Character domain logic
+│   └── assistant-runtime/   # AI runtime (experimental)
+├── vendor/
+│   └── twick/               # Vendored dependencies
+├── docs/                    # Documentation (you are here)
+├── scripts/                 # Build and dev scripts
+├── turbo.json               # Turborepo configuration
+├── package.json             # Root package.json
+└── yarn.lock                # Dependency lock file
+```
+
+---
+
+## Package Overview
+
+### @forge/shared
+
+**Core platform components and utilities**
+
+Location: `packages/shared/`
+
+```typescript
+// Editor components
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  EditorDockLayout,
+  EditorDockPanel,
+  WorkspaceStatusBar,
+  WorkspaceInspector,
+  WorkspaceOverlaySurface,
+} from '@forge/shared/components/editor';
+
+// AI system
+import {
+  type DomainAssistantContract,
+  type DomainTool,
+  useAIHighlight,
+} from '@forge/shared/assistant';
+
+// Utilities
+import { cn, isEntity } from '@forge/shared/lib/utils';
+import type { Selection } from '@forge/shared';
+```
+
+**What's Included:**
+
+- Editor platform components (Shell, Dock, Toolbar, etc.)
+- AI assistant framework (contracts, tools)
+- Settings system
+- Entitlements
+- Type utilities
+- Shared hooks and utilities
+
+---
+
+### @forge/ui
+
+**shadcn/ui component library**
+
+Location: `packages/ui/`
+
+```typescript
+import { Button } from '@forge/ui/button';
+import { Card } from '@forge/ui/card';
+import { Badge } from '@forge/ui/badge';
+import { Input } from '@forge/ui/input';
+import { Select } from '@forge/ui/select';
+import { Dialog, DialogContent, DialogTitle } from '@forge/ui/dialog';
+import { Drawer, DrawerContent, DrawerTitle } from '@forge/ui/drawer';
+import { Popover, PopoverContent, PopoverTrigger } from '@forge/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@forge/ui/tooltip';
+```
+
+**What's Included:**
+
+- 40+ shadcn/ui components
+- Radix UI primitives
+- Tailwind CSS styling
+- Accessible by default
+- Fully typed with TypeScript
+
+**Key Components:**
+
+| Component | Use Case |
+|-----------|----------|
+| Button | Actions, triggers |
+| Card | Panels, containers |
+| Badge | Status, labels |
+| Dialog | Modals |
+| Drawer | Bottom sheets |
+| Popover | Contextual UI |
+| Tooltip | Hints |
+| Select | Dropdowns |
+| Input | Text entry |
+
+---
+
+### @forge/types
+
+**TypeScript type definitions**
+
+Location: `packages/types/`
+
+```typescript
+// Graph types
+import type {
+  ForgeGraphDoc,
+  ForgeNodeType,
+  ForgeGraphPatchOp,
+  ForgeGraphKind,
+} from '@forge/types/graph';
+
+// Character types
+import type { CharacterDoc, RelationshipDoc } from '@forge/types/character';
+
+// Payload types (auto-generated)
+import type { Character, Relationship, ForgeGraph } from '@forge/types/payload';
+```
+
+**What's Included:**
+
+- Domain types (Forge, Character, Video, etc.)
+- Payload CMS types (auto-generated from collections)
+- Shared type utilities
+- Type guards
+
+---
+
+### @forge/domain-forge
+
+**Dialogue editor domain logic**
+
+Location: `packages/domain-forge/`
+
+```typescript
+// AI assistant contract
+import { useForgeAssistantContract } from '@forge/domain-forge/assistant';
+
+// Copilot utilities (legacy, being replaced)
+import { planStepToOp } from '@forge/domain-forge/copilot/plan-utils';
+```
+
+**What's Included:**
+
+- Domain assistant contract
+- Graph operation tools
+- Plan execution logic
+- Story builder integration
+
+**Usage:**
+
+```typescript
+import { useForgeAssistantContract } from '@forge/domain-forge/assistant';
+
+const forgeContract = useForgeAssistantContract({
+  graph: activeGraph,
+  selection,
+  isDirty,
+  applyOperations,
+  onAIHighlight,
+  clearAIHighlights,
+});
+
+<DialogueAssistantPanel contract={forgeContract} />
+```
+
+---
+
+### @forge/domain-character
+
+**Character editor domain logic**
+
+Location: `packages/domain-character/`
+
+```typescript
+// AI assistant contract
+import { useCharacterAssistantContract } from '@forge/domain-character';
+```
+
+**What's Included:**
+
+- Domain assistant contract
+- Character CRUD tools
+- Relationship management
+- Image generation
+
+**Usage:**
+
+```typescript
+import { useCharacterAssistantContract } from '@forge/domain-character';
+
+const characterContract = useCharacterAssistantContract({
+  characters,
+  relationships,
+  activeCharacterId,
+  projectId,
+  selection,
+  isDirty,
+  createCharacter,
+  updateCharacter,
+  createRelationship,
+  generateImage,
+  setActiveCharacter,
+  onAIHighlight,
+  clearAIHighlights,
+});
+```
+
+---
+
+## apps/studio Structure
+
+Main Next.js application:
+
+```
+apps/studio/
+├── app/                     # Next.js App Router
+│   ├── (platform)/          # Platform routes (editors)
+│   │   ├── dialogue/page.tsx
+│   │   ├── character/page.tsx
+│   │   └── ...
+│   ├── api/                 # API routes
+│   │   ├── assistant-chat/route.ts
+│   │   ├── forge/plan/route.ts
+│   │   └── ...
+│   ├── admin/               # Payload admin
+│   └── docs/                # Docs viewer
+├── components/              # React components
+│   ├── editors/             # Editor implementations
+│   │   ├── CharacterEditor.tsx
+│   │   ├── DialogueEditor.tsx
+│   │   └── dialogue/        # Dialogue sub-components
+│   ├── character/           # Character domain components
+│   ├── graph/               # Graph components
+│   └── ...
+├── lib/                     # Utilities and logic
+│   ├── app-shell/           # App-level state
+│   ├── data/hooks/          # TanStack Query hooks
+│   ├── domains/             # Domain stores (Zustand)
+│   │   ├── forge/store.ts
+│   │   └── character/store.ts
+│   ├── settings/            # Settings system
+│   ├── api-client/          # API client
+│   └── ...
+├── payload/                 # Payload CMS config
+│   ├── collections/         # Collection definitions
+│   └── ...
+├── public/                  # Static assets
+├── migrations/              # Database migrations
+├── next.config.ts           # Next.js config
+├── tailwind.config.ts       # Tailwind config
+├── tsconfig.json            # TypeScript config
+└── package.json             # Dependencies
+```
+
+---
+
+## Import Patterns
+
+### From @forge/shared
+
+```typescript
+// Editor components
+import {
+  WorkspaceShell,
+  EditorDockLayout,
+} from '@forge/shared/components/editor';
+
+// AI system
+import {
+  type DomainAssistantContract,
+  useAIHighlight,
+} from '@forge/shared/assistant';
+
+// Types
+import type { Selection } from '@forge/shared';
+```
+
+### From @forge/ui
+
+```typescript
+// Individual components
+import { Button } from '@forge/ui/button';
+import { Card } from '@forge/ui/card';
+
+// OR use barrel import (not recommended for large apps)
+import { Button, Card, Badge } from '@forge/ui';
+```
+
+### From Domain Packages
+
+```typescript
+// Domain contracts
+import { useForgeAssistantContract } from '@forge/domain-forge/assistant';
+import { useCharacterAssistantContract } from '@forge/domain-character';
+```
+
+### From Types
+
+```typescript
+// Graph types
+import type { ForgeGraphDoc, ForgeNodeType } from '@forge/types/graph';
+
+// Payload types (generated)
+import type { Character } from '@forge/types/payload';
+```
+
+### From Studio (Internal)
+
+```typescript
+// Data hooks
+import { useCharacters, useCreateCharacter } from '@/lib/data/hooks';
+
+// Stores
+import { useForgeGraphsStore } from '@/lib/domains/forge/store';
+import { useEditorStore } from '@/lib/app-shell/store';
+import { useSettingsStore } from '@/lib/settings/store';
+
+// Components
+import { DialogueAssistantPanel } from '@/components/editors/dialogue/DialogueAssistantPanel';
+```
+
+---
+
+## Dependency Management
+
+### Adding Dependencies
+
+```bash
+# Add to root (workspace-wide)
+yarn add -W <package>
+
+# Add to specific package
+yarn workspace @forge/ui add <package>
+
+# Add to studio app
+yarn workspace studio add <package>
+```
+
+### Workspace Dependencies
+
+```json
+// packages/domain-forge/package.json
+{
+  "name": "@forge/domain-forge",
+  "dependencies": {
+    "@forge/shared": "workspace:*",
+    "@forge/types": "workspace:*"
+  }
+}
+```
+
+### Peer Dependencies
+
+```json
+// packages/ui/package.json
+{
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+```
+
+---
+
+## Build System (Turborepo)
+
+### Configuration
+
+```json
+// turbo.json
+{
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "type-check": {
+      "dependsOn": ["^build"]
+    }
+  }
+}
+```
+
+### Build Order
+
+1. **@forge/types** - Types first
+2. **@forge/ui** - UI components
+3. **@forge/shared** - Platform components
+4. **@forge/domain-*** - Domain packages
+5. **apps/studio** - Application
+
+### Scripts
+
+```bash
+# Build all packages
+yarn build
+
+# Dev mode (watches for changes)
+yarn dev
+
+# Lint all packages
+yarn lint
+
+# Type check all packages
+yarn type-check
+
+# Clean build artifacts
+yarn clean
+```
+
+---
+
+## Publishing Strategy
+
+### Internal (Monorepo Only)
+
+Currently all packages are internal. To use:
+
+```typescript
+// In any workspace package
+import { Button } from '@forge/ui/button';
+```
+
+### Future: External Publishing
+
+If publishing to npm:
+
+```json
+// package.json
+{
+  "name": "@forge/ui",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
+```
+
+```bash
+# Publish all packages
+yarn workspaces foreach --no-private npm publish
+```
+
+---
+
+## Creating a New Package
+
+### 1. Create Directory
+
+```bash
+mkdir -p packages/domain-my-editor
+cd packages/domain-my-editor
+```
+
+### 2. Initialize package.json
+
+```json
+{
+  "name": "@forge/domain-my-editor",
+  "version": "0.0.1",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@forge/shared": "workspace:*",
+    "@forge/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}
+```
+
+### 3. Create Source Files
+
+```typescript
+// packages/domain-my-editor/src/index.ts
+export { useMyEditorAssistantContract } from './assistant';
+export { useMyEditorStore } from './store';
+
+// packages/domain-my-editor/src/assistant/index.ts
+export function useMyEditorAssistantContract(deps: MyEditorDeps) {
+  // Implementation
+}
+```
+
+### 4. Add to TypeScript Config
+
+```json
+// tsconfig.json (root)
+{
+  "compilerOptions": {
+    "paths": {
+      "@forge/domain-my-editor": ["./packages/domain-my-editor/src"]
+    }
+  }
+}
+```
+
+### 5. Import in Studio
+
+```typescript
+// apps/studio/components/editors/MyEditor.tsx
+import { useMyEditorAssistantContract } from '@forge/domain-my-editor';
+```
+
+---
+
+## Package Guidelines
+
+### 1. Naming Convention
+
+- Platform: `@forge/shared`, `@forge/ui`
+- Domains: `@forge/domain-{name}`
+- Types: `@forge/types`
+- Apps: `studio`, `docs`
+
+### 2. Exports
+
+Use explicit exports:
+
+```typescript
+// packages/shared/src/index.ts
+export { WorkspaceShell } from './components/editor/WorkspaceShell';
+export type { WorkspaceShellProps } from './components/editor/WorkspaceShell';
+```
+
+### 3. Dependencies
+
+- Minimize external dependencies
+- Use peer dependencies for React, React DOM
+- Workspace dependencies for internal packages
+- Lock versions for critical dependencies
+
+### 4. TypeScript
+
+- All packages must be fully typed
+- Export types alongside implementations
+- No `any` types (use `unknown` if needed)
+
+---
+
+## Summary
+
+### Key Packages
+
+| Package | Purpose | Import From |
+|---------|---------|-------------|
+| **@forge/shared** | Editor platform | `@forge/shared/components/editor` |
+| **@forge/ui** | UI components | `@forge/ui/button` |
+| **@forge/types** | Type definitions | `@forge/types/graph` |
+| **@forge/domain-forge** | Dialogue logic | `@forge/domain-forge/assistant` |
+| **@forge/domain-character** | Character logic | `@forge/domain-character` |
+| **studio** | Main app | `@/lib/...` |
+
+### Build Commands
+
+```bash
+yarn build          # Build all packages
+yarn dev            # Dev mode with watch
+yarn type-check     # TypeScript validation
+yarn lint           # ESLint
+yarn clean          # Remove build artifacts
+```
+
+---
+
+**You now understand Forge's monorepo architecture and package structure.**

@@ -1,0 +1,21 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "00-index",
+    "README",
+    "00-tools-and-editors",
+    "01-unified-workspace",
+    "02-workspace-editor-architecture",
+    "03-copilotkit-and-agents",
+    "04-component-library-and-registry",
+    "05-editor-platform",
+    "06-model-routing-and-openrouter",
+    "07-modes-as-mcp-apps",
+    "08-copilotkit-vs-assistant-ui",
+    "09-dialogue-domain-and-yarn-spinner",
+    "10-gameplayer",
+    "11-mcp-copilotkit-assistant-ui",
+    "12-mcp-hosts-and-chat-first",
+    "settings-tree-as-source-and-codegen"
+  ]
+}

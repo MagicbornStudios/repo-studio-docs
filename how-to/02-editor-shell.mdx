@@ -1,0 +1,50 @@
+---
+title: 02 - Editor shell and slots
+---
+
+# 02 - Editor shell and slots
+
+Every editor uses the same surfaces. Composition only; no data binding in this guide.
+
+## Shared components
+
+From `packages/shared/src/shared/components/workspace/`:
+
+| Component | Purpose |
+|-----------|---------|
+| WorkspaceShell | Root; `editorId`, `title`, `domain`, `theme`, `density` |
+| WorkspaceToolbar | `.Left`, `.Right`, `.Center`, `.Group`, `.Button`, `.Menubar` |
+| WorkspaceLayout | Slots: `.Left`, `.Main`, `.Right`, `.Bottom` |
+| WorkspacePanel | Panel wrapper; title, tabs, scrollable |
+| WorkspaceStatusBar | Footer strip |
+| WorkspaceOverlaySurface | `overlays`, `activeOverlay`, `onDismiss` |
+
+## Minimal shell
+
+```tsx
+<WorkspaceShell editorId="my-editor" title="My Editor" domain="my">
+  <WorkspaceToolbar>
+    <WorkspaceToolbar.Left><span>My Editor</span></WorkspaceToolbar.Left>
+  </WorkspaceToolbar>
+  <WorkspaceLayout layoutId="my-layout">
+    <WorkspaceLayout.Main>
+      <WorkspacePanel panelId="main" title="Main">
+        Main content
+      </WorkspacePanel>
+    </WorkspaceLayout.Main>
+  </WorkspaceLayout>
+  <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+  <WorkspaceOverlaySurface overlays={[]} activeOverlay={null} onDismiss={() => {}} />
+</WorkspaceShell>
+```
+
+Reference: `apps/studio/components/workspaces/DialogueWorkspace.tsx`, `apps/studio/components/workspaces/CharacterWorkspace.tsx`.
+
+**Next:** [03 - Styling and theming](03-styling)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/components/workspace/WorkspaceShell.tsx`, `packages/shared/src/shared/components/workspace/WorkspaceLayout.tsx`, `apps/studio/components/workspaces/DialogueWorkspace.tsx`
+Related: components/01-editor-shell, components/02-dock-layout
+Do not: Use deprecated dock naming (`WorkspaceLayout`, `WorkspacePanel`) in new code
+</Callout>
+

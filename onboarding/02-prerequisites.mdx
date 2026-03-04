@@ -1,0 +1,28 @@
+---
+title: Prerequisites
+---
+
+# Prerequisites
+
+Before you start, make sure you have:
+
+- **Node 20+** — Run `node -v` to check
+- **pnpm** — Run `pnpm -v` to check. This repo pins pnpm via `packageManager`; use Corepack to match CI:
+  ```bash
+  corepack enable
+  corepack prepare pnpm@9.15.5 --activate
+  ```
+  Or: `corepack enable` (Node will use the version from `package.json`).
+
+## Optional but useful
+
+- **Git** — For cloning and contributing
+- **A code editor** — Cursor, VS Code, or similar
+
+That's it. Next: install and env.
+
+<Callout variant="note" title="For coding agents">
+File refs: `package.json` (packageManager), `SETUP.md`
+Related: onboarding/03-install-and-env, STATUS § pnpm workspaces
+Do not: Assume npm or yarn; always use pnpm
+</Callout>

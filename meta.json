@@ -1,0 +1,25 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "---Onboarding---",
+    "onboarding",
+    "---Building---",
+    "components",
+    "how-to",
+    "tutorials",
+    "---Architecture---",
+    "architecture",
+    "ai",
+    "guides",
+    "---Product---",
+    "product",
+    "roadmap",
+    "design",
+    "---Reference---",
+    "reference",
+    "---For coding agents---",
+    "18-agent-artifacts-index",
+    "19-coding-agent-strategy",
+    "agent-artifacts"
+  ]
+}

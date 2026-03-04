@@ -1,0 +1,210 @@
+---
+title: 05 - Building an editor
+description: "Step-by-step: registry, shell, main content, inspector, domain contract. Add a new editor to Studio."
+---
+
+# 05 - Building an editor
+
+Step-by-step: registry, shell, main content, inspector, domain contract.
+
+## Overview [#overview]
+
+To add a new editor to Forge Studio:
+
+1. Add its id to `EDITOR_IDS` and metadata
+2. Create the editor component with `WorkspaceShell` + `WorkspaceLayout`
+3. Export an `editorDescriptor` and register in the bootstrap
+4. Optionally add Inspector, Assistant UI (domain contract), Plan tools
+
+**File refs:** `apps/studio/lib/app-shell/store.ts`, `apps/studio/lib/app-shell/editor-metadata.ts`, `apps/studio/lib/editor-registry/editor-bootstrap.ts`, `apps/studio/components/editors/DialogueEditor.tsx`, `apps/studio/components/editors/CharacterEditor.tsx`
+
+## Step 1: Add editor id and register
+
+### 1a. Add to EDITOR_IDS
+
+In `apps/studio/lib/app-shell/store.ts`:
+
+```ts
+export const EDITOR_IDS = ['dialogue', 'character', 'my-editor'] as const;
+export type EditorId = (typeof EDITOR_IDS)[number];
+```
+
+### 1b. Add metadata
+
+In `apps/studio/lib/app-shell/editor-metadata.ts`:
+
+```ts
+import type { EditorId } from './store';
+
+export const EDITOR_VIEWPORT_IDS: Record<EditorId, string> = {
+  dialogue: 'dialogue-graph',
+  character: 'character-graph',
+  'my-editor': 'my-viewport',
+};
+
+/** Accent color per editor:viewport. */
+export const VIEWPORT_ACCENT_COLORS: Record<string, string> = {
+  'dialogue:narrative': 'var(--status-info)',
+  'dialogue:storylet': 'var(--graph-edge-choice-1)',
+  'character:main': 'var(--graph-edge-choice-2)',
+  'my-editor:main': 'var(--context-accent)',
+};
+```
+
+### 1c. Create editor descriptor and register
+
+In `apps/studio/lib/editor-registry/editor-bootstrap.ts`:
+
+```ts
+'use client';
+
+import { useEditorRegistryStore } from './editor-registry';
+import { DialogueEditor, editorDescriptor as dialogueDescriptor } from '@/components/editors/DialogueEditor';
+import { CharacterEditor, editorDescriptor as characterDescriptor } from '@/components/editors/CharacterEditor';
+import { MyEditor, editorDescriptor as myEditorDescriptor } from '@/components/editors/MyEditor';
+
+export function registerDefaultEditors(): void {
+  const { registerEditor } = useEditorRegistryStore.getState();
+  registerEditor({ ...dialogueDescriptor, component: DialogueEditor });
+  registerEditor({ ...characterDescriptor, component: CharacterEditor });
+  registerEditor({ ...myEditorDescriptor, component: MyEditor });
+}
+```
+
+### 1d. Export editorDescriptor from your component
+
+In `apps/studio/components/editors/MyEditor.tsx`:
+
+```tsx
+import type { EditorDescriptor } from '@/lib/editor-registry/editor-registry';
+import { FileEdit } from 'lucide-react';
+
+export const editorDescriptor: Omit<EditorDescriptor, 'component'> = {
+  id: 'my-editor',
+  label: 'My Editor',
+  summary: 'Brief description for menus and tooltips',
+  icon: FileEdit,
+  order: 2,
+};
+
+export function MyEditor() {
+  // ...
+}
+```
+
+Tabs and content render from the registry. No manual branches in AppShell.
+
+## Step 2: Shell + slots [#step-2-shell-slots]
+
+Compose `WorkspaceShell`, `WorkspaceToolbar`, `WorkspaceLayout`, `WorkspaceStatusBar`, `WorkspaceOverlaySurface`. Use the **UI-first slot pattern**:
+
+```tsx
+import {
+  WorkspaceShell,
+  WorkspaceToolbar,
+  WorkspaceLayout,
+  WorkspacePanel,
+  WorkspaceStatusBar,
+  WorkspaceOverlaySurface,
+} from '@forge/shared';
+import { BookOpen, LayoutDashboard, ScanSearch } from 'lucide-react';
+
+export function MyEditor() {
+  return (
+    <WorkspaceShell editorId="my-editor" title="My Editor" domain="my-domain" className="bg-canvas">
+      <WorkspaceToolbar>
+        <WorkspaceToolbar.Left><span className="text-xs font-medium">My Editor</span></WorkspaceToolbar.Left>
+        <WorkspaceToolbar.Right>
+          <WorkspaceToolbar.Button size="sm" variant="outline">Action</WorkspaceToolbar.Button>
+        </WorkspaceToolbar.Right>
+      </WorkspaceToolbar>
+
+      <WorkspaceLayout layoutId="my-editor-layout" leftDefaultSize={20} rightDefaultSize={25}>
+        <WorkspaceLayout.Left>
+          <WorkspaceLayout.Panel id="nav" title="Navigator" icon={<BookOpen size={14} />}>
+            <WorkspacePanel panelId="nav-panel" hideTitleBar scrollable>
+              <div className="p-4">Left content</div>
+            </WorkspacePanel>
+          </WorkspaceLayout.Panel>
+        </WorkspaceLayout.Left>
+
+        <WorkspaceLayout.Main>
+          <WorkspaceLayout.Panel id="main" title="Main" icon={<LayoutDashboard size={14} />}>
+            <WorkspacePanel panelId="main-panel" hideTitleBar scrollable>
+              <div className="p-4">Main content</div>
+            </WorkspacePanel>
+          </WorkspaceLayout.Panel>
+        </WorkspaceLayout.Main>
+
+        <WorkspaceLayout.Right>
+          <WorkspaceLayout.Panel id="inspector" title="Inspector" icon={<ScanSearch size={14} />}>
+            <WorkspacePanel panelId="inspector-panel" hideTitleBar scrollable>
+              <div className="p-4">Inspector content</div>
+            </WorkspacePanel>
+          </WorkspaceLayout.Panel>
+        </WorkspaceLayout.Right>
+      </WorkspaceLayout>
+
+      <WorkspaceStatusBar>Ready</WorkspaceStatusBar>
+    </WorkspaceShell>
+  );
+}
+```
+
+## Step 3: Main content [#step-3-main-content]
+
+Put your editor UI in `WorkspaceLayout.Main`. Hold selection in local state or a store; expose it for the inspector and domain contract. Example from DialogueEditor: selection is `{ type: 'entity', entityType: 'forge.node', id }` or `{ type: 'none' }`. Use `packages/shared/src/shared/workspace/selection.ts` for the shape.
+
+## Step 4: Inspector (optional)
+
+Use `WorkspaceLayout.Right` with `WorkspacePanel` wrapping `WorkspaceInspector`. Pass `selection` and `sections`:
+
+```tsx
+import { WorkspaceInspector } from '@forge/shared';
+import type { InspectorSection, Selection } from '@forge/shared';
+import { isEntity } from '@forge/shared';
+
+const sections: InspectorSection[] = [
+  { id: 'properties', label: 'Properties', content: <div>...</div> },
+];
+
+<WorkspaceInspector selection={selection} sections={sections}>
+  {isEntity(selection) ? (
+    <div className="space-y-4">
+      <div><label>ID</label><p>{selection.id}</p></div>
+      <div><label>Type</label><p>{selection.entityType}</p></div>
+    </div>
+  ) : (
+    <p className="text-muted-foreground">No selection</p>
+  )}
+</WorkspaceInspector>
+```
+
+Selection shape: `packages/shared/src/shared/workspace/selection.ts` (discriminant union: `none` | `entity` | `textRange` | `canvasObject`).
+
+## Step 5: Domain contract and Assistant UI [#step-5-domain-contract]
+
+Implement `DomainAssistantContract`: `getContextSnapshot()`, `getInstructions()`, `createTools()`, `getSuggestions()`, `onHighlight`, `clearHighlights`. Wire via `useDomainAssistant` and `DialogueAssistantPanel` (or equivalent). See [07 - Assistant and AI](07-assistant-and-ai).
+
+## Step 6: Plan-commit (optional)
+
+For plan-execute-review-commit flows: add plan API, `forge_createPlan` / `forge_executePlan` tools, `WorkspaceReviewBar`. Reference: DialogueEditor and `packages/domain-forge`.
+
+## Constants
+
+Use constants for editor ids and panel ids. See `apps/studio/lib/editor-registry/constants.ts` for `CHAT_PANEL_ID` and similar. Define `MY_EDITOR_PANEL_IDS` if you have shared panels.
+
+## Do not
+
+- Add manual tab/render branches in AppShell; use the registry
+- Use `DomainCopilotContract` (CopilotKit); use `DomainAssistantContract`
+- Import from `@forge/dev-kit` in Studio; use `@forge/shared` and `@forge/ui` directly
+
+**Next:** [06 - Dialogue walkthrough](06-dialogue-walkthrough)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/lib/editor-registry/editor-bootstrap.ts`, `apps/studio/lib/app-shell/store.ts`, `apps/studio/lib/app-shell/editor-metadata.ts`, `apps/studio/components/editors/DialogueEditor.tsx`
+Related: how-to/07-assistant-and-ai, STATUS § Studio, components/01-editor-shell
+Do not: Add manual tab/render branch in AppShell; use registry. Do not use DomainCopilotContract (CopilotKit); use DomainAssistantContract
+</Callout>
+

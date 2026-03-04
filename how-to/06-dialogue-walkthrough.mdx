@@ -1,0 +1,41 @@
+---
+title: 06 - Dialogue walkthrough
+---
+
+# 06 - Dialogue Editor walkthrough
+
+Dialogue Editor: React Flow graphs, draft + patch ops, AI plan → patch → review → commit.
+
+## Goal
+
+- React Flow graph in shared editor shell
+- Draft in Zustand; patch operations
+- AI plan → patch → review → commit
+- Highlight changed nodes/edges after AI actions
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `apps/studio/components/editors/DialogueEditor.tsx` | Editor shell, layout, assistant panel |
+| `apps/studio/lib/store.ts` | Draft graph, patch ops |
+| `packages/domain-forge/src/assistant/` | Domain contract, tools |
+| `apps/studio/components/forge/ForgeInspectorSections.ts` | Inspector sections |
+
+## Flow
+
+1. **Shell** — WorkspaceShell, WorkspaceToolbar, WorkspaceLayout (left library, main graphs, right inspector + chat)
+2. **Draft** — `useForgeGraphsStore`; edits via `ForgeGraphPatchOp`
+3. **Selection** — Mapped to shared `Selection`; inspector and AI use it
+4. **Inspector** — `WorkspaceInspector` + `dialogueInspectorSections`; `when(selection)` filters
+5. **AI** — `forgeAssistantContract` + `DialogueAssistantPanel`; tools: `forge_getGraph`, `forge_createNode`, `forge_createPlan`, etc.
+6. **Review** — `WorkspaceReviewBar` when `isDirty && pendingFromPlan`; Revert/Accept
+
+**Next:** [07 - Assistant and AI](07-assistant-and-ai)
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/components/editors/DialogueEditor.tsx`, `packages/domain-forge/src/assistant/`, `apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx`
+Related: how-to/07-assistant-and-ai, ai/02-domain-integration
+Do not: Use useDomainCopilot (CopilotKit); use useDomainAssistant + DialogueAssistantPanel
+</Callout>
+

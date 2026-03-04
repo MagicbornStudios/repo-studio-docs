@@ -1,0 +1,143 @@
+---
+title: Install and environment
+description: Single-page setup guide. Install, env portal flow, key variables, bootstrap, manual setup.
+---
+
+# Install and environment
+
+Single-page setup for local development. For the **full list** of environment variables, see [Environment variables](reference/environment-variables.mdx).
+
+---
+
+## Install [#install]
+
+From the repo root:
+
+```bash
+pnpm install
+```
+
+**Use pnpm only.** Do not use npm or yarn. The monorepo uses pnpm workspaces.
+
+---
+
+## Env portal flow [#env-portal-flow]
+
+**Recommended path:** Run `pnpm dev`. Bootstrap runs first; when required keys are missing, the **env portal** opens in your browser at `http://127.0.0.1:3847`.
+
+1. **Fill** — Enter values for required keys per section (Core runtime, AI, etc.). Required fields are highlighted. Secret fields use password inputs.
+2. **Save** — Click Save. The portal writes to `apps/studio/.env.local` (and Platform if configured).
+3. **Rerun** — After save, bootstrap exits. Rerun `pnpm dev` to start the app.
+
+The portal reads from `scripts/env/manifest.mjs` (source of truth) and writes to `.env.local`.
+
+For portal UI details (sections, Vercel sync), see [Environment portal](guides/env-portal.mdx).
+
+---
+
+## Key variables [#key-variables]
+
+**Minimal for local dev (Studio):**
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `PAYLOAD_SECRET` | yes | Payload auth secret. Use `dev-secret-change-me` locally. |
+| `OPENROUTER_API_KEY` | yes (for AI) | OpenRouter API key for chat, planning, structured output. |
+| `DATABASE_URI` | optional (local) | Defaults to `file:./data/payload.db`. Set for Postgres in preview/production. |
+| `NEXT_PUBLIC_APP_URL` | preview, prod | Public Studio URL. `http://localhost:3000` for local. |
+
+**Local auto-login (optional):** Set `NEXT_PUBLIC_LOCAL_DEV_AUTO_ADMIN=1` to use seeded admin (`admin@forge.local` / `admin12345`). See `apps/studio/.env.example`.
+
+**Billing / media:** Stripe, S3, ElevenLabs keys are required only when using those features. See [Environment variables](reference/environment-variables.mdx) for the complete table.
+
+---
+
+## Bootstrap [#bootstrap]
+
+`pnpm dev` runs `pnpm env:bootstrap` first. Bootstrap checks required keys for the current app (Studio or Platform). If any are missing:
+
+- The **env portal** opens in your browser
+- Fill values → Save → bootstrap exits
+- Rerun `pnpm dev` to start the app
+
+**Skip bootstrap** (e.g. CI, scripts): Set `FORGE_SKIP_ENV_BOOTSTRAP=1` or `CI=1`.
+
+File refs: `scripts/env-bootstrap.mjs`, `scripts/env/manifest.mjs`.
+
+---
+
+## Manual setup [#manual-setup]
+
+If you prefer not to use the portal:
+
+```bash
+# Copy example
+cp apps/studio/.env.example apps/studio/.env.local
+
+# Edit apps/studio/.env.local — add at minimum:
+# PAYLOAD_SECRET=dev-secret-change-me
+# OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+**Portal on demand:**
+
+```bash
+pnpm env:portal    # Web UI for Studio + Platform + Vercel sync
+# or
+pnpm env:setup     # CLI setup (--app studio|platform|all)
+```
+
+Env files: `apps/studio/.env.local`, `apps/platform/.env.local`. Source of truth: `scripts/env/manifest.mjs`.
+
+---
+
+## First run [#first-run]
+
+From the repo root:
+
+```bash
+pnpm dev
+```
+
+Open **http://localhost:3000** in your browser.
+
+**What happens:**
+
+1. `pnpm env:bootstrap` runs first (unless skipped). If keys are missing, the portal opens.
+2. Studio starts (Next.js + Payload). Default port 3000.
+3. You see the Studio shell: project switcher, editor tabs (Dialogue, Character), right-rail Inspector and Chat.
+4. Local auto-login uses seeded admin when `NEXT_PUBLIC_LOCAL_DEV_AUTO_ADMIN=1`.
+
+**Other commands:**
+
+| Command | Use |
+|--------|-----|
+| `pnpm build` | Build Studio |
+| `pnpm test` | Run tests |
+| `pnpm payload:types` | Regenerate Payload types after collection changes |
+
+See [First run](04-first-run.mdx) and [What you'll see](05-what-youll-see.mdx).
+
+---
+
+## Vercel sync [#vercel-sync]
+
+The portal includes an optional **Vercel** section for syncing env vars to Vercel projects.
+
+**Configure in `.env.vercel.local`:**
+
+- `VERCEL_API_TOKEN` — For API access
+- `VERCEL_PROJECT_STUDIO` — Studio project id/name
+- `VERCEL_PROJECT_PLATFORM` — Platform project id/name
+
+Then use **Sync to Vercel** in the portal, or run `pnpm env:sync:vercel` from the CLI.
+
+See [28 — Vercel and Supabase launch](how-to/28-vercel-supabase-launch.mdx) for the full deploy flow.
+
+---
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/.env.example`, `scripts/env/manifest.mjs`, `scripts/env-bootstrap.mjs`, `scripts/env/env-portal.mjs`
+Related: SETUP.md, STATUS § Env DX system, onboarding/04-first-run
+Do not: Use npm or yarn; do not add env keys to .env.example that are secrets; manifest.mjs is source of truth for required keys
+</Callout>

@@ -1,0 +1,182 @@
+---
+title: 07 - Assistant and AI
+description: Domain contracts, Assistant UI, tools. Step-by-step integration guide.
+---
+
+# 07 - Assistant and AI
+
+Domain contracts, Assistant UI, tools. Single source: [ai/02-domain-integration](../ai/02-domain-integration).
+
+---
+
+## Overview [#overview]
+
+- **Assistant UI** — Chat surface (no CopilotKit). Thread, composer, tool UIs.
+- **Domain contract** — `DomainAssistantContract`: context, instructions, tools, suggestions, highlights.
+- **Tools** — `forge_getGraph`, `forge_createNode`, `forge_createPlan`, `forge_executePlan`, etc.
+- **Route** — `POST /api/assistant-chat` (LangGraph or legacy stream).
+
+<ComponentPreview name="assistant-panel-demo" />
+
+---
+
+## Define contract [#define-contract]
+
+Every domain implements `DomainAssistantContract` from `packages/shared/src/shared/assistant/domain-contract.ts`:
+
+```ts
+interface DomainAssistantContract {
+  domain: string;
+  getContextSnapshot(): DomainContextSnapshot;
+  getInstructions(): string;
+  createTools(): DomainTool[];
+  getSuggestions(): Array<{ title: string; message: string }>;
+  onHighlight(entities: Record<string, string[]>): void;
+  clearHighlights(): void;
+}
+```
+
+**DomainContextSnapshot** — Passed to tool `execute` functions:
+
+```ts
+interface DomainContextSnapshot {
+  domain: string;
+  domainState: Record<string, unknown>;  // Node count, selection, etc.
+  selectionSummary?: string | null;      // Human-readable selection summary
+}
+```
+
+**Example (Forge):** `packages/domain-forge/src/assistant/index.ts` — `useForgeAssistantContract(deps)` returns a memoized contract. Dependencies include `graph`, `selection`, `isDirty`, `applyOperations`, `onAIHighlight`, `clearAIHighlights`.
+
+---
+
+## Create tools [#create-tools]
+
+Each tool implements `DomainTool`:
+
+```ts
+interface DomainTool {
+  domain: string;
+  name: string;
+  description: string;
+  parameters: { type: 'object'; properties: Record<string, unknown>; required?: string[] };
+  execute: (args: unknown, context: DomainToolContext) => Promise<unknown>;
+  render?: (result: unknown) => ReactNode;  // e.g. PlanCard for forge_createPlan
+}
+```
+
+**Tool naming:** Use prefix per domain: `forge_*`, `character_*`. The model receives these as function names.
+
+**Example (forge_createNode):**
+
+```ts
+{
+  domain: 'forge',
+  name: 'forge_createNode',
+  description: 'Create a new node in the graph. Returns the new node id.',
+  parameters: {
+    type: 'object',
+    properties: {
+      type: { type: 'string', enum: ['CHARACTER', 'PLAYER', 'CONDITIONAL'] },
+      label: { type: 'string' },
+      x: { type: 'number' },
+      y: { type: 'number' },
+    },
+    required: ['type', 'label', 'x', 'y'],
+  },
+  execute: async (args, { snapshot }) => {
+    const op = { type: 'addNode', payload: { ... } };
+    applyOperations([op]);
+    return { nodeId: '...' };
+  },
+}
+```
+
+Reference: `packages/domain-forge/src/assistant/tools.ts`, `packages/domain-character/src/assistant/`.
+
+---
+
+## Custom tool UI [#custom-tool-ui]
+
+When a tool returns structured data (e.g. plan steps), provide a `render` function to show custom UI inline in the chat.
+
+<ComponentPreview name="plan-card-demo" />
+
+**forge_createPlan** returns `{ steps, title, summary }`. The `render` function returns `PlanCard` + `PlanActionBar`:
+
+```tsx
+render: (result) => (
+  <PlanCard
+    title={result.title}
+    summary={result.summary}
+    steps={result.steps}
+    footer={
+      <PlanActionBar
+        onAccept={() => executePlan(result.steps)}
+        onReject={() => setPendingFromPlan(false)}
+      />
+    }
+  />
+)
+```
+
+Register with `ForgePlanToolUI` and `ForgePlanExecuteProvider` — see [DialogueAssistantPanel in Catalog](../components/showcase/molecules.mdx#assistant-panel).
+
+---
+
+## Wire in editor [#wire-in-editor]
+
+1. **Build contract** — `useForgeAssistantContract(deps)` or `useCharacterAssistantContract(deps)`.
+2. **Register tools** — `useDomainAssistant(contract, { enabled: true })`.
+3. **Render tool UIs** — `<DomainToolsRenderer contract={contract} enabled={true} />`.
+4. **Mount chat panel** — `DialogueAssistantPanel` with `contract` and `toolsEnabled`.
+
+```tsx
+import { useDomainAssistant, DomainToolsRenderer } from '@forge/shared/assistant';
+import { DialogueAssistantPanel } from '@/components/editors/dialogue/DialogueAssistantPanel';
+
+// In editor component:
+const contract = useForgeAssistantContract({
+  graph, selection, isDirty,
+  applyOperations, onAIHighlight, clearAIHighlights,
+  createPlanApi, setPendingFromPlan, commitGraph,
+});
+
+useDomainAssistant(contract, { enabled: toolsEnabled });
+<DomainToolsRenderer contract={contract} enabled={toolsEnabled} />
+
+// In dock layout:
+<DialogueAssistantPanel
+  contract={toolsEnabled ? contract : undefined}
+  toolsEnabled={toolsEnabled}
+  executePlan={handleExecutePlan}
+/>
+```
+
+**DialogueAssistantPanel** wraps `AssistantRuntimeProvider` + `Thread` + transport. Source: `apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx`.
+
+---
+
+## Model routing [#model-routing]
+
+OpenRouter is the model provider. See [architecture/03-model-routing-openrouter](../architecture/03-model-routing-openrouter.mdx). Use **OpenAI SDK** with `baseURL`; do not use `@openrouter/ai-sdk-provider` (see [errors-and-attempts](../agent-artifacts/core/errors-and-attempts.md)).
+
+**LangGraph:** Set `AI_LANGGRAPH_ENABLED=1` and `NEXT_PUBLIC_AI_LANGGRAPH_ENABLED=1` for LangGraph orchestration in `/api/assistant-chat`. See [ai/migration](../ai/migration/00-index.mdx).
+
+---
+
+## References [#references]
+
+- **Forge:** `packages/domain-forge/src/assistant/`
+- **Character:** `packages/domain-character/src/assistant/`
+- **DialogueAssistantPanel:** `apps/studio/components/editors/dialogue/DialogueAssistantPanel.tsx`
+- **Domain contract:** `packages/shared/src/shared/assistant/domain-contract.ts`
+- **API route:** `apps/studio/app/api/assistant-chat/route.ts`
+
+**Next:** [08 - Adding AI to editors](08-adding-ai-to-editors)
+
+<Callout variant="note" title="For coding agents">
+File refs: `packages/shared/src/shared/assistant/domain-contract.ts`, `packages/shared/src/shared/assistant/use-domain-assistant.ts`, `packages/domain-forge/src/assistant/tools.ts`, `apps/studio/app/api/assistant-chat/route.ts`
+Related: ai/02-domain-integration, ai/03-domains-forge-character, how-to/08-adding-ai-to-editors
+Do not: Use CopilotKit, useDomainCopilot, useCopilotAction; use Assistant UI and useDomainAssistant
+</Callout>

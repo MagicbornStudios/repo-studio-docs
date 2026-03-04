@@ -1,0 +1,34 @@
+---
+title: What you'll see
+---
+
+# What you'll see
+
+When Studio is running, you'll see the expected first-run UI:
+
+## Studio UI
+
+- **Project switcher** — Top-left; switch or create projects
+- **Editor tabs** — Dialogue, Character (and others when enabled)
+- **Main area** — Active editor (graph, timeline, inspector content)
+- **Right rail** — Inspector (selection properties) and Chat (Assistant UI)
+- **Docs** — In-app docs at [http://localhost:3000/docs](http://localhost:3000/docs): how-tos, architecture, AI. Browse all components at [Components Showcase](components/showcase/atoms.mdx).
+
+## Editors
+
+- **Dialogue** — Dual narrative/storylet graphs per project; React Flow; AI plan-execute-review-commit
+- **Character** — Relationship graph, drag-drop characters, AI assistant
+- **Video** (locked) — Timeline UI; not MVP
+- **Strategy** (locked) — Codebase agent; not MVP
+
+## Key files
+
+- `apps/studio/components/Studio.tsx` — Root component; registries for editors, menus, panels
+- `apps/studio/registry/__index__.tsx` — Default editor registration
+- `packages/shared/src/shared/components/workspace/` — WorkspaceShell, DockLayout, DockPanel
+
+<Callout variant="note" title="For coding agents">
+File refs: `apps/studio/components/Studio.tsx`, `apps/studio/registry/__index__.tsx`, `apps/studio/lib/app-shell/editor-metadata.ts`, `packages/shared/src/shared/components/workspace/`
+Related: STATUS § Studio, components/01-editor-shell, how-to/05-building-an-editor
+Do not: Add editor tabs manually in AppShell; use registry. Do not assume Video or Strategy are enabled
+</Callout>

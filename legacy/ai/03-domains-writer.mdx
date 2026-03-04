@@ -1,0 +1,52 @@
+---
+title: Writer (Lexical) domain
+created: 2026-02-12
+updated: 2026-02-12
+---
+
+# Writer (Lexical) domain
+
+Notion-style, Lexical-based Writer editor. AI edits use **block-level operations**, not raw JSON or full-document replacement. Same pattern as Notion today.
+
+---
+
+## Patch kind
+
+[packages/shared/src/shared/copilot/workflows/patch.ts](../../packages/shared/src/shared/copilot/workflows/patch.ts) defines `PatchKind = 'reactflow' | 'lexical' | 'videoDoc'`. Writer uses `PatchEnvelope<'lexical', LexicalPatchOp[]>`.
+
+---
+
+## Block-level tools
+
+**Do not** accept raw Lexical JSON or `writer_setFullContent`. Use tools that map to Lexical operations:
+
+| Tool | Purpose |
+|------|---------|
+| writer_insertBlock | Insert block (paragraph, heading, list, code) at position |
+| writer_replaceBlock | Replace block content |
+| writer_deleteBlock | Remove block |
+| writer_getSelection | Get current selection/block context |
+| writer_readAloud | TTS via ElevenLabs; return audio URL |
+
+Lexical supports `$insertNodes`, `$removeNodes`, `$setSelection`, etc. Model describes changes; tools translate to Lexical ops and assign block IDs.
+
+---
+
+## Diff strategy
+
+- **LexicalDiffPanel**: Block-level before/after in chat. Use [DiffPreview](../../packages/shared/src/shared/copilot/generative-ui/DiffPreview.tsx) with block rendering or custom layout.
+- **Notion-style**: Inline diff or side-by-side block comparison. Read-only Lexical blocks in before/after view.
+
+---
+
+## Block types
+
+Paragraph, heading (h1–h3), list (bullet, numbered), code block, etc. Align with [pages](../../apps/studio/payload/collections/pages.ts) and [blocks](../../apps/studio/payload/collections/blocks.ts) collections (Notion-inspired).
+
+---
+
+## References
+
+- [08 - Best practices](08-best-practices.mdx) — Diff strategy, Notion-style flow
+- [07 - Components reference](07-components-reference.mdx) — LexicalDiffPanel, tool-ui
+- [product roadmap Writer editor](../../roadmap/product.mdx) — Notion-like, Lexical, branching narrative

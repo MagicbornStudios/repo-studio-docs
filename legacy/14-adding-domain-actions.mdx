@@ -1,0 +1,66 @@
+---
+title: Adding system actions (editor + CopilotKit)
+
+created: 2026-02-04
+updated: 2026-02-04
+---
+
+# Adding system actions (editor + CopilotKit)
+
+This guide describes how to add a new editor/system (e.g. Writer, Characters) or new actions for an existing system so the Copilot agent can operate that editor.
+
+## 1. Implement the capability contract
+
+Every editor that the agent operates should implement the shared **WorkspaceCapabilities** contract (legacy naming; see `packages/shared/src/shared/workspace/capabilities.ts`):
+
+- **getSelection()** - Return the current shared `Selection` (e.g. `entity` for a node/edge, `textRange` for text, `none`).
+- **getContextSnapshot()** - Return `WorkspaceContextSnapshot`: `editorId`, `selection`, `openDocumentId` / `openTemplateId`, and optional `context` (e.g. selected node label) for the LLM.
+- **revealSelection()** (optional) - Fit the viewport to the current selection (e.g. fit view to node, scroll to range). Requires the editor to expose a viewport handle (e.g. React Flow `fitView` / `fitViewToNodes`).
+
+You can implement these as callbacks or derived state in your editor component; the agent does not call these directly - they back the **context** you expose via `useCopilotReadable` and the **revealSelection** action.
+
+## 2. Expose context to the agent
+
+When using a **DomainCopilotContract** (system contract), the contract's **getContextSnapshot()** supplies the context (registered via **useDomainCopilot**). Otherwise, in your editor component you can call **useCopilotReadable** with:
+
+- A **description** of what this context is for (so the agent knows when to use it).
+- A **value** object that includes at least:
+  - `editorId` - e.g. "dialogue", "writer".
+  - `viewportType` - e.g. "reactflow", "lexical" (legacy `editorType`).
+  - System-specific summary (e.g. `graphSummary`, `documentSummary`) and **selection** (or `selectionSummary`) so the agent can refer to "the selected node" or "the current paragraph".
+
+Keep the value minimal but enough for the agent to reason about state and selection.
+
+## 3. Define system actions
+
+Actions are the way the agent changes the editor. Define them in a **system contract** that implements `DomainCopilotContract` (see `packages/shared/src/shared/copilot/types.ts`). The contract's **createActions()** returns an array of action configs. Forge: [packages/domain-forge/src/copilot/actions.ts](../../packages/domain-forge/src/copilot/actions.ts). Each action has:
+
+- **name** - Stable ID with system prefix. Use `createDomainAction('forge', config)` to enforce this (e.g. `createNode` -> `forge_createNode`).
+- **description** - When and why the agent should use it.
+- **parameters** - Name, type, description, required/optional.
+- **handler** - Async function that performs the change (e.g. call store `applyOperations`, open overlay).
+- **render** (optional) - For generative UI in chat; must return a ReactElement (no `null`).
+
+For a **new system**, create a contract (e.g. `useWriterContract`) and wire **onAIHighlight** / **clearAIHighlights** so the UI can highlight AI-created/edited elements.
+
+## 4. Register actions when the editor is active
+
+Register actions only when that editor is active. Forge does this by calling **useForgeContract(deps)** to build the contract, then **useDomainCopilot(forgeContract, { toolsEnabled })** in the editor component. Only one editor is mounted at a time, so only that system's actions are registered.
+
+For a new system, create a contract hook (e.g. `useWriterContract`) that returns a `DomainCopilotContract`, then call **useDomainCopilot(myContract, { toolsEnabled })** from your editor component. The shared hook registers context, actions, and suggestions from the contract; **createActions()** must always return the same number of actions (use **available: 'disabled'** when an action is contextually inactive).
+
+## 5. Checklist for a new system
+
+1. **Capabilities** - Implement `getSelection`, `getContextSnapshot`, and optionally `revealSelection` (with editor viewport handle).
+2. **Context** - `useCopilotReadable` with `editorId`, `viewportType`, selection, and system summary.
+3. **Actions** - Create entity, link/connect, edit, delete, get state, open overlay, reveal selection (as needed).
+4. **Registration** - Build a system contract (e.g. `useForgeContract` / `useWriterContract`) and call **useDomainCopilot(contract, { toolsEnabled })** from the editor component.
+5. **Optional** - `onAIChange` and highlight state if you want to show what the AI changed.
+
+## References
+
+- **Forge contract and actions** - [packages/domain-forge/src/copilot](../../packages/domain-forge/src/copilot) (`useForgeContract`, `createForgeActions` in actions.ts). The Dialogue editor wires it via `useDomainCopilot(forgeContract, { toolsEnabled })`.
+- **Capabilities** - `packages/shared/src/shared/workspace/capabilities.ts`.
+- **AI integration overview** - [15-ai-workspace-integration.mdx](./15-ai-workspace-integration.mdx).
+- **Adding more AI** - [how-to/08-adding-ai-to-workspaces.mdx](./how-to/08-adding-ai-to-workspaces.mdx).
+- **Architecture** - [architecture/03-copilotkit-and-agents.mdx](./architecture/03-copilotkit-and-agents.mdx), [architecture/02-workspace-editor-architecture.mdx](./architecture/02-workspace-editor-architecture.mdx).

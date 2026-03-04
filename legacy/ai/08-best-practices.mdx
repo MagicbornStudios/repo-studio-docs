@@ -1,0 +1,92 @@
+---
+title: Best practices
+created: 2026-02-12
+updated: 2026-02-12
+---
+
+# Best practices for agentic systems
+
+---
+
+## Tool naming
+
+- Prefix by domain: `forge_*`, `character_*`, `writer_*`, `app_*`
+- Use `action_verb` pattern: `forge_createNode`, `character_generateVoice`
+- Keep consistent across CopilotKit (today) and Assistant UI (future)
+
+---
+
+## Component alignment (tool-ui.com)
+
+- **Plan**: Use tool-ui Plan with `responseActions` (Apply Plan, Request Changes). Not custom PlanReviewCard.
+- **Progress Tracker**: For in-progress multi-step execution in chat (e.g. applying plan steps).
+- **Question Flow**: Guided configuration (character creation, import setup).
+- **Image / Video**: tool-ui components for media in chat.
+- **Audio**: ElevenLabs for generation; tool-ui Audio for playback.
+
+---
+
+## Diff strategy: Graph (Forge)
+
+**Do not** accept raw JSON (nodes/edges) from the model.
+
+**Caveats of raw JSON:**
+- Duplicate node IDs, invalid edge references, malformed structure
+- Model may omit required fields or produce invalid positions
+- No automatic layout; IDs must be unique and stable
+
+**Use tool-based operations** that assign IDs automatically: `forge_createNode`, `forge_createEdge`, `forge_updateNode`, `forge_deleteNode`. Validate via `validatePatch` in [plan-execute-review-commit](../../packages/domain-forge/src/workflows/plan-execute-review-commit.ts).
+
+**Diff UI:** GraphDiffPanel—before/after ops summary in chat (e.g. "Add 3 nodes, 2 edges").
+
+---
+
+## Diff strategy: Writer (Lexical)
+
+**Notion-style** block-level operations. Do not accept full-document JSON.
+
+- Tools: `writer_insertBlock`, `writer_replaceBlock`, `writer_deleteBlock`, `writer_getSelection`
+- Lexical supports `$insertNodes`, `$removeNodes`, `$setSelection`
+- Diff UI: LexicalDiffPanel—block-level before/after
+- Patch: `PatchEnvelope<'lexical', LexicalPatchOp[]>`
+
+---
+
+## Approval flows
+
+Use ApprovalCard or Plan + Apply/Dismiss for destructive or multi-step ops. Model proposes; user confirms before execution.
+
+---
+
+## Context snapshots
+
+- Keep small; include selection, summary, not full state
+- Domain-specific: `getContextSnapshot()` returns `{ domain, workspaceId, selection, domainState }`
+
+---
+
+## Instructions
+
+- Clear, domain-specific; mention tool names explicitly
+- Example: "Use forge_* tools. For complex changes, use forge_createPlan first."
+
+---
+
+## Error handling
+
+- ToolUIErrorBoundary wraps tool renders
+- Return structured errors from execute: `{ success: false, error: string }`
+
+---
+
+## Coexistence
+
+- Feature flag (USE_ASSISTANT_UI or PostHog copilotkit-enabled)
+- Both systems during migration; domain-by-domain toggle
+- Keep CopilotKit until full migration validated
+
+---
+
+## MCP-first tools
+
+Design tools to map cleanly to MCP spec for external hosts (Cursor, Claude Desktop). Same tool names and parameters in both in-Studio and MCP surfaces.

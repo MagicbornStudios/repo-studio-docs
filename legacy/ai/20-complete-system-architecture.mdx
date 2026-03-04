@@ -1,0 +1,169 @@
+---
+title: Complete AI System Architecture (2026)
+created: 2026-02-11
+updated: 2026-02-12
+status: current
+---
+
+# Complete AI System Architecture
+
+This document reflects the implemented Studio AI stack as of 2026-02-12.
+
+---
+
+## Overview
+
+Studio AI now uses a layered architecture:
+
+1. `assistant-ui` + AI SDK transport in editors
+2. Single chat endpoint: `POST /api/assistant-chat`
+3. Feature-flagged LangGraph orchestration path (`AI_LANGGRAPH_ENABLED`)
+4. Domain tool contracts (Forge, Character) executed client-side
+5. Payload-backed durable assistant sessions (`agent-sessions`)
+
+---
+
+## Runtime packages
+
+### `@forge/assistant-runtime`
+
+New package for orchestration, context assembly, workflow helpers, and MCP descriptor adapters.
+
+Key modules:
+
+- `src/langgraph/chat-orchestrator.ts`
+- `src/context/assemblers/{forge,character,pages}.ts`
+- `src/workflows/{forge-plan,forge-story-builder,character-core}.ts`
+- `src/sessions/payload-session-store.ts`
+- `src/mcp/{types,domain-tool-to-mcp,forge-descriptors,character-descriptors}.ts`
+
+---
+
+## Chat endpoint architecture
+
+File: `apps/studio/app/api/assistant-chat/route.ts`
+
+`/api/assistant-chat` has two internal paths:
+
+- `legacyStreamPath`: existing streaming behavior
+- `langGraphPath`: LangGraph addendum path, enabled by flag
+
+Rollout flags:
+
+- Server: `AI_LANGGRAPH_ENABLED`
+- Client mirror: `NEXT_PUBLIC_AI_LANGGRAPH_ENABLED`
+
+Request metadata headers:
+
+- `x-forge-ai-domain`
+- `x-forge-ai-editor-id`
+- `x-forge-ai-project-id`
+- `x-forge-ai-viewport-id`
+
+---
+
+## LangGraph orchestration
+
+Current orchestrator sequence:
+
+`load_session -> assemble_context -> classify_intent -> route_workflow -> persist_session`
+
+Practical outputs:
+
+- session/thread metadata
+- intent class (`forge_plan`, `forge_story_builder`, `character_core`, `general`)
+- workflow hints
+- condensed retrieval context addendum merged into system prompt
+
+Session scope default:
+
+- One durable thread per `(user, editor, project)`
+- Session key format: `session:{userId}:{editorId}:{projectId|none}`
+
+---
+
+## Session persistence
+
+Collection: `apps/studio/payload/collections/agent-sessions.ts`
+
+Schema now includes:
+
+- `user` (required)
+- `project` (required)
+- `editor` (required)
+- `domain` (required, expanded options)
+- `sessionKey` (required, unique)
+- `threadId` (required)
+- `checkpoint` (json)
+- `summary`, `events`
+- `messageCount` (default `0`)
+- `lastModelId`
+
+Access model:
+
+- Authenticated self access + admin override
+- Non-admin writes force `user` to request user in `beforeChange`
+
+---
+
+## Domain flows
+
+### Forge
+
+- `POST /api/forge/plan` now uses `runForgePlanWorkflow`
+- `POST /api/forge/story-builder` added (`premise -> steps/characters/scenes/summary`)
+- New assistant tool: `forge_createStoryFromPremise`
+- Writes remain client-applied via existing plan/apply path
+
+### Character
+
+New assistant contract in `packages/domain-character/src/assistant` with tools:
+
+- `character_getContext`
+- `character_create`
+- `character_update`
+- `character_createRelationship`
+- `character_generatePortrait`
+
+Character editor now passes domain contract + transport headers into `DialogueAssistantPanel`.
+
+---
+
+## Retrieval context (read-only)
+
+LangGraph context assembly includes:
+
+- Forge project graph snapshots
+- Character/relationship snapshots
+- Writer pages + block snippets (read-only)
+
+Retrieval budgets:
+
+- max 5 pages
+- max 3 blocks per page
+- max 500 chars per page snippet
+
+No writer mutation tools are included in this phase.
+
+---
+
+## MCP state (adapter now, server next)
+
+Implemented:
+
+- `McpToolDescriptor`, `McpAppDescriptor` contracts
+- domain-tool -> MCP mapping
+- Forge/Character MCP descriptor factories
+
+Deferred:
+
+- executable MCP server runtime/package
+- host transport and auth wiring
+
+---
+
+## Validation status
+
+- `@forge/assistant-runtime` build: passing (`pnpm --filter @forge/assistant-runtime build`)
+- Assistant-runtime targeted tests: passing (`apps/studio/__tests__/assistant-runtime.test.ts`)
+- Full Studio typecheck currently blocked by existing unrelated `StrategyEditor.tsx` JSX mismatch in repo state
