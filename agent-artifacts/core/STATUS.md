@@ -101,6 +101,14 @@ Living artifact for agents. Index: [18-agent-artifacts-index.mdx](../../18-agent
   - added release run summary output (`GITHUB_STEP_SUMMARY`) via `desktop:smoke:summary` and local report diff utility (`desktop:smoke:diff`) for quick run-to-run regression comparisons,
   - release publish now appends a desktop health status block into GitHub Release notes by ingesting `repostudio-smoke-summary.md` from smoke-report artifacts,
   - silent install gate now auto-retries with repair (`desktop:smoke:repair`) and fails only if both primary and repair retry paths fail.
+- In progress (2026-03-10): Desktop installer-parity verification follow-up:
+  - hardened silent-install readiness to require `icudtl.dat` in addition to packaged app payload markers,
+  - fixed Windows standalone build reliability by patching both async and sync symlink fallbacks used during Next standalone tracing,
+  - updated standalone/server and desktop-readiness path resolution to support vendored `vendor/repo-studio/apps/repo-studio` roots and already-built standalone roots,
+  - bundled RepoStudio CLI sources plus required runtime package assets (`dockview`, Tailwind/PostCSS packages, `@openai/codex`, `chokidar`, `yaml`, shared styles, app PostCSS/package metadata) into desktop standalone output so installed runtimes can self-diagnose,
+  - switched `packages/repo-studio/src/cli.mjs` command loading to lazy imports so `doctor --json` no longer pulls the desktop watcher stack eagerly,
+  - local verification now passes for `desktop:verify:standalone`, `electron-builder --win dir`, `desktop:smoke:launch`, attended installer packaging, and silent installer smoke to fresh temp install roots (`Run7`/`Run8`) with `installCompleted=true` and `installReady=true`,
+  - remaining gap: installed `/api/repo/runtime/deps` still reports `desktopRuntimeReady=false` even though invoking the packaged CLI directly from `resources/next/standalone/packages/repo-studio/src/cli.mjs doctor --json` reports desktop readiness as healthy; the app-side runtime route is still not reflecting that packaged CLI result during the HTTP probe.
 - Done (2026-02-27): Phase 15 desktop onboarding and debug ergonomics:
   - added temporary branding/logo and a splash loading window for the desktop shell,
   - added a first-run in-app setup flow with dependency readiness, project-opening guidance, and desktop startup flag visibility,
